@@ -3,8 +3,9 @@ import {FlatList, StyleSheet, Text, View} from 'react-native';
 
 import {Button} from '../components/Button';
 import {ScreenFrame} from '../components/ScreenFrame';
+import {TokenStorageNotice} from '../components/TokenStorageNotice';
 import {useTranslation} from '../i18n';
-import {toSessionError} from '../session/trelloSession';
+import {TokenStorage, toSessionError} from '../session/trelloSession';
 import {TrelloBoard, TrelloClient, TrelloMember} from '../trello';
 import {borders, colors, spacing, typography} from '../theme';
 
@@ -16,6 +17,10 @@ type BoardsState =
 export interface BoardsScreenProps {
   member: TrelloMember;
   client: TrelloClient;
+  tokenStorage: TokenStorage;
+  saveFailed?: boolean;
+  /** Saves the token on the tablet, or removes it from there. */
+  onRememberChange: (remember: boolean) => void;
   onDisconnect: () => void;
   /** Called when Trello rejects the token while loading. */
   onTokenRejected: () => void;
@@ -25,6 +30,9 @@ export interface BoardsScreenProps {
 export function BoardsScreen({
   member,
   client,
+  tokenStorage,
+  saveFailed,
+  onRememberChange,
   onDisconnect,
   onTokenRejected,
 }: BoardsScreenProps): React.JSX.Element {
@@ -60,6 +68,11 @@ export function BoardsScreen({
         </Text>
         <Button label={t('boards.disconnect')} onPress={onDisconnect} />
       </View>
+      <TokenStorageNotice
+        tokenStorage={tokenStorage}
+        saveFailed={saveFailed}
+        onChange={onRememberChange}
+      />
 
       {state.status === 'loading' && (
         <Text style={styles.message}>{t('boards.loading')}</Text>

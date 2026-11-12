@@ -47,7 +47,7 @@ export default function App(): React.JSX.Element {
             key={intent.requestId}
             lasso={intent.lasso}
             client={state.client}
-            store={session.store}
+            store={session.settingsStore}
             onTokenRejected={session.retry}
           />
         );
@@ -56,6 +56,9 @@ export default function App(): React.JSX.Element {
         <BoardsScreen
           member={state.member}
           client={state.client}
+          tokenStorage={state.tokenStorage}
+          saveFailed={state.saveFailed}
+          onRememberChange={session.setRemembered}
           onDisconnect={session.disconnect}
           onTokenRejected={session.retry}
         />
@@ -66,7 +69,6 @@ export default function App(): React.JSX.Element {
         <ConnectScreen
           busy={state.status === 'connecting'}
           error={state.status === 'signedOut' ? state.error : undefined}
-          persistentStorage={session.persistentStorage}
           onConnect={session.connect}
           onRetry={session.retry}
         />

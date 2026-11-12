@@ -3,6 +3,28 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.4.0 — Opt-in saving of the Trello token on the tablet
+
+- The token is now always kept in memory first: it survives closing the
+  plugin view, and must be pasted again after the tablet restarts.
+- Saving it on the tablet is the user's explicit choice: a "Save the token on
+  this tablet" checkbox (unticked by default) on the connect screen, with a
+  warning that the token is then stored unencrypted and readable by anyone or
+  any plugin with access to the tablet's files.
+- The boards screen tells where the token is kept, with "Save on this
+  tablet" (after a confirmation showing the same warning) and "Forget on this
+  tablet" (stays connected for the session). Disconnecting deletes it
+  everywhere and revokes it on Trello.
+- New persistent backend for hosts without AsyncStorage: since plugins
+  cannot write files, values are encoded into the names of empty directories
+  under `<plugin directory>/state/` (`FileUtils.makeDir` / `listFiles` /
+  `deleteDir`), split into chunks when long. The last board and list of the
+  card flow are stored there too.
+- Declared `plugin.permission.FILE:WRITE` and `FILE:DELETE`; they are only
+  requested when something is actually written to the tablet.
+- Unit tests for the directory store and the opt-in session logic.
+- Bumped the plugin to version 0.4.0 (`versionCode` 8).
+
 ## 0.3.3 — Note read permission for the lasso
 
 - Reported on device: "file permission has not been requested, so related

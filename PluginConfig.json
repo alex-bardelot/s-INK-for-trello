@@ -5,11 +5,13 @@
   "desc": "Trello boards on your Supernote.",
   "author": "SuperTrello contributors",
   "iconPath": "assets/icon.png",
-  "versionCode": "7",
-  "versionName": "0.3.3",
+  "versionCode": "8",
+  "versionName": "0.4.0",
   "jsMainPath": "index",
   "uses-permissions": [
     "plugin.permission.INTERNET",
-    "plugin.permission.FILE:READ"
+    "plugin.permission.FILE:READ",
+    "plugin.permission.FILE:WRITE",
+    "plugin.permission.FILE:DELETE"
   ]
 }

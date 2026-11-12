@@ -103,10 +103,19 @@ How the connection works and why:
 - Trello's redirect-based flows need a WebView or a registered callback URL,
   which the Supernote host does not provide, so the manual token flow
   (`response_type=token` without `return_url`) is used.
-- The Supernote SDK has no storage API and plugins cannot ship native modules
-  without a custom build. The token is kept in the host's AsyncStorage module
-  when it is present; otherwise it is only kept in memory and must be entered
-  again after the plugin host restarts (the plugin then says so).
+- By default the token is only kept in memory: it survives closing the plugin
+  view, but must be pasted again after the tablet restarts.
+- Saving it on the tablet is opt-in: tick **Save the token on this tablet**
+  when connecting, or press **Save on this tablet** on the boards screen. The
+  plugin warns first that the token is then stored unencrypted, readable by
+  anyone (or any plugin) with access to the tablet's files. **Forget on this
+  tablet** removes it again while staying connected.
+- The Supernote SDK has no file-writing or key/value API and plugins cannot
+  ship native modules without a custom build. The token therefore goes to the
+  host's AsyncStorage module when it is present; otherwise it is encoded into
+  the names of empty directories under `<plugin directory>/state/`, the only
+  persistent write the SDK allows (`FileUtils.makeDir` / `listFiles`). Board
+  and list choices of the card flow are stored the same way.
 - **Disconnect** forgets the token and revokes it on Trello. A token revoked
   from Trello's side is detected on the next opening.
 

@@ -12,6 +12,10 @@ export const Permission = {
   Internet: 'plugin.permission.INTERNET',
   /** Read access to notes, needed by `getLassoElements` (error 1503 otherwise). */
   FileRead: 'plugin.permission.FILE:READ',
+  /** Creating the directories that hold saved settings (see `stores.ts`). */
+  FileWrite: 'plugin.permission.FILE:WRITE',
+  /** Deleting those directories when a setting changes or is forgotten. */
+  FileDelete: 'plugin.permission.FILE:DELETE',
 } as const;
 
 export type PermissionName = (typeof Permission)[keyof typeof Permission];
@@ -49,6 +53,16 @@ export async function ensurePermission(
 /** Makes sure the plugin may access the network. */
 export function ensureInternetPermission(rationale?: string): Promise<boolean> {
   return ensurePermission(Permission.Internet, rationale);
+}
+
+/** Makes sure the plugin may create and delete its storage directories. */
+export async function ensureStorageWritePermission(
+  rationale?: string,
+): Promise<boolean> {
+  return (
+    (await ensurePermission(Permission.FileWrite, rationale)) &&
+    (await ensurePermission(Permission.FileDelete, rationale))
+  );
 }
 
 /** Makes sure the plugin may read the lasso selection of a note. */

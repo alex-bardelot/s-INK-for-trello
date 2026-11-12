@@ -2,7 +2,8 @@ import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 
 import {i18n} from '../i18n';
 import {ensureInternetPermission} from '../plugin/permissions';
-import {getDefaultStore, KeyValueStore} from '../storage/keyValueStore';
+import {KeyValueStore} from '../storage/keyValueStore';
+import {getDeviceStore, getSessionStore} from '../storage/stores';
 import {TRELLO_API_KEY, TrelloClient} from '../trello';
 import {
   connectWithToken,
@@ -10,15 +11,17 @@ import {
   restoreSession,
   SessionDeps,
   SessionState,
+  setTokenRemembered,
 } from './trelloSession';
 
 export interface UseTrelloSessionResult {
   state: SessionState;
-  /** `true` if the token survives a restart of the tablet. */
-  persistentStorage: boolean;
-  /** Store holding the token, also used for other plugin settings. */
-  store: KeyValueStore;
-  connect: (rawToken: string) => Promise<void>;
+  /** Store for non-sensitive plugin settings (kept on the tablet). */
+  settingsStore: KeyValueStore;
+  /** Connects; the token is saved on the tablet only if `remember` is set. */
+  connect: (rawToken: string, remember: boolean) => Promise<void>;
+  /** Saves the token on the tablet, or removes it from there. */
+  setRemembered: (remember: boolean) => Promise<void>;
   disconnect: () => Promise<void>;
   /** Checks the stored account again (e.g. after a network error). */
   retry: () => Promise<void>;
@@ -27,7 +30,8 @@ export interface UseTrelloSessionResult {
 function createDefaultDeps(): SessionDeps {
   return {
     apiKey: TRELLO_API_KEY,
-    store: getDefaultStore(),
+    sessionStore: getSessionStore(),
+    deviceStore: getDeviceStore(),
     ensureNetwork: () =>
       ensureInternetPermission(i18n.t('error.permissionDenied')),
     createClient: token => new TrelloClient({apiKey: TRELLO_API_KEY, token}),
@@ -60,11 +64,18 @@ export function useTrelloSession(): UseTrelloSessionResult {
   }, [retry]);
 
   const connect = useCallback(
-    async (rawToken: string) => {
+    async (rawToken: string, remember: boolean) => {
       update({status: 'connecting'});
-      update(await connectWithToken(deps, rawToken));
+      update(await connectWithToken(deps, rawToken, remember));
     },
     [deps, update],
+  );
+
+  const setRemembered = useCallback(
+    async (remember: boolean) => {
+      update(await setTokenRemembered(deps, state, remember));
+    },
+    [deps, state, update],
   );
 
   const signOut = useCallback(async () => {
@@ -74,9 +85,9 @@ export function useTrelloSession(): UseTrelloSessionResult {
 
   return {
     state,
-    persistentStorage: deps.store.persistent,
-    store: deps.store,
+    settingsStore: deps.deviceStore,
     connect,
+    setRemembered,
     disconnect: signOut,
     retry,
   };

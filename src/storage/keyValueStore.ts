@@ -124,18 +124,8 @@ export function createMemoryStore(): KeyValueStore {
   };
 }
 
-let defaultStore: KeyValueStore | null = null;
-
-/** Returns the best store available on this device (created once). */
-export function getDefaultStore(): KeyValueStore {
-  if (!defaultStore) {
-    const found = findAsyncStorageModule();
-    defaultStore = found
-      ? createNativeStore(found.name, found.module)
-      : createMemoryStore();
-    console.info(
-      `[SuperTrello] Storage backend: ${defaultStore.backend} (persistent: ${defaultStore.persistent})`,
-    );
-  }
-  return defaultStore;
+/** Store backed by the host's AsyncStorage, if the host bundles it. */
+export function findNativeStore(): KeyValueStore | null {
+  const found = findAsyncStorageModule();
+  return found ? createNativeStore(found.name, found.module) : null;
 }

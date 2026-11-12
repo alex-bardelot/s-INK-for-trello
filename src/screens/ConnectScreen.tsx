@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 
 import {Button} from '../components/Button';
+import {Checkbox} from '../components/Checkbox';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {TranslationKey, useTranslation} from '../i18n';
 import {isClipboardAvailable, readClipboardText} from '../platform/clipboard';
@@ -29,8 +30,8 @@ const ERROR_MESSAGES: Record<SessionErrorCode, TranslationKey> = {
 export interface ConnectScreenProps {
   error?: SessionErrorCode;
   busy: boolean;
-  persistentStorage: boolean;
-  onConnect: (token: string) => void;
+  /** Connects; the token is saved on the tablet only if `remember` is set. */
+  onConnect: (token: string, remember: boolean) => void;
   /** Checks the stored account again after a transient failure. */
   onRetry: () => void;
 }
@@ -50,12 +51,13 @@ const TRANSIENT_ERRORS: ReadonlySet<SessionErrorCode> = new Set([
 export function ConnectScreen({
   error,
   busy,
-  persistentStorage,
   onConnect,
   onRetry,
 }: ConnectScreenProps): React.JSX.Element {
   const {t} = useTranslation();
   const [token, setToken] = useState('');
+  // Saving the token on the tablet is opt-in: off until the user ticks it.
+  const [remember, setRemember] = useState(false);
   const [browserError, setBrowserError] = useState(false);
   const [pasteError, setPasteError] = useState<TranslationKey | null>(null);
   const authorizeUrl = useMemo(
@@ -72,7 +74,10 @@ export function ConnectScreen({
     });
   }, [authorizeUrl]);
 
-  const submit = useCallback(() => onConnect(token), [onConnect, token]);
+  const submit = useCallback(
+    () => onConnect(token, remember),
+    [onConnect, token, remember],
+  );
 
   // Long-press paste is not offered in the plugin view: read the clipboard
   // directly and connect at once when it holds something token-shaped.
@@ -88,9 +93,9 @@ export function ConnectScreen({
     }
     setToken(text.trim());
     if (normalizeToken(text)) {
-      onConnect(text);
+      onConnect(text, remember);
     }
-  }, [onConnect]);
+  }, [onConnect, remember]);
 
   return (
     <ScreenFrame title={t('connect.title')}>
@@ -124,6 +129,21 @@ export function ConnectScreen({
             <Text style={[styles.paragraph, styles.step]}>
               {t('connect.step2')}
             </Text>
+            <View style={styles.remember}>
+              <Checkbox
+                checked={remember}
+                disabled={busy}
+                label={t('connect.remember')}
+                onChange={setRemember}
+              />
+              <Text
+                accessibilityRole={remember ? 'alert' : undefined}
+                style={[styles.paragraph, remember && styles.warning]}>
+                {t(
+                  remember ? 'connect.rememberWarning' : 'connect.sessionOnly',
+                )}
+              </Text>
+            </View>
             <TextInput
               accessibilityLabel={t('connect.tokenPlaceholder')}
               autoCapitalize="none"
@@ -155,12 +175,6 @@ export function ConnectScreen({
             {pasteError && (
               <Text style={styles.paragraph}>{t(pasteError)}</Text>
             )}
-
-            {!persistentStorage && (
-              <Text style={[styles.paragraph, styles.note]}>
-                {t('connect.storageWarning')}
-              </Text>
-            )}
           </>
         )}
       </ScrollView>
@@ -180,9 +194,13 @@ const styles = StyleSheet.create({
   step: {
     marginTop: spacing.lg,
   },
-  note: {
-    marginTop: spacing.lg,
-    fontStyle: 'italic',
+  remember: {
+    gap: spacing.sm,
+  },
+  warning: {
+    borderColor: colors.foreground,
+    borderWidth: borders.width,
+    padding: spacing.md,
   },
   error: {
     color: colors.foreground,
