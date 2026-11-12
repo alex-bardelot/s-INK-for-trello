@@ -2,7 +2,7 @@ import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 
 import {i18n} from '../i18n';
 import {ensureInternetPermission} from '../plugin/permissions';
-import {getDefaultStore} from '../storage/keyValueStore';
+import {getDefaultStore, KeyValueStore} from '../storage/keyValueStore';
 import {TRELLO_API_KEY, TrelloClient} from '../trello';
 import {
   connectWithToken,
@@ -16,6 +16,8 @@ export interface UseTrelloSessionResult {
   state: SessionState;
   /** `true` if the token survives a restart of the tablet. */
   persistentStorage: boolean;
+  /** Store holding the token, also used for other plugin settings. */
+  store: KeyValueStore;
   connect: (rawToken: string) => Promise<void>;
   disconnect: () => Promise<void>;
   /** Checks the stored account again (e.g. after a network error). */
@@ -73,6 +75,7 @@ export function useTrelloSession(): UseTrelloSessionResult {
   return {
     state,
     persistentStorage: deps.store.persistent,
+    store: deps.store,
     connect,
     disconnect: signOut,
     retry,

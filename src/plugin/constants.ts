@@ -34,4 +34,18 @@ export const AppType = {
  */
 export const ButtonId = {
   Open: 100,
+  LassoCreateCard: 101,
+} as const;
+
+/**
+ * Lasso content types for which a lasso button is shown
+ * (`editDataTypes` of `PluginManager.registerButton`).
+ */
+export const LassoDataType = {
+  Stroke: 0,
+  Title: 1,
+  Image: 2,
+  Text: 3,
+  Link: 4,
+  Geometry: 5,
 } as const;

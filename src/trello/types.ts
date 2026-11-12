@@ -23,3 +23,27 @@ export interface TrelloBoard {
   starred: boolean;
   idOrganization: string | null;
 }
+
+/** A list (column) of a board (`GET /1/boards/{id}/lists`). */
+export interface TrelloList {
+  id: string;
+  name: string;
+  closed: boolean;
+  pos: number;
+  idBoard: string;
+}
+
+/** A card, as returned by `POST /1/cards`. */
+export interface TrelloCard {
+  id: string;
+  name: string;
+  url: string;
+  shortUrl: string;
+}
+
+/** Fields needed to create a card. */
+export interface NewCard {
+  idList: string;
+  name: string;
+  desc?: string;
+}

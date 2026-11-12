@@ -3,8 +3,8 @@
 A [Supernote](https://supernote.com) plugin that brings Trello boards to your
 e-ink tablet.
 
-> **Status:** early development. The current build connects a Trello account
-> and lists its open boards. See [RELEASE_NOTES.md](RELEASE_NOTES.md).
+> **Status:** early development. The current build connects a Trello account,
+> lists its open boards and turns lasso selections into Trello cards. See [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ## Compatibility
 
@@ -24,6 +24,11 @@ Other Supernote devices that support plugins may work but are not tested.
   account and validates it; otherwise it guides the user through Trello's
   authorization page. Once connected, the open boards are listed (starred
   first).
+- **Add a Trello card** lasso button in NOTE: circle handwriting or text,
+  press the button, pick a board (favorites, the last used one on top, or all
+  boards on demand), pick a list (the last used one on top), review the
+  recognized title and description, and create the card. The first line
+  becomes the card title, the rest its description.
 - UI follows the tablet's system language: English, French, Japanese,
   Simplified Chinese and Traditional Chinese. Unsupported languages fall back
   to English.
@@ -116,12 +121,13 @@ and install the new package the same way.
 ├── PluginConfig.json        # Plugin manifest read by the Supernote host
 ├── assets/                  # Icons and static assets
 ├── src/
-│   ├── App.tsx              # Root component, routes on the Trello session state
+│   ├── App.tsx              # Root component, routes on session state and pressed button
+│   ├── cards/               # Card creation logic (ordering, remembered choices)
 │   ├── components/          # Shared UI components
 │   ├── i18n/                # Localization (catalogs, locale resolution, hook)
 │   │   └── locales/         # One JSON catalog per language
 │   ├── platform/            # Host capability wrappers (clipboard)
-│   ├── plugin/              # Supernote SDK integration (init, buttons, permissions)
+│   ├── plugin/              # Supernote SDK integration (buttons, permissions, lasso text)
 │   ├── screens/             # Screens
 │   ├── session/             # Trello account lifecycle (restore, connect, disconnect)
 │   ├── storage/             # Key/value storage with runtime backend detection

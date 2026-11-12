@@ -2,6 +2,7 @@ import {PluginManager} from 'sn-plugin-lib';
 
 import {getSystemLocale, i18n} from '../i18n';
 import {refreshButtons, registerButtons} from './buttons';
+import {handleButtonPress} from './launchIntent';
 
 const LOG_TAG = '[SuperTrello]';
 
@@ -29,10 +30,16 @@ export function bootstrapPlugin(): void {
   registerButtons()
     .then(registered => {
       if (!registered) {
-        console.warn(`${LOG_TAG} Toolbar button registration was rejected`);
+        console.warn(`${LOG_TAG} A button registration was rejected`);
       }
     })
     .catch(error =>
       console.warn(`${LOG_TAG} Failed to register buttons`, error),
-    );
+    )
+    .finally(() => {
+      // The SDK requires buttons to be registered before the listener.
+      PluginManager.registerButtonListener({
+        onButtonPress: event => handleButtonPress(event.id),
+      });
+    });
 }

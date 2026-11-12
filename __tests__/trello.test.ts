@@ -108,4 +108,39 @@ describe('TrelloClient', () => {
     expect(url).toBe(`https://api.trello.com/1/tokens/${TOKEN}`);
     expect(init.method).toBe('DELETE');
   });
+  it('returns open lists of a board sorted by position', async () => {
+    const fetchImpl = jest.fn().mockResolvedValue(
+      jsonResponse([
+        {id: 'b', name: 'Doing', pos: 2048},
+        {id: 'a', name: 'To do', pos: 1024},
+      ]),
+    );
+    const lists = await clientWith(fetchImpl).getBoardLists('board 1');
+    expect(lists.map(l => l.id)).toEqual(['a', 'b']);
+    expect(fetchImpl.mock.calls[0][0]).toBe(
+      'https://api.trello.com/1/boards/board%201/lists?filter=open&fields=name%2Cclosed%2Cpos%2CidBoard',
+    );
+  });
+
+  it('creates a card with a JSON body', async () => {
+    const fetchImpl = jest
+      .fn()
+      .mockResolvedValue(jsonResponse({id: 'c1', name: 'Buy milk'}));
+    const card = await clientWith(fetchImpl).createCard({
+      idList: 'l1',
+      name: 'Buy milk',
+      desc: '2 litres',
+    });
+    expect(card.id).toBe('c1');
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(url).toBe('https://api.trello.com/1/cards');
+    expect(init.method).toBe('POST');
+    expect(init.headers['Content-Type']).toBe('application/json');
+    expect(JSON.parse(init.body)).toEqual({
+      idList: 'l1',
+      name: 'Buy milk',
+      desc: '2 litres',
+      pos: 'bottom',
+    });
+  });
 });

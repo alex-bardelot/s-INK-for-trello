@@ -3,6 +3,23 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.3.0 — Create Trello cards from a lasso selection
+
+- Added an "Add a Trello card" lasso toolbar button in NOTE, shown when the
+  selection contains handwriting or text.
+- The selection is read with the SDK: handwriting goes through the device's
+  recognition engine (`recognizeElements`), text boxes are read as is.
+- Card flow: board picker (favorites, last used board on top, "Show all
+  boards" toggle), list picker (last used list of the board on top), review
+  screen with editable title and description, then creation and confirmation.
+- The last board and the last list of each board are remembered.
+- The plugin view now opens on the feature of the pressed button.
+- Trello client: board lists and card creation (JSON body).
+- Shared `ChoiceList` component and a back button in `ScreenFrame`.
+- Unit tests for ordering, title/description split, preferences, launch
+  routing and the new client calls.
+- Bumped the plugin to version 0.3.0 (`versionCode` 4).
+
 ## 0.2.1 — Paste the Trello token
 
 - Added a "Paste token" button on the connection screen: the long-press

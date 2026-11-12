@@ -8,12 +8,15 @@ import {borders, colors, spacing, typography} from '../theme';
 export interface ScreenFrameProps {
   title: string;
   children: React.ReactNode;
+  /** When set, a back button is shown before the title. */
+  onBack?: () => void;
 }
 
 /** Common layout of the plugin screens: title bar with a close button. */
 export function ScreenFrame({
   title,
   children,
+  onBack,
 }: ScreenFrameProps): React.JSX.Element {
   const {t} = useTranslation();
 
@@ -26,6 +29,16 @@ export function ScreenFrame({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        {onBack && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('common.back')}
+            hitSlop={spacing.md}
+            onPress={onBack}
+            style={styles.backButton}>
+            <Text style={styles.closeIcon}>‹</Text>
+          </Pressable>
+        )}
         <Text accessibilityRole="header" style={styles.title} numberOfLines={1}>
           {title}
         </Text>
@@ -64,6 +77,10 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     padding: spacing.sm,
+  },
+  backButton: {
+    paddingRight: spacing.md,
+    paddingVertical: spacing.sm,
   },
   closeIcon: {
     color: colors.foreground,

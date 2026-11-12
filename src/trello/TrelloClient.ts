@@ -1,6 +1,12 @@
 import {TRELLO_API_BASE_URL, TRELLO_REQUEST_TIMEOUT_MS} from './config';
 import {TrelloApiError} from './errors';
-import {TrelloBoard, TrelloMember} from './types';
+import {
+  NewCard,
+  TrelloBoard,
+  TrelloCard,
+  TrelloList,
+  TrelloMember,
+} from './types';
 
 type QueryValue = string | number | boolean | undefined;
 
@@ -16,10 +22,17 @@ export interface TrelloClientOptions {
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   query?: Readonly<Record<string, QueryValue>>;
+  /** Sent as JSON. Used for user content, which may exceed URL limits. */
+  body?: Readonly<Record<string, unknown>>;
 }
 
 const MEMBER_FIELDS = 'username,fullName,initials,url';
 const BOARD_FIELDS = 'name,url,closed,starred,idOrganization';
+const LIST_FIELDS = 'name,closed,pos,idBoard';
+
+/** Trello limits, from the REST reference of `POST /1/cards`. */
+export const CARD_NAME_MAX_LENGTH = 16384;
+export const CARD_DESC_MAX_LENGTH = 16384;
 
 /**
  * Minimal client for the Trello REST API.
@@ -72,6 +85,31 @@ export class TrelloClient {
     );
   }
 
+  /** Returns the open lists of a board, in board order. */
+  async getBoardLists(boardId: string): Promise<TrelloList[]> {
+    const lists = await this.request<TrelloList[]>(
+      `/boards/${encodeURIComponent(boardId)}/lists`,
+      {query: {filter: 'open', fields: LIST_FIELDS}},
+    );
+    if (!Array.isArray(lists)) {
+      throw new TrelloApiError('invalidResponse', 'Expected a list of lists');
+    }
+    return [...lists].sort((a, b) => a.pos - b.pos);
+  }
+
+  /** Creates a card at the bottom of a list. */
+  createCard({idList, name, desc = ''}: NewCard): Promise<TrelloCard> {
+    return this.request<TrelloCard>('/cards', {
+      method: 'POST',
+      body: {
+        idList,
+        name: name.slice(0, CARD_NAME_MAX_LENGTH),
+        desc: desc.slice(0, CARD_DESC_MAX_LENGTH),
+        pos: 'bottom',
+      },
+    });
+  }
+
   /** Revokes the token on Trello's side (used when disconnecting). */
   async revokeToken(): Promise<void> {
     await this.request<unknown>(`/tokens/${encodeURIComponent(this.token)}`, {
@@ -81,7 +119,7 @@ export class TrelloClient {
 
   private async request<T>(
     path: string,
-    {method = 'GET', query = {}}: RequestOptions = {},
+    {method = 'GET', query = {}, body}: RequestOptions = {},
   ): Promise<T> {
     const url = this.baseUrl + path + buildQueryString(query);
     const controller = new AbortController();
@@ -91,8 +129,10 @@ export class TrelloClient {
     try {
       response = await this.fetchImpl(url, {
         method,
+        body: body ? JSON.stringify(body) : undefined,
         headers: {
           Accept: 'application/json',
+          ...(body ? {'Content-Type': 'application/json'} : {}),
           Authorization: `OAuth oauth_consumer_key="${this.apiKey}", oauth_token="${this.token}"`,
         },
         signal: controller.signal,
