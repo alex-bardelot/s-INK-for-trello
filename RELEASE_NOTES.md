@@ -3,16 +3,17 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
-## Unreleased — Tablet deployment script
+## Unreleased — Remove tablet deployment script
 
-- Added `scripts/deploy.mjs` to push the plugin package to the tablet's
-  `MyStyle` folder without manual copying:
-  - over Wi-Fi through the built-in Browse & Access server (`npm run deploy`),
-  - over USB with adb (`npm run deploy:adb`).
-- Added `npm run build:deploy` to build and push in one step.
-- Added optional, git-ignored `deploy.config.json` (see
-  `deploy.config.example.json`) to store the tablet address.
-- Linted Node.js scripts; removed the UTF-8 BOM from `PluginConfig.json`.
+- Removed `scripts/deploy.mjs` and its npm scripts / config: packages are now
+  delivered through the official Supernote Partner sync (`MyStyle` folder).
+- Documented the Supernote Partner sync in the README install steps.
+- Kept the UTF-8 BOM removal from `PluginConfig.json`.
+
+## Unreleased — Tablet deployment script (reverted)
+
+- Added `scripts/deploy.mjs` to push the package to the tablet over Wi-Fi
+  (Browse & Access) or adb. Reverted by the next commit.
 
 ## 0.1.0 — Project bootstrap
 
