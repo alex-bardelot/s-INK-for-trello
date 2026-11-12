@@ -50,5 +50,7 @@
   "card.nameRequired": "カードにはタイトルが必要です。",
   "card.create": "カードを作成",
   "card.creating": "カードを作成しています…",
-  "card.created": "{board} › {list} にカードを作成しました："
+  "card.created": "{board} › {list} にカードを作成しました：",
+  "card.writeManually": "カードを手動で入力",
+  "card.diagnostics": "診断情報"
 }

@@ -5,8 +5,8 @@
   "desc": "Trello boards on your Supernote.",
   "author": "SuperTrello contributors",
   "iconPath": "assets/icon.png",
-  "versionCode": "4",
-  "versionName": "0.3.0",
+  "versionCode": "5",
+  "versionName": "0.3.1",
   "jsMainPath": "index",
   "uses-permissions": [
     "plugin.permission.INTERNET"

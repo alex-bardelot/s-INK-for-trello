@@ -50,5 +50,7 @@
   "card.nameRequired": "La carte doit avoir un titre.",
   "card.create": "Créer la carte",
   "card.creating": "Création de la carte…",
-  "card.created": "Carte créée dans {board} › {list} :"
+  "card.created": "Carte créée dans {board} › {list} :",
+  "card.writeManually": "Écrire la carte à la main",
+  "card.diagnostics": "Diagnostic"
 }

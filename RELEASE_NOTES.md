@@ -3,6 +3,18 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.3.1 — More robust lasso text reading
+
+- Reported on device: the lasso text was not recognized.
+- Lasso reading now tries several strategies: recognition of strokes with the
+  page size, then with the Manta fallback size, then of every selected
+  element; text boxes fall back to `PluginNoteAPI.getLassoText()`; the
+  recognition result is accepted as a string or an object with `text`.
+- When no text is found, the screen shows a diagnostics block (SDK responses,
+  element types, page size) plus "Retry" and "Write the card manually",
+  which continues the card flow with empty fields.
+- Unit test for the recognition result parsing.
+
 ## 0.3.0 — Create Trello cards from a lasso selection
 
 - Added an "Add a Trello card" lasso toolbar button in NOTE, shown when the

@@ -1,3 +1,5 @@
+jest.mock('sn-plugin-lib', () => ({}));
+
 import {
   hasHiddenBoards,
   orderBoards,
@@ -11,6 +13,7 @@ import {
 } from '../src/cards/preferences';
 import {ButtonId} from '../src/plugin/constants';
 import {getLaunchIntent, handleButtonPress} from '../src/plugin/launchIntent';
+import {recognizedText} from '../src/plugin/lassoText';
 import {createMemoryStore} from '../src/storage/keyValueStore';
 import {TrelloBoard, TrelloList} from '../src/trello';
 
@@ -141,5 +144,17 @@ describe('launch intent', () => {
 
     handleButtonPress(9999);
     expect(getLaunchIntent()).toEqual({kind: 'boards'});
+  });
+});
+
+describe('recognizedText', () => {
+  it('reads the text whatever shape the host returns', () => {
+    expect(recognizedText({success: true, result: ' hello '})).toBe('hello');
+    expect(recognizedText({success: true, result: {text: 'a'}})).toBe('a');
+    expect(recognizedText({success: true, result: null})).toBe('');
+    expect(
+      recognizedText({success: false, error: {code: 1, message: 'x'}}),
+    ).toBe('');
+    expect(recognizedText(undefined)).toBe('');
   });
 });

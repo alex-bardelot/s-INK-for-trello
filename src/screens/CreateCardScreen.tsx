@@ -26,7 +26,7 @@ import {borders, colors, spacing, typography} from '../theme';
 
 type Step =
   | {kind: 'loading'}
-  | {kind: 'noText'; error: LassoTextError}
+  | {kind: 'noText'; error: LassoTextError; diagnostics: string}
   | {kind: 'failed'; error: SessionErrorCode; retry: () => void}
   | {kind: 'board'}
   | {kind: 'loadingLists'; board: TrelloBoard}
@@ -87,6 +87,26 @@ export function CreateCardScreen({
     [onTokenRejected],
   );
 
+  const loadBoards = useCallback(
+    async (prefs: CardPreferences): Promise<void> => {
+      try {
+        const allBoards = await client.getMyBoards();
+        setBoards(allBoards);
+        // Without any favorite, the default selection would be empty.
+        setShowAllBoards(
+          orderBoards(allBoards, prefs.lastBoardId, false).length === 0,
+        );
+        setStep({kind: 'board'});
+      } catch (error) {
+        fail(error, () => {
+          setStep({kind: 'loading'});
+          loadBoards(prefs);
+        });
+      }
+    },
+    [client, fail],
+  );
+
   const start = useCallback(async () => {
     setStep({kind: 'loading'});
     const [lasso, prefs] = await Promise.all([
@@ -95,24 +115,26 @@ export function CreateCardScreen({
     ]);
     preferences.current = prefs;
     if (!lasso.ok) {
-      setStep({kind: 'noText', error: lasso.error});
+      setStep({
+        kind: 'noText',
+        error: lasso.error,
+        diagnostics: lasso.diagnostics,
+      });
       return;
     }
     const split = splitCardText(lasso.text);
     setName(split.name);
     setDesc(split.desc);
-    try {
-      const allBoards = await client.getMyBoards();
-      setBoards(allBoards);
-      // Without any favorite, the default selection would be empty.
-      setShowAllBoards(
-        orderBoards(allBoards, prefs.lastBoardId, false).length === 0,
-      );
-      setStep({kind: 'board'});
-    } catch (error) {
-      fail(error, start);
-    }
-  }, [client, fail, store]);
+    await loadBoards(prefs);
+  }, [loadBoards, store]);
+
+  /** Continues without recognized text: the user types the card. */
+  const writeManually = useCallback(async () => {
+    setName('');
+    setDesc('');
+    setStep({kind: 'loading'});
+    await loadBoards(preferences.current);
+  }, [loadBoards]);
 
   useEffect(() => {
     start();
@@ -182,10 +204,26 @@ export function CreateCardScreen({
     case 'noText':
       return (
         <ScreenFrame title={title}>
-          <View style={styles.stack}>
+          <ScrollView contentContainerStyle={styles.stack}>
             <Text style={styles.message}>{t(LASSO_ERRORS[step.error])}</Text>
+            <Button
+              primary
+              label={t('card.writeManually')}
+              onPress={writeManually}
+            />
+            <Button label={t('common.retry')} onPress={start} />
             <Button label={t('common.close')} onPress={close} />
-          </View>
+            {step.diagnostics ? (
+              <View style={styles.diagnostics}>
+                <Text style={styles.diagnosticsTitle}>
+                  {t('card.diagnostics')}
+                </Text>
+                <Text selectable style={styles.diagnosticsText}>
+                  {step.diagnostics}
+                </Text>
+              </View>
+            ) : null}
+          </ScrollView>
         </ScreenFrame>
       );
 
@@ -386,5 +424,22 @@ const styles = StyleSheet.create({
   },
   descInput: {
     minHeight: 160,
+  },
+  diagnostics: {
+    borderColor: colors.foreground,
+    borderStyle: 'dashed',
+    borderWidth: borders.width,
+    gap: spacing.xs,
+    padding: spacing.sm,
+  },
+  diagnosticsTitle: {
+    color: colors.foreground,
+    fontSize: typography.body,
+    fontWeight: '600',
+  },
+  diagnosticsText: {
+    color: colors.foreground,
+    fontFamily: 'monospace',
+    fontSize: 18,
   },
 });

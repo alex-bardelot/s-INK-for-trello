@@ -50,5 +50,7 @@
   "card.nameRequired": "卡片需要標題。",
   "card.create": "建立卡片",
   "card.creating": "正在建立卡片…",
-  "card.created": "已在 {board} › {list} 中建立卡片："
+  "card.created": "已在 {board} › {list} 中建立卡片：",
+  "card.writeManually": "手動填寫卡片",
+  "card.diagnostics": "診斷資訊"
 }

@@ -50,5 +50,7 @@
   "card.nameRequired": "The card needs a title.",
   "card.create": "Create card",
   "card.creating": "Creating the card…",
-  "card.created": "Card created in {board} › {list}:"
+  "card.created": "Card created in {board} › {list}:",
+  "card.writeManually": "Write the card manually",
+  "card.diagnostics": "Diagnostics"
 }
