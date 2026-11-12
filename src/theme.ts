@@ -9,12 +9,22 @@ export const colors = {
 } as const;
 
 export const spacing = {
+  xs: 4,
   sm: 8,
   md: 16,
   lg: 24,
+  xl: 40,
 } as const;
 
 export const typography = {
+  body: 22,
+  label: 24,
+  heading: 30,
   icon: 28,
   title: 40,
+} as const;
+
+export const borders = {
+  width: 2,
+  radius: 6,
 } as const;

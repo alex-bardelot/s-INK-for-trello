@@ -56,10 +56,10 @@ describe('catalogs', () => {
 describe('I18n', () => {
   it('translates in the active locale', () => {
     const i18n = new I18n();
-    expect(i18n.t('home.greeting')).toBe('Hi SuperTrello');
+    expect(i18n.t('common.close')).toBe('Close');
 
     i18n.setLocale('fr_FR');
-    expect(i18n.t('home.greeting')).toBe('Salut SuperTrello');
+    expect(i18n.t('common.close')).toBe('Fermer');
   });
 
   it('notifies subscribers only when the locale changes', () => {

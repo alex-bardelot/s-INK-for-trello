@@ -3,6 +3,23 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.2.0 — Trello account connection
+
+- Added a dependency-free Trello REST client (`src/trello/`) built from the
+  official documentation: current member, open boards, token revocation.
+  Credentials are sent in the `Authorization` header, never in URLs.
+- On opening, the plugin looks for a linked Trello account and validates it;
+  a token rejected by Trello is forgotten, transient failures can be retried.
+- Added the connection screen (manual token flow of `trello.com/1/authorize`)
+  and the boards screen (starred first, disconnect button).
+- Declared and requested the `plugin.permission.INTERNET` permission.
+- Added a key/value store that uses the host's AsyncStorage module when it
+  exists and falls back to memory, with a warning, otherwise.
+- Added shared `ScreenFrame` and `Button` components; removed the greeting
+  screen.
+- Added unit tests for the Trello client and the session logic.
+- Bumped the plugin to version 0.2.0 (`versionCode` 2).
+
 ## Unreleased — Remove tablet deployment script
 
 - Removed `scripts/deploy.mjs` and its npm scripts / config: packages are now

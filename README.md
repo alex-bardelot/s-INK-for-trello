@@ -3,8 +3,8 @@
 A [Supernote](https://supernote.com) plugin that brings Trello boards to your
 e-ink tablet.
 
-> **Status:** early development. The current build only installs the plugin
-> and displays a localized greeting. See [RELEASE_NOTES.md](RELEASE_NOTES.md).
+> **Status:** early development. The current build connects a Trello account
+> and lists its open boards. See [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ## Compatibility
 
@@ -20,6 +20,10 @@ Other Supernote devices that support plugins may work but are not tested.
 ## Features
 
 - Toolbar button in NOTE and DOC that opens the plugin view.
+- Trello account connection: on opening, the plugin looks for a linked
+  account and validates it; otherwise it guides the user through Trello's
+  authorization page. Once connected, the open boards are listed (starred
+  first).
 - UI follows the tablet's system language: English, French, Japanese,
   Simplified Chinese and Traditional Chinese. Unsupported languages fall back
   to English.
@@ -48,6 +52,20 @@ npm run lint
 npm test
 ```
 
+### Configure the Trello API key
+
+SuperTrello talks to the [Trello REST API](https://developer.atlassian.com/cloud/trello/rest/)
+directly with `fetch`; there is no official Trello SDK for JavaScript.
+Each build needs a Trello API key:
+
+1. Create a Power-Up at <https://trello.com/apps/admin> (any workspace).
+2. Open its **Trello Auth** tab and select **Generate a new API Key**.
+3. Paste the key in `TRELLO_API_KEY` in `src/trello/config.ts`.
+
+The API key is public by design (it grants no access on its own); the token
+each user generates is the secret, and it never leaves the tablet except in
+the `Authorization` header of requests to `api.trello.com`.
+
 ### Build the plugin package
 
 ```bash
@@ -67,6 +85,25 @@ The package is written to `build/outputs/SuperTrello.snplg`.
    `SuperTrello.snplg`.
 3. Open a note or a document: the SuperTrello button appears in the toolbar.
 
+### Connect a Trello account
+
+1. Press the SuperTrello button and allow Internet access when asked.
+2. Open the displayed address in a browser (the tablet's, or any other
+   device's), sign in to Trello and press **Allow**.
+3. Trello displays a token: type it in the plugin and press **Connect**.
+
+How the connection works and why:
+
+- Trello's redirect-based flows need a WebView or a registered callback URL,
+  which the Supernote host does not provide, so the manual token flow
+  (`response_type=token` without `return_url`) is used.
+- The Supernote SDK has no storage API and plugins cannot ship native modules
+  without a custom build. The token is kept in the host's AsyncStorage module
+  when it is present; otherwise it is only kept in memory and must be entered
+  again after the plugin host restarts (the plugin then says so).
+- **Disconnect** forgets the token and revokes it on Trello. A token revoked
+  from Trello's side is detected on the next opening.
+
 To update, bump `versionCode` / `versionName` in `PluginConfig.json`, rebuild
 and install the new package the same way.
 
@@ -78,11 +115,15 @@ and install the new package the same way.
 ├── PluginConfig.json        # Plugin manifest read by the Supernote host
 ├── assets/                  # Icons and static assets
 ├── src/
-│   ├── App.tsx              # Root component shown in the plugin view
+│   ├── App.tsx              # Root component, routes on the Trello session state
+│   ├── components/          # Shared UI components
 │   ├── i18n/                # Localization (catalogs, locale resolution, hook)
 │   │   └── locales/         # One JSON catalog per language
-│   ├── plugin/              # Supernote SDK integration (init, buttons)
+│   ├── plugin/              # Supernote SDK integration (init, buttons, permissions)
 │   ├── screens/             # Screens
+│   ├── session/             # Trello account lifecycle (restore, connect, disconnect)
+│   ├── storage/             # Key/value storage with runtime backend detection
+│   ├── trello/              # Trello REST client, authorization URL, types
 │   └── theme.ts             # E-ink oriented design tokens
 ├── __tests__/               # Jest unit tests
 ├── android/                 # Native Android project (only used for native modules)
