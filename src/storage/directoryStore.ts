@@ -1,7 +1,7 @@
 import {KeyValueStore} from './keyValueStore';
 
 /**
- * Directory operations the store relies on. The Supernote SDK exposes them
+ * File operations the store relies on. The Supernote SDK exposes them
  * through `FileUtils`; they are injected to keep the store testable.
  */
 export interface DirectoryFileSystem {
@@ -9,7 +9,44 @@ export interface DirectoryFileSystem {
   /** Paths (or names) of the entries of a directory, `null` if missing. */
   listFiles(dirPath: string): Promise<Array<string> | null | undefined>;
   deleteDir(dirPath: string): Promise<boolean>;
+  deleteFile?(filePath: string): Promise<boolean>;
+  exists?(path: string): Promise<boolean>;
+  copyFile?(sourcePath: string, destPath: string): Promise<boolean>;
 }
+
+export interface DirectoryStoreOptions {
+  /**
+   * Called right before something is created or deleted; resolves `false`
+   * if writing is not allowed. Reads and no-op removals skip it, so the
+   * user is only asked when something is actually written.
+   */
+  ensureWritable?: () => Promise<boolean>;
+  /** Called before listing the directory; resolves `false` if refused. */
+  ensureReadable?: () => Promise<boolean>;
+  /**
+   * Existing file copied to create file entries, used when directory
+   * entries cannot be listed back on this host.
+   */
+  findSeedFile?: () => Promise<string | null>;
+}
+
+/** Diagnostic snapshot of a store, safe to show (values are masked). */
+export interface StoreDiagnostics {
+  backend: string;
+  rootDir: string | null;
+  rootExists?: boolean;
+  /** Entries found, as `key#index (n chars)`. */
+  entries: string[] | null;
+  entryKind: EntryKind;
+  lastError: string | null;
+}
+
+/** Store that can describe its state for troubleshooting on the device. */
+export interface DiagnosableStore extends KeyValueStore {
+  diagnose(): Promise<StoreDiagnostics>;
+}
+
+type EntryKind = 'directory' | 'file';
 
 /** Separates the key, the chunk index and the chunk in an entry name. */
 const SEPARATOR = '~';
@@ -33,26 +70,42 @@ function baseName(path: string): string {
   return trimmed.slice(trimmed.lastIndexOf('/') + 1);
 }
 
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 interface Entry {
   name: string;
+  /** Decoded-key-free part used for diagnostics. */
+  key: string;
   index: number;
   chunk: string;
 }
 
-function parseEntry(name: string, encodedKey: string): Entry | null {
-  const prefix = `${encodedKey}${SEPARATOR}`;
-  if (!name.startsWith(prefix)) {
+function parseName(name: string): Entry | null {
+  const first = name.indexOf(SEPARATOR);
+  if (first < 0) {
     return null;
   }
-  const rest = name.slice(prefix.length);
-  const separator = rest.indexOf(SEPARATOR);
-  if (separator !== INDEX_DIGITS) {
+  const rest = name.slice(first + 1);
+  if (rest.indexOf(SEPARATOR) !== INDEX_DIGITS) {
     return null;
   }
-  const index = Number(rest.slice(0, separator));
+  const index = Number(rest.slice(0, INDEX_DIGITS));
   return Number.isInteger(index)
-    ? {name, index, chunk: rest.slice(separator + 1)}
+    ? {
+        name,
+        key: name.slice(0, first),
+        index,
+        chunk: rest.slice(INDEX_DIGITS + 1),
+      }
     : null;
+}
+
+function entryName(encodedKey: string, index: number, chunk: string): string {
+  return [encodedKey, String(index).padStart(INDEX_DIGITS, '0'), chunk].join(
+    SEPARATOR,
+  );
 }
 
 function splitChunks(encoded: string): string[] {
@@ -63,13 +116,22 @@ function splitChunks(encoded: string): string[] {
   return chunks.length > 0 ? chunks : [''];
 }
 
+function decodeEntries(entries: Entry[]): string | null {
+  if (entries.length === 0) {
+    return null;
+  }
+  return decodeURIComponent(entries.map(e => e.chunk).join(''));
+}
+
 /**
- * Store that keeps each value in the *names* of empty directories.
+ * Store that keeps each value in the *names* of entries of a directory.
  *
- * Plugins cannot write files: the SDK only lets them create, list and delete
- * directories. A value is therefore encoded (see {@link encodeName}), split
- * into chunks and stored as `<key>~<index>~<chunk>` directories under
- * `rootDir`. Values are stored unencrypted.
+ * Plugins cannot write file contents: the SDK only lets them create, copy,
+ * list and delete entries. A value is therefore encoded (see
+ * {@link encodeName}), split into chunks and stored as `<key>~<index>~<chunk>`
+ * entries under `rootDir`: empty directories, or copies of a seed file when
+ * the host does not list directories back. Every write is read back to make
+ * sure it can be found again. Values are stored unencrypted.
  *
  * @param getRootDir Resolves the directory holding the entries, or `null`
  *   when it is not available.
@@ -77,22 +139,28 @@ function splitChunks(encoded: string): string[] {
 export function createDirectoryStore(
   getRootDir: () => Promise<string | null>,
   fs: DirectoryFileSystem,
-  /**
-   * Called right before the first directory is created or deleted; resolves
-   * `false` if writing is not allowed. Reads and no-op removals skip it, so
-   * the user is only asked when something is actually written.
-   */
-  ensureWritable: () => Promise<boolean> = async () => true,
-): KeyValueStore {
-  const checkWritable = async () => {
-    if (!(await ensureWritable())) {
-      throw new Error('Writing to the plugin directory was not allowed');
-    }
-  };
+  options: DirectoryStoreOptions = {},
+): DiagnosableStore {
+  const {
+    ensureWritable = async () => true,
+    ensureReadable = async () => true,
+    findSeedFile,
+  } = options;
+  let entryKind: EntryKind = 'directory';
+  let lastError: string | null = null;
+
   // Operations run one after the other so a read never sees half a write.
   let queue: Promise<unknown> = Promise.resolve();
   const serialize = <T>(operation: () => Promise<T>): Promise<T> => {
-    const result = queue.then(operation, operation);
+    const run = async () => {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = errorMessage(error);
+        throw error;
+      }
+    };
+    const result = queue.then(run, run);
     queue = result.catch(() => undefined);
     return result;
   };
@@ -100,29 +168,99 @@ export function createDirectoryStore(
   const rootDir = async (): Promise<string> => {
     const dir = await getRootDir();
     if (!dir) {
-      throw new Error('The plugin directory is not available');
+      throw new Error('getPluginDirPath() returned nothing');
     }
     return dir;
   };
 
-  const entriesOf = async (dir: string, key: string): Promise<Entry[]> => {
-    const encodedKey = encodeName(key);
+  const checkWritable = async () => {
+    if (!(await ensureWritable())) {
+      throw new Error('FILE:WRITE / FILE:DELETE permission refused');
+    }
+  };
+
+  const listAll = async (dir: string): Promise<Entry[]> => {
+    if (!(await ensureReadable())) {
+      throw new Error('FILE:READ permission refused');
+    }
     const paths = (await fs.listFiles(dir)) ?? [];
     return paths
-      .map(path => parseEntry(baseName(path), encodedKey))
-      .filter((entry): entry is Entry => entry !== null)
+      .map(path => parseName(baseName(path)))
+      .filter((entry): entry is Entry => entry !== null);
+  };
+
+  const entriesOf = async (dir: string, key: string): Promise<Entry[]> => {
+    const encodedKey = encodeName(key);
+    return (await listAll(dir))
+      .filter(entry => entry.key === encodedKey)
       .sort((a, b) => a.index - b.index);
   };
 
-  const removeEntries = async (dir: string, entries: Entry[]) => {
-    if (entries.length > 0) {
+  const deleteEntry = async (path: string): Promise<boolean> =>
+    (await fs.deleteDir(path)) ||
+    (fs.deleteFile ? await fs.deleteFile(path) : false);
+
+  const removeNames = async (dir: string, names: string[]) => {
+    if (names.length > 0) {
       await checkWritable();
     }
-    for (const entry of entries) {
-      if (!(await fs.deleteDir(`${dir}/${entry.name}`))) {
-        throw new Error(`Could not delete ${entry.name}`);
+    for (const name of names) {
+      if (!(await deleteEntry(`${dir}/${name}`))) {
+        throw new Error(`Could not delete ${name.split(SEPARATOR)[0]}`);
       }
     }
+  };
+
+  const createEntry = async (
+    path: string,
+    kind: EntryKind,
+    seed: string | null,
+  ): Promise<boolean> => {
+    if (kind === 'directory') {
+      return fs.makeDir(path);
+    }
+    return seed && fs.copyFile ? fs.copyFile(seed, path) : false;
+  };
+
+  /** Writes the entries, then checks they are listed back. */
+  const writeAndVerify = async (
+    dir: string,
+    key: string,
+    value: string,
+    kind: EntryKind,
+  ): Promise<string | null> => {
+    const seed = kind === 'file' && findSeedFile ? await findSeedFile() : null;
+    if (kind === 'file' && !seed) {
+      return 'no seed file to copy';
+    }
+    const encodedKey = encodeName(key);
+    const names = splitChunks(encodeName(value)).map((chunk, index) =>
+      entryName(encodedKey, index, chunk),
+    );
+    const created: string[] = [];
+    for (const name of names) {
+      if (!(await createEntry(`${dir}/${name}`, kind, seed))) {
+        await removeNames(dir, created).catch(() => undefined);
+        return `${kind} entry not created`;
+      }
+      created.push(name);
+    }
+    let listed: string | null = null;
+    try {
+      listed = decodeEntries(await entriesOf(dir, key));
+    } catch {
+      listed = null;
+    }
+    if (listed === value) {
+      return null;
+    }
+    const visible =
+      fs.exists && created.length > 0
+        ? await fs.exists(`${dir}/${created[0]}`)
+        : undefined;
+    // Not listed back: remove what was written by name.
+    await removeNames(dir, created).catch(() => undefined);
+    return `${kind} entries created but not listed back (exists: ${visible})`;
   };
 
   return {
@@ -131,11 +269,8 @@ export function createDirectoryStore(
     getItem: key =>
       serialize(async () => {
         const entries = await entriesOf(await rootDir(), key);
-        if (entries.length === 0) {
-          return null;
-        }
         try {
-          return decodeURIComponent(entries.map(e => e.chunk).join(''));
+          return decodeEntries(entries);
         } catch (error) {
           console.warn(`[SuperTrello] Corrupted stored value: ${key}`, error);
           return null;
@@ -147,24 +282,61 @@ export function createDirectoryStore(
         await checkWritable();
         // Returns false when the directory already exists: not an error.
         await fs.makeDir(dir);
-        await removeEntries(dir, await entriesOf(dir, key));
-        const encodedKey = encodeName(key);
-        const chunks = splitChunks(encodeName(value));
-        for (let index = 0; index < chunks.length; index++) {
-          const name = [
-            encodedKey,
-            String(index).padStart(INDEX_DIGITS, '0'),
-            chunks[index],
-          ].join(SEPARATOR);
-          if (!(await fs.makeDir(`${dir}/${name}`))) {
-            throw new Error(`Could not create ${name}`);
-          }
+        if (fs.exists && !(await fs.exists(dir))) {
+          throw new Error('The state directory could not be created');
         }
+        await removeNames(
+          dir,
+          (await entriesOf(dir, key)).map(entry => entry.name),
+        );
+
+        const kinds: EntryKind[] =
+          entryKind === 'file' ? ['file'] : ['directory', 'file'];
+        const failures: string[] = [];
+        for (const kind of kinds) {
+          const failure = await writeAndVerify(dir, key, value, kind);
+          if (!failure) {
+            entryKind = kind;
+            lastError = null;
+            return;
+          }
+          failures.push(failure);
+        }
+        throw new Error(failures.join('; '));
       }),
     removeItem: key =>
       serialize(async () => {
         const dir = await rootDir();
-        await removeEntries(dir, await entriesOf(dir, key));
+        await removeNames(
+          dir,
+          (await entriesOf(dir, key)).map(entry => entry.name),
+        );
       }),
+    diagnose: async () => {
+      const diagnostics: StoreDiagnostics = {
+        backend: 'pluginDirectory',
+        rootDir: null,
+        entries: null,
+        entryKind,
+        lastError,
+      };
+      try {
+        diagnostics.rootDir = await getRootDir();
+        if (diagnostics.rootDir) {
+          diagnostics.rootExists = fs.exists
+            ? await fs.exists(diagnostics.rootDir)
+            : undefined;
+          diagnostics.entries = (await listAll(diagnostics.rootDir)).map(
+            entry =>
+              `${decodeURIComponent(entry.key)}#${entry.index} (${
+                entry.chunk.length
+              } chars)`,
+          );
+        }
+      } catch (error) {
+        diagnostics.lastError = `diagnose: ${errorMessage(error)}`;
+      }
+      return diagnostics;
+    },
   };
 }

@@ -3,6 +3,22 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.6.2 — More robust token saving, with storage diagnostics
+
+- Reported on device: saving the token on the tablet did not work.
+- Every write to the plugin directory is now read back; a value that cannot
+  be found again counts as a failure instead of silently being lost.
+- If the host does not list the empty directories back, entries are created
+  as copies of a small file of the plugin package (`FileUtils.copyFile`),
+  and that mode is kept for the next writes.
+- The storage asks for `FILE:READ` before listing the directory, including
+  at startup when the saved token is looked for.
+- New "Storage diagnostics" button on the connect and boards screens:
+  backend, permission states, plugin directory, entries (values masked,
+  only their length), copy seed and last error.
+- Unit tests for the read-back check, the file fallback and the masking.
+- Bumped the plugin to version 0.6.2 (`versionCode` 12).
+
 ## 0.6.1 — More legible labels
 
 - Reported on device: yellow labels did not stand out from the white card.

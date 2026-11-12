@@ -110,7 +110,7 @@ describe('createDirectoryStore permissions', () => {
   it('asks for write access only when something is written', async () => {
     const {fs} = makeFileSystem();
     const ensureWritable = jest.fn(async () => true);
-    const store = createDirectoryStore(async () => ROOT, fs, ensureWritable);
+    const store = createDirectoryStore(async () => ROOT, fs, {ensureWritable});
 
     await store.getItem('token');
     await store.removeItem('token');
@@ -122,12 +122,76 @@ describe('createDirectoryStore permissions', () => {
 
   it('fails without writing when access is refused', async () => {
     const {fs, dirs} = makeFileSystem();
-    const store = createDirectoryStore(
-      async () => ROOT,
-      fs,
-      async () => false,
-    );
+    const store = createDirectoryStore(async () => ROOT, fs, {
+      ensureWritable: async () => false,
+    });
     await expect(store.setItem('token', 'x')).rejects.toThrow();
     expect(dirs.size).toBe(0);
+  });
+
+  it('fails to read when read access is refused', async () => {
+    const {fs} = makeFileSystem();
+    const store = createDirectoryStore(async () => ROOT, fs, {
+      ensureReadable: async () => false,
+    });
+    await expect(store.getItem('token')).rejects.toThrow('FILE:READ');
+  });
+});
+
+describe('createDirectoryStore on hosts that do not list directories', () => {
+  /** Like the SDK if `listFiles` only returned files, not directories. */
+  function makeFilesOnlySystem() {
+    const dirs = new Set<string>([ROOT]);
+    const files = new Set<string>(['/plugin/PluginConfig.json']);
+    const fs: DirectoryFileSystem = {
+      makeDir: async path => !dirs.has(path) && !!dirs.add(path),
+      listFiles: async path =>
+        [...files].filter(
+          f =>
+            f.startsWith(`${path}/`) && !f.slice(path.length + 1).includes('/'),
+        ),
+      deleteDir: async path => dirs.delete(path),
+      deleteFile: async path => files.delete(path),
+      exists: async path => dirs.has(path) || files.has(path),
+      copyFile: async (source, dest) =>
+        files.has(source) && !files.has(dest) && !!files.add(dest),
+    };
+    return {fs, dirs, files};
+  }
+
+  it('falls back to copies of a seed file and reads them back', async () => {
+    const {fs, dirs, files} = makeFilesOnlySystem();
+    const store = createDirectoryStore(async () => ROOT, fs, {
+      findSeedFile: async () => '/plugin/PluginConfig.json',
+    });
+    await store.setItem('token', 'ATTA1234');
+    expect(await store.getItem('token')).toBe('ATTA1234');
+    expect(files.has(`${ROOT}/token~000~ATTA1234`)).toBe(true);
+    // The unlisted directory entries were cleaned up.
+    expect([...dirs].filter(d => d.includes('~'))).toHaveLength(0);
+
+    await store.removeItem('token');
+    expect(await store.getItem('token')).toBeNull();
+    expect(store.diagnose && (await store.diagnose()).entryKind).toBe('file');
+  });
+
+  it('reports why saving failed when nothing can be listed back', async () => {
+    const {fs} = makeFilesOnlySystem();
+    const store = createDirectoryStore(async () => ROOT, fs);
+    await expect(store.setItem('token', 'x')).rejects.toThrow(
+      /not listed back.*no seed file/,
+    );
+    expect((await store.diagnose()).lastError).toMatch(/not listed back/);
+  });
+
+  it('masks stored values in diagnostics', async () => {
+    const {fs} = makeFileSystem();
+    const store = createDirectoryStore(async () => ROOT, fs);
+    await store.setItem('supertrello.trello.token', 'SECRET');
+    const diagnostics = await store.diagnose();
+    expect(diagnostics.entries).toEqual([
+      'supertrello.trello.token#0 (6 chars)',
+    ]);
+    expect(JSON.stringify(diagnostics)).not.toContain('SECRET');
   });
 });

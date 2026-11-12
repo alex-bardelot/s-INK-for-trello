@@ -5,6 +5,7 @@ import {useTranslation} from '../i18n';
 import {TokenStorage} from '../session/trelloSession';
 import {borders, colors, spacing, typography} from '../theme';
 import {Button} from './Button';
+import {StorageDiagnostics} from './StorageDiagnostics';
 
 export interface TokenStorageNoticeProps {
   tokenStorage: TokenStorage;
@@ -63,6 +64,7 @@ export function TokenStorageNotice({
         label={t(saved ? 'storage.forget' : 'storage.save')}
         onPress={() => (saved ? onChange(false) : setConfirming(true))}
       />
+      <StorageDiagnostics />
     </View>
   );
 }
