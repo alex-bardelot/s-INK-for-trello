@@ -90,7 +90,8 @@ The package is written to `build/outputs/SuperTrello.snplg`.
 1. Press the SuperTrello button and allow Internet access when asked.
 2. Open the displayed address in a browser (the tablet's, or any other
    device's), sign in to Trello and press **Allow**.
-3. Trello displays a token: type it in the plugin and press **Connect**.
+3. Trello displays a token: copy it and press **Paste token** in the plugin
+   (or type it and press **Connect**).
 
 How the connection works and why:
 
@@ -119,6 +120,7 @@ and install the new package the same way.
 │   ├── components/          # Shared UI components
 │   ├── i18n/                # Localization (catalogs, locale resolution, hook)
 │   │   └── locales/         # One JSON catalog per language
+│   ├── platform/            # Host capability wrappers (clipboard)
 │   ├── plugin/              # Supernote SDK integration (init, buttons, permissions)
 │   ├── screens/             # Screens
 │   ├── session/             # Trello account lifecycle (restore, connect, disconnect)

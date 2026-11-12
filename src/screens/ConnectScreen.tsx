@@ -11,8 +11,9 @@ import {
 import {Button} from '../components/Button';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {TranslationKey, useTranslation} from '../i18n';
+import {isClipboardAvailable, readClipboardText} from '../platform/clipboard';
 import {SessionErrorCode} from '../session/trelloSession';
-import {buildAuthorizeUrl, TRELLO_API_KEY} from '../trello';
+import {buildAuthorizeUrl, normalizeToken, TRELLO_API_KEY} from '../trello';
 import {borders, colors, spacing, typography} from '../theme';
 
 const ERROR_MESSAGES: Record<SessionErrorCode, TranslationKey> = {
@@ -56,6 +57,7 @@ export function ConnectScreen({
   const {t} = useTranslation();
   const [token, setToken] = useState('');
   const [browserError, setBrowserError] = useState(false);
+  const [pasteError, setPasteError] = useState<TranslationKey | null>(null);
   const authorizeUrl = useMemo(
     () => buildAuthorizeUrl({apiKey: TRELLO_API_KEY}),
     [],
@@ -71,6 +73,24 @@ export function ConnectScreen({
   }, [authorizeUrl]);
 
   const submit = useCallback(() => onConnect(token), [onConnect, token]);
+
+  // Long-press paste is not offered in the plugin view: read the clipboard
+  // directly and connect at once when it holds something token-shaped.
+  const paste = useCallback(async () => {
+    if (!isClipboardAvailable()) {
+      setPasteError('connect.clipboardUnavailable');
+      return;
+    }
+    const text = await readClipboardText();
+    setPasteError(text ? null : 'connect.clipboardEmpty');
+    if (!text) {
+      return;
+    }
+    setToken(text.trim());
+    if (normalizeToken(text)) {
+      onConnect(text);
+    }
+  }, [onConnect]);
 
   return (
     <ScreenFrame title={t('connect.title')}>
@@ -121,12 +141,20 @@ export function ConnectScreen({
             />
             <View style={styles.actions}>
               <Button
+                disabled={busy}
+                label={t('connect.paste')}
+                onPress={paste}
+              />
+              <Button
                 primary
                 disabled={busy || token.trim().length === 0}
                 label={busy ? t('connect.connecting') : t('connect.submit')}
                 onPress={submit}
               />
             </View>
+            {pasteError && (
+              <Text style={styles.paragraph}>{t(pasteError)}</Text>
+            )}
 
             {!persistentStorage && (
               <Text style={[styles.paragraph, styles.note]}>
@@ -181,5 +209,7 @@ const styles = StyleSheet.create({
   },
   actions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
   },
 });

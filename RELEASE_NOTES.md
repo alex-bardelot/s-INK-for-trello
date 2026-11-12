@@ -3,6 +3,14 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.2.1 — Paste the Trello token
+
+- Added a "Paste token" button on the connection screen: the long-press
+  paste menu of text fields does not work in the Supernote plugin view.
+  It reads the clipboard through React Native's core Android clipboard
+  module and connects at once when the content looks like a token.
+- Explains when the clipboard is empty or cannot be read on the device.
+
 ## Unreleased — Trello API key
 
 - Configured the SuperTrello Trello API key in `src/trello/config.ts`
