@@ -3,6 +3,19 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.3.2 — Read the lasso selection before opening the view
+
+- Reported on device: error 904 "No lasso action has been performed". The
+  host drops the lasso once the plugin view is shown, so reading the
+  selection from the card screen always came too late.
+- The lasso button now only emits its event (`showType` 0): the selection is
+  read immediately in the button listener, then the view is opened with
+  `PluginManager.showPluginView()` and the card flow uses that result.
+- Removed the "Retry" button of the no-text screen (the lasso is gone by
+  then) and added a hint to close, select again and press the button.
+- Unit tests for reading the selection at press time.
+- Bumped the plugin to version 0.3.2 (`versionCode` 6).
+
 ## 0.3.1 — More robust lasso text reading
 
 - Reported on device: the lasso text was not recognized.

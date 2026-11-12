@@ -71,7 +71,8 @@ export function recognizedText(response: unknown): string {
     return result.trim();
   }
   if (result && typeof result === 'object') {
-    const candidate = (result as {text?: unknown; content?: unknown}).text ??
+    const candidate =
+      (result as {text?: unknown; content?: unknown}).text ??
       (result as {content?: unknown}).content;
     if (typeof candidate === 'string') {
       return candidate.trim();
@@ -212,7 +213,8 @@ export async function readLassoText(): Promise<LassoTextResult> {
   console.warn('[SuperTrello] No text in the lasso selection\n' + diagnostics);
   return {
     ok: false,
-    error: handwritingCandidates.length > 0 ? 'recognitionFailed' : 'noSelection',
+    error:
+      handwritingCandidates.length > 0 ? 'recognitionFailed' : 'noSelection',
     diagnostics,
   };
 }

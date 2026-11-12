@@ -52,5 +52,6 @@
   "card.creating": "カードを作成しています…",
   "card.created": "{board} › {list} にカードを作成しました：",
   "card.writeManually": "カードを手動で入力",
-  "card.diagnostics": "診断情報"
+  "card.diagnostics": "診断情報",
+  "card.selectAgain": "もう一度試すには、この画面を閉じ、なげなわで文字を選択し直してから「Trello カードを追加」を押してください。"
 }

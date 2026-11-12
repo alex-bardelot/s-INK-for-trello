@@ -130,20 +130,45 @@ describe('card preferences', () => {
 });
 
 describe('launch intent', () => {
+  const readText = () => Promise.resolve({ok: true as const, text: 'Buy milk'});
+
   it('follows the pressed button', () => {
-    handleButtonPress(ButtonId.LassoCreateCard);
+    handleButtonPress(ButtonId.LassoCreateCard, readText);
     const first = getLaunchIntent();
     expect(first.kind).toBe('lassoCreateCard');
 
-    handleButtonPress(ButtonId.LassoCreateCard);
+    handleButtonPress(ButtonId.LassoCreateCard, readText);
     const second = getLaunchIntent();
     expect(second).not.toEqual(first);
 
     handleButtonPress(ButtonId.Open);
     expect(getLaunchIntent()).toEqual({kind: 'boards'});
 
-    handleButtonPress(9999);
+    expect(handleButtonPress(9999)).toBeNull();
     expect(getLaunchIntent()).toEqual({kind: 'boards'});
+  });
+
+  it('reads the lasso selection when the button is pressed', async () => {
+    const read = jest.fn(readText);
+    const intent = handleButtonPress(ButtonId.LassoCreateCard, read);
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(intent?.kind).toBe('lassoCreateCard');
+    if (intent?.kind === 'lassoCreateCard') {
+      await expect(intent.lasso).resolves.toEqual({ok: true, text: 'Buy milk'});
+    }
+  });
+
+  it('turns a failing reader into a "no selection" result', async () => {
+    const intent = handleButtonPress(ButtonId.LassoCreateCard, () =>
+      Promise.reject(new Error('boom')),
+    );
+    if (intent?.kind !== 'lassoCreateCard') {
+      throw new Error('Expected a lasso intent');
+    }
+    await expect(intent.lasso).resolves.toMatchObject({
+      ok: false,
+      error: 'noSelection',
+    });
   });
 });
 

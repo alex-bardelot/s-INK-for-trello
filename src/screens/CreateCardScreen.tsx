@@ -18,7 +18,7 @@ import {Button} from '../components/Button';
 import {ChoiceList} from '../components/ChoiceList';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {TranslationKey, useTranslation} from '../i18n';
-import {LassoTextError, readLassoText} from '../plugin/lassoText';
+import {LassoTextError, LassoTextResult} from '../plugin/lassoText';
 import {SessionErrorCode, toSessionError} from '../session/trelloSession';
 import {KeyValueStore} from '../storage/keyValueStore';
 import {TrelloBoard, TrelloCard, TrelloClient, TrelloList} from '../trello';
@@ -51,6 +51,8 @@ const SESSION_ERRORS: Record<SessionErrorCode, TranslationKey> = {
 };
 
 export interface CreateCardScreenProps {
+  /** Text of the lasso selection, read when the button was pressed. */
+  lasso: Promise<LassoTextResult>;
   client: TrelloClient;
   store: KeyValueStore;
   /** Called when Trello rejects the token. */
@@ -62,6 +64,7 @@ export interface CreateCardScreenProps {
  * read the text → pick a board → pick a list → review → create.
  */
 export function CreateCardScreen({
+  lasso,
   client,
   store,
   onTokenRejected,
@@ -109,24 +112,24 @@ export function CreateCardScreen({
 
   const start = useCallback(async () => {
     setStep({kind: 'loading'});
-    const [lasso, prefs] = await Promise.all([
-      readLassoText(),
+    const [lassoText, prefs] = await Promise.all([
+      lasso,
       loadCardPreferences(store),
     ]);
     preferences.current = prefs;
-    if (!lasso.ok) {
+    if (!lassoText.ok) {
       setStep({
         kind: 'noText',
-        error: lasso.error,
-        diagnostics: lasso.diagnostics,
+        error: lassoText.error,
+        diagnostics: lassoText.diagnostics,
       });
       return;
     }
-    const split = splitCardText(lasso.text);
+    const split = splitCardText(lassoText.text);
     setName(split.name);
     setDesc(split.desc);
     await loadBoards(prefs);
-  }, [loadBoards, store]);
+  }, [lasso, loadBoards, store]);
 
   /** Continues without recognized text: the user types the card. */
   const writeManually = useCallback(async () => {
@@ -206,12 +209,12 @@ export function CreateCardScreen({
         <ScreenFrame title={title}>
           <ScrollView contentContainerStyle={styles.stack}>
             <Text style={styles.message}>{t(LASSO_ERRORS[step.error])}</Text>
+            <Text style={styles.message}>{t('card.selectAgain')}</Text>
             <Button
               primary
               label={t('card.writeManually')}
               onPress={writeManually}
             />
-            <Button label={t('common.retry')} onPress={start} />
             <Button label={t('common.close')} onPress={close} />
             {step.diagnostics ? (
               <View style={styles.diagnostics}>

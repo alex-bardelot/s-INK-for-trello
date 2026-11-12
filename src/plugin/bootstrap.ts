@@ -39,7 +39,21 @@ export function bootstrapPlugin(): void {
     .finally(() => {
       // The SDK requires buttons to be registered before the listener.
       PluginManager.registerButtonListener({
-        onButtonPress: event => handleButtonPress(event.id),
+        onButtonPress: event => {
+          const intent = handleButtonPress(event.id);
+          if (intent?.kind === 'lassoCreateCard') {
+            // The lasso button does not open the view by itself: the
+            // selection must be read before the host drops the lasso.
+            intent.lasso.finally(() =>
+              PluginManager.showPluginView().catch(error =>
+                console.warn(
+                  `${LOG_TAG} Failed to show the plugin view`,
+                  error,
+                ),
+              ),
+            );
+          }
+        },
       });
     });
 }

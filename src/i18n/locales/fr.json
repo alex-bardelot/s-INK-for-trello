@@ -52,5 +52,6 @@
   "card.creating": "Création de la carte…",
   "card.created": "Carte créée dans {board} › {list} :",
   "card.writeManually": "Écrire la carte à la main",
-  "card.diagnostics": "Diagnostic"
+  "card.diagnostics": "Diagnostic",
+  "card.selectAgain": "Pour réessayer, fermez cette vue, sélectionnez à nouveau le texte au lasso puis appuyez sur « Ajouter une carte Trello »."
 }

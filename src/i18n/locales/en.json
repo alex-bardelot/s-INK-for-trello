@@ -52,5 +52,6 @@
   "card.creating": "Creating the card…",
   "card.created": "Card created in {board} › {list}:",
   "card.writeManually": "Write the card manually",
-  "card.diagnostics": "Diagnostics"
+  "card.diagnostics": "Diagnostics",
+  "card.selectAgain": "To try again, close this view, select the text with the lasso again and press “Add a Trello card”."
 }

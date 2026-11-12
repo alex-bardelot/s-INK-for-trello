@@ -52,5 +52,6 @@
   "card.creating": "正在创建卡片…",
   "card.created": "已在 {board} › {list} 中创建卡片：",
   "card.writeManually": "手动填写卡片",
-  "card.diagnostics": "诊断信息"
+  "card.diagnostics": "诊断信息",
+  "card.selectAgain": "如需重试，请关闭此视图，用套索重新选择文字，然后点击“添加 Trello 卡片”。"
 }

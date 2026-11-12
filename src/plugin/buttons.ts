@@ -36,7 +36,8 @@ export async function registerButtons(): Promise<boolean> {
       id: ButtonId.LassoCreateCard,
       name: i18n.t('button.lasso.createCard'),
       icon: ICON_URI,
-      showType: ButtonShowType.ShowView,
+      // The view is opened by the button listener once the selection is read.
+      showType: ButtonShowType.EventOnly,
       editDataTypes: [LassoDataType.Stroke, LassoDataType.Text],
     }),
   ]);

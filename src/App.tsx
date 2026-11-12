@@ -31,6 +31,7 @@ export default function App(): React.JSX.Element {
         return (
           <CreateCardScreen
             key={intent.requestId}
+            lasso={intent.lasso}
             client={state.client}
             store={session.store}
             onTokenRejected={session.retry}
