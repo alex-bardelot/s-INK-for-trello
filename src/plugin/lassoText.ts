@@ -1,5 +1,8 @@
 import {PluginCommAPI, PluginFileAPI, PluginNoteAPI} from 'sn-plugin-lib';
 
+import {i18n} from '../i18n';
+import {ensureFileReadPermission} from './permissions';
+
 /** Element types, from `Element.TYPE_*` in the Supernote SDK. */
 const ElementType = {
   Stroke: 0,
@@ -31,7 +34,10 @@ interface LassoElement {
 type Size = {width: number; height: number};
 
 /** Why no text could be taken from the lasso selection. */
-export type LassoTextError = 'noSelection' | 'recognitionFailed';
+export type LassoTextError =
+  | 'noSelection'
+  | 'recognitionFailed'
+  | 'permissionDenied';
 
 export type LassoTextResult =
   | {ok: true; text: string}
@@ -158,6 +164,16 @@ function countTypes(elements: LassoElement[]): string {
  * Several strategies are tried in turn, since the SDK documents little.
  */
 export async function readLassoText(): Promise<LassoTextResult> {
+  // getLassoElements is a file read API: without FILE:READ the host rejects it.
+  if (
+    !(await ensureFileReadPermission(i18n.t('card.filePermissionRationale')))
+  ) {
+    return {
+      ok: false,
+      error: 'permissionDenied',
+      diagnostics: 'FILE:READ permission not granted',
+    };
+  }
   const log: string[] = [];
   let elements: LassoElement[] = [];
   try {

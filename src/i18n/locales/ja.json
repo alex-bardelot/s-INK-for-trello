@@ -53,5 +53,7 @@
   "card.created": "{board} › {list} にカードを作成しました：",
   "card.writeManually": "カードを手動で入力",
   "card.diagnostics": "診断情報",
-  "card.selectAgain": "もう一度試すには、この画面を閉じ、なげなわで文字を選択し直してから「Trello カードを追加」を押してください。"
+  "card.selectAgain": "もう一度試すには、この画面を閉じ、なげなわで文字を選択し直してから「Trello カードを追加」を押してください。",
+  "card.filePermissionRationale": "なげなわで選択した内容を Trello カードにするため、SuperTrello はノートを読み取る必要があります。今後確認しないようにするには「常に許可」を選択してください。",
+  "card.filePermissionDenied": "ノートの読み取りが許可されていないため、なげなわの選択範囲を読み取れません。プラグイン設定で SuperTrello のファイルアクセスを許可してから、もう一度お試しください。"
 }

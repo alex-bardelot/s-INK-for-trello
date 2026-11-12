@@ -38,6 +38,7 @@ type Step =
 const LASSO_ERRORS: Record<LassoTextError, TranslationKey> = {
   noSelection: 'card.noSelection',
   recognitionFailed: 'card.recognitionFailed',
+  permissionDenied: 'card.filePermissionDenied',
 };
 
 const SESSION_ERRORS: Record<SessionErrorCode, TranslationKey> = {

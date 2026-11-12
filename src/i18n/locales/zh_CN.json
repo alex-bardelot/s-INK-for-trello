@@ -53,5 +53,7 @@
   "card.created": "已在 {board} › {list} 中创建卡片：",
   "card.writeManually": "手动填写卡片",
   "card.diagnostics": "诊断信息",
-  "card.selectAgain": "如需重试，请关闭此视图，用套索重新选择文字，然后点击“添加 Trello 卡片”。"
+  "card.selectAgain": "如需重试，请关闭此视图，用套索重新选择文字，然后点击“添加 Trello 卡片”。",
+  "card.filePermissionRationale": "SuperTrello 需要读取您的笔记，才能将套索选区转换为 Trello 卡片。选择“始终允许”可避免再次询问。",
+  "card.filePermissionDenied": "未允许读取笔记，无法读取套索选区。请在插件设置中允许 SuperTrello 访问文件，然后重试。"
 }

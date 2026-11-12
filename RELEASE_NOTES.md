@@ -3,6 +3,18 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.3.3 — Note read permission for the lasso
+
+- Reported on device: "file permission has not been requested, so related
+  APIs cannot be called". `getLassoElements` is a file read API and needs
+  `plugin.permission.FILE:READ`.
+- Declared `plugin.permission.FILE:READ` in `PluginConfig.json`.
+- The permission is requested when the plugin view opens (after the session
+  check) and, if still missing, right before reading the lasso selection.
+- New message when note access is refused; generic `ensurePermission`
+  helper replacing the Internet-only one.
+- Bumped the plugin to version 0.3.3 (`versionCode` 7).
+
 ## 0.3.2 — Read the lasso selection before opening the view
 
 - Reported on device: error 904 "No lasso action has been performed". The

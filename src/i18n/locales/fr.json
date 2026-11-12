@@ -53,5 +53,7 @@
   "card.created": "Carte créée dans {board} › {list} :",
   "card.writeManually": "Écrire la carte à la main",
   "card.diagnostics": "Diagnostic",
-  "card.selectAgain": "Pour réessayer, fermez cette vue, sélectionnez à nouveau le texte au lasso puis appuyez sur « Ajouter une carte Trello »."
+  "card.selectAgain": "Pour réessayer, fermez cette vue, sélectionnez à nouveau le texte au lasso puis appuyez sur « Ajouter une carte Trello ».",
+  "card.filePermissionRationale": "SuperTrello doit lire vos notes pour transformer la sélection au lasso en carte Trello. Choisissez « Toujours autoriser » pour ne plus être sollicité.",
+  "card.filePermissionDenied": "La lecture des notes n’a pas été autorisée : la sélection au lasso ne peut pas être lue. Autorisez l’accès aux fichiers pour SuperTrello dans les réglages des plugins, puis réessayez."
 }

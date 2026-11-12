@@ -1,7 +1,8 @@
-import React from 'react';
+import React, {useEffect, useRef} from 'react';
 
 import {useTranslation} from './i18n';
 import {useLaunchIntent} from './plugin/launchIntent';
+import {ensureFileReadPermission} from './plugin/permissions';
 import {BoardsScreen} from './screens/BoardsScreen';
 import {ConnectScreen} from './screens/ConnectScreen';
 import {CreateCardScreen} from './screens/CreateCardScreen';
@@ -22,6 +23,19 @@ export default function App(): React.JSX.Element {
   const session = useTrelloSession();
   const intent = useLaunchIntent();
   const {state} = session;
+
+  // Ask for note read access while the view is shown, so that the lasso
+  // button, which reads the selection before opening the view, already
+  // holds it. Choosing "Always allow" avoids being asked again. Waits for
+  // the session check, which may itself prompt for network access.
+  const sessionChecked = state.status !== 'checking';
+  const fileReadRequested = useRef(false);
+  useEffect(() => {
+    if (sessionChecked && !fileReadRequested.current) {
+      fileReadRequested.current = true;
+      ensureFileReadPermission(t('card.filePermissionRationale'));
+    }
+  }, [sessionChecked, t]);
 
   switch (state.status) {
     case 'checking':
