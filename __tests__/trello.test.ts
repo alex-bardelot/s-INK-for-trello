@@ -122,6 +122,20 @@ describe('TrelloClient', () => {
     );
   });
 
+  it('returns open cards of a board sorted by position', async () => {
+    const fetchImpl = jest.fn().mockResolvedValue(
+      jsonResponse([
+        {id: 'y', idList: 'l1', pos: 200},
+        {id: 'x', idList: 'l1', pos: 100},
+      ]),
+    );
+    const cards = await clientWith(fetchImpl).getBoardCards('b1');
+    expect(cards.map(c => c.id)).toEqual(['x', 'y']);
+    expect(fetchImpl.mock.calls[0][0]).toBe(
+      'https://api.trello.com/1/boards/b1/cards?filter=open&fields=name%2CidList%2Cpos%2Cdue%2CdueComplete%2Cbadges',
+    );
+  });
+
   it('creates a card with a JSON body', async () => {
     const fetchImpl = jest
       .fn()

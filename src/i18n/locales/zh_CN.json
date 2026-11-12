@@ -65,5 +65,19 @@
   "card.diagnostics": "诊断信息",
   "card.selectAgain": "如需重试，请关闭此视图，用套索重新选择文字，然后点击“添加 Trello 卡片”。",
   "card.filePermissionRationale": "SuperTrello 需要读取您的笔记，才能将套索选区转换为 Trello 卡片。选择“始终允许”可避免再次询问。",
-  "card.filePermissionDenied": "未允许读取笔记，无法读取套索选区。请在插件设置中允许 SuperTrello 访问文件，然后重试。"
+  "card.filePermissionDenied": "未允许读取笔记，无法读取套索选区。请在插件设置中允许 SuperTrello 访问文件，然后重试。",
+  "board.loading": "正在加载看板…",
+  "board.loadFailed": "无法加载此看板。",
+  "board.noLists": "此看板没有打开的列表。",
+  "board.noCards": "没有卡片",
+  "board.refresh": "刷新",
+  "board.columns": "{count} ▥",
+  "board.columnsHint": "并排显示 {count} 个列表。点按以更改。",
+  "board.listsRange": "列表 {from}–{to}，共 {total}",
+  "board.previousLists": "上一组列表",
+  "board.nextLists": "下一组列表",
+  "board.cardsPage": "{page}/{total}",
+  "board.previousCards": "上一页卡片",
+  "board.nextCards": "下一页卡片",
+  "board.due": "截止 {date}"
 }

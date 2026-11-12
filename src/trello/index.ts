@@ -10,6 +10,7 @@ export {
 export type {
   NewCard,
   TrelloBoard,
+  TrelloBoardCard,
   TrelloCard,
   TrelloList,
   TrelloMember,

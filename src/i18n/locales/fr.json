@@ -65,5 +65,19 @@
   "card.diagnostics": "Diagnostic",
   "card.selectAgain": "Pour réessayer, fermez cette vue, sélectionnez à nouveau le texte au lasso puis appuyez sur « Ajouter une carte Trello ».",
   "card.filePermissionRationale": "SuperTrello doit lire vos notes pour transformer la sélection au lasso en carte Trello. Choisissez « Toujours autoriser » pour ne plus être sollicité.",
-  "card.filePermissionDenied": "La lecture des notes n’a pas été autorisée : la sélection au lasso ne peut pas être lue. Autorisez l’accès aux fichiers pour SuperTrello dans les réglages des plugins, puis réessayez."
+  "card.filePermissionDenied": "La lecture des notes n’a pas été autorisée : la sélection au lasso ne peut pas être lue. Autorisez l’accès aux fichiers pour SuperTrello dans les réglages des plugins, puis réessayez.",
+  "board.loading": "Chargement du tableau…",
+  "board.loadFailed": "Ce tableau n’a pas pu être chargé.",
+  "board.noLists": "Ce tableau n’a aucune liste ouverte.",
+  "board.noCards": "Aucune carte",
+  "board.refresh": "Actualiser",
+  "board.columns": "{count} ▥",
+  "board.columnsHint": "{count} listes côte à côte. Appuyez pour changer.",
+  "board.listsRange": "Listes {from}–{to} sur {total}",
+  "board.previousLists": "Listes précédentes",
+  "board.nextLists": "Listes suivantes",
+  "board.cardsPage": "{page}/{total}",
+  "board.previousCards": "Cartes précédentes",
+  "board.nextCards": "Cartes suivantes",
+  "board.due": "Échéance {date}"
 }

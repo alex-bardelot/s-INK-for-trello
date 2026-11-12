@@ -65,5 +65,19 @@
   "card.diagnostics": "診断情報",
   "card.selectAgain": "もう一度試すには、この画面を閉じ、なげなわで文字を選択し直してから「Trello カードを追加」を押してください。",
   "card.filePermissionRationale": "なげなわで選択した内容を Trello カードにするため、SuperTrello はノートを読み取る必要があります。今後確認しないようにするには「常に許可」を選択してください。",
-  "card.filePermissionDenied": "ノートの読み取りが許可されていないため、なげなわの選択範囲を読み取れません。プラグイン設定で SuperTrello のファイルアクセスを許可してから、もう一度お試しください。"
+  "card.filePermissionDenied": "ノートの読み取りが許可されていないため、なげなわの選択範囲を読み取れません。プラグイン設定で SuperTrello のファイルアクセスを許可してから、もう一度お試しください。",
+  "board.loading": "ボードを読み込み中…",
+  "board.loadFailed": "このボードを読み込めませんでした。",
+  "board.noLists": "このボードには開いているリストがありません。",
+  "board.noCards": "カードなし",
+  "board.refresh": "更新",
+  "board.columns": "{count} ▥",
+  "board.columnsHint": "{count} 個のリストを並べて表示。押すと変更します。",
+  "board.listsRange": "リスト {from}–{to} / {total}",
+  "board.previousLists": "前のリスト",
+  "board.nextLists": "次のリスト",
+  "board.cardsPage": "{page}/{total}",
+  "board.previousCards": "前のカード",
+  "board.nextCards": "次のカード",
+  "board.due": "期限 {date}"
 }

@@ -10,6 +10,8 @@ export interface ScreenFrameProps {
   children: React.ReactNode;
   /** When set, a back button is shown before the title. */
   onBack?: () => void;
+  /** Extra controls shown between the title and the close button. */
+  actions?: React.ReactNode;
 }
 
 /** Common layout of the plugin screens: title bar with a close button. */
@@ -17,6 +19,7 @@ export function ScreenFrame({
   title,
   children,
   onBack,
+  actions,
 }: ScreenFrameProps): React.JSX.Element {
   const {t} = useTranslation();
 
@@ -42,6 +45,7 @@ export function ScreenFrame({
         <Text accessibilityRole="header" style={styles.title} numberOfLines={1}>
           {title}
         </Text>
+        {actions && <View style={styles.actions}>{actions}</View>}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('common.close')}
@@ -74,6 +78,12 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     fontSize: typography.heading,
     fontWeight: '700',
+  },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginHorizontal: spacing.md,
   },
   closeButton: {
     padding: spacing.sm,

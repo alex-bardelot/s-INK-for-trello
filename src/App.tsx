@@ -1,13 +1,15 @@
-import React, {useEffect, useRef} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 
 import {useTranslation} from './i18n';
 import {useLaunchIntent} from './plugin/launchIntent';
 import {ensureFileReadPermission} from './plugin/permissions';
+import {BoardScreen} from './screens/BoardScreen';
 import {BoardsScreen} from './screens/BoardsScreen';
 import {ConnectScreen} from './screens/ConnectScreen';
 import {CreateCardScreen} from './screens/CreateCardScreen';
 import {StatusScreen} from './screens/StatusScreen';
 import {useTrelloSession} from './session/useTrelloSession';
+import {TrelloBoard} from './trello';
 
 /**
  * Root component rendered by the Supernote plugin host when the
@@ -23,6 +25,7 @@ export default function App(): React.JSX.Element {
   const session = useTrelloSession();
   const intent = useLaunchIntent();
   const {state} = session;
+  const [openBoard, setOpenBoard] = useState<TrelloBoard | null>(null);
 
   // Ask for note read access while the view is shown, so that the lasso
   // button, which reads the selection before opening the view, already
@@ -52,6 +55,18 @@ export default function App(): React.JSX.Element {
           />
         );
       }
+      if (openBoard) {
+        return (
+          <BoardScreen
+            key={openBoard.id}
+            board={openBoard}
+            client={state.client}
+            store={session.settingsStore}
+            onBack={() => setOpenBoard(null)}
+            onTokenRejected={session.retry}
+          />
+        );
+      }
       return (
         <BoardsScreen
           member={state.member}
@@ -60,6 +75,7 @@ export default function App(): React.JSX.Element {
           saveFailed={state.saveFailed}
           onRememberChange={session.setRemembered}
           onDisconnect={session.disconnect}
+          onOpenBoard={setOpenBoard}
           onTokenRejected={session.retry}
         />
       );

@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useState} from 'react';
-import {FlatList, StyleSheet, Text, View} from 'react-native';
+import {FlatList, Pressable, StyleSheet, Text, View} from 'react-native';
 
 import {Button} from '../components/Button';
 import {ScreenFrame} from '../components/ScreenFrame';
@@ -22,6 +22,7 @@ export interface BoardsScreenProps {
   /** Saves the token on the tablet, or removes it from there. */
   onRememberChange: (remember: boolean) => void;
   onDisconnect: () => void;
+  onOpenBoard: (board: TrelloBoard) => void;
   /** Called when Trello rejects the token while loading. */
   onTokenRejected: () => void;
 }
@@ -34,6 +35,7 @@ export function BoardsScreen({
   saveFailed,
   onRememberChange,
   onDisconnect,
+  onOpenBoard,
   onTokenRejected,
 }: BoardsScreenProps): React.JSX.Element {
   const {t} = useTranslation();
@@ -94,11 +96,18 @@ export function BoardsScreen({
             <Text style={styles.message}>{t('boards.empty')}</Text>
           }
           renderItem={({item}) => (
-            <View style={styles.board}>
-              <Text style={styles.boardName} numberOfLines={2}>
-                {item.starred ? `★ ${item.name}` : item.name}
-              </Text>
-            </View>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => onOpenBoard(item)}
+              style={({pressed}) => [styles.board, pressed && styles.pressed]}>
+              {({pressed}) => (
+                <Text
+                  style={[styles.boardName, pressed && styles.pressedName]}
+                  numberOfLines={2}>
+                  {item.starred ? `★ ${item.name}` : item.name}
+                </Text>
+              )}
+            </Pressable>
           )}
         />
       )}
@@ -131,6 +140,13 @@ const styles = StyleSheet.create({
   },
   board: {
     paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+  },
+  pressed: {
+    backgroundColor: colors.foreground,
+  },
+  pressedName: {
+    color: colors.background,
   },
   boardName: {
     color: colors.foreground,

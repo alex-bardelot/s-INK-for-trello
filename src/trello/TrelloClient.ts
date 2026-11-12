@@ -3,6 +3,7 @@ import {TrelloApiError} from './errors';
 import {
   NewCard,
   TrelloBoard,
+  TrelloBoardCard,
   TrelloCard,
   TrelloList,
   TrelloMember,
@@ -29,6 +30,7 @@ interface RequestOptions {
 const MEMBER_FIELDS = 'username,fullName,initials,url';
 const BOARD_FIELDS = 'name,url,closed,starred,idOrganization';
 const LIST_FIELDS = 'name,closed,pos,idBoard';
+const BOARD_CARD_FIELDS = 'name,idList,pos,due,dueComplete,badges';
 
 /** Trello limits, from the REST reference of `POST /1/cards`. */
 export const CARD_NAME_MAX_LENGTH = 16384;
@@ -95,6 +97,18 @@ export class TrelloClient {
       throw new TrelloApiError('invalidResponse', 'Expected a list of lists');
     }
     return [...lists].sort((a, b) => a.pos - b.pos);
+  }
+
+  /** Returns the open cards of a board, sorted by position within their list. */
+  async getBoardCards(boardId: string): Promise<TrelloBoardCard[]> {
+    const cards = await this.request<TrelloBoardCard[]>(
+      `/boards/${encodeURIComponent(boardId)}/cards`,
+      {query: {filter: 'open', fields: BOARD_CARD_FIELDS}},
+    );
+    if (!Array.isArray(cards)) {
+      throw new TrelloApiError('invalidResponse', 'Expected a list of cards');
+    }
+    return [...cards].sort((a, b) => a.pos - b.pos);
   }
 
   /** Creates a card at the bottom of a list. */

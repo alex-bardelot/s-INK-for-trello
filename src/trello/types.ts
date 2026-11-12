@@ -33,6 +33,26 @@ export interface TrelloList {
   idBoard: string;
 }
 
+/** Summary counters Trello computes for a card. */
+export interface TrelloCardBadges {
+  checkItems: number;
+  checkItemsChecked: number;
+  /** `true` when the card has a description. */
+  description: boolean;
+}
+
+/** A card of a board, as shown on the board view (`GET /1/boards/{id}/cards`). */
+export interface TrelloBoardCard {
+  id: string;
+  name: string;
+  idList: string;
+  pos: number;
+  /** Due date as an ISO 8601 string, or `null`. */
+  due: string | null;
+  dueComplete: boolean;
+  badges: TrelloCardBadges;
+}
+
 /** A card, as returned by `POST /1/cards`. */
 export interface TrelloCard {
   id: string;

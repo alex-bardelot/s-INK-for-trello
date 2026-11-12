@@ -3,6 +3,25 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.5.0 — Board view
+
+- Pressing a board in "Your boards" opens it: its open lists are shown side
+  by side with their cards (title on up to 2 lines, due date, checklist
+  progress, description marker).
+- 2 lists side by side in portrait and 3 in landscape by default. A header
+  button switches between 1, 2 and 3 lists; the choice is remembered per
+  orientation.
+- Lists and cards are browsed page by page instead of scrolling (slow on
+  E Ink): ◀ ▶ under the lists, ▲ ▼ under each list. Cards have a fixed
+  height and a page only holds the cards that fit entirely, so they are
+  never drawn under the page buttons.
+- Two-finger swipe, like turning pages in a document: left/right for the
+  next/previous lists, up/down on a list for its next/previous cards.
+- Refresh button in the header. `ScreenFrame` accepts extra header actions.
+- Trello client: open cards of a board (`GET /1/boards/{id}/cards`).
+- Unit tests for paging, swipe detection, preferences and the new client call.
+- Bumped the plugin to version 0.5.0 (`versionCode` 9).
+
 ## 0.4.0 — Opt-in saving of the Trello token on the tablet
 
 - The token is now always kept in memory first: it survives closing the
