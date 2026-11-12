@@ -32,7 +32,6 @@
   "storage.confirmSave": "仍然儲存",
   "storage.saveFailed": "無法在此平板上儲存權杖。它將保留到平板重新啟動為止。",
   "storage.writePermissionRationale": "SuperTrello 需要存取自己的外掛資料夾，以便在此平板上儲存和讀取您的設定。",
-  "storage.diagnostics": "儲存診斷",
   "error.missingApiKey": "此版本未設定 Trello API 金鑰。請參閱 README。",
   "error.permissionDenied": "網路存取遭拒。請允許存取，讓 SuperTrello 能連線至 Trello。",
   "error.malformedToken": "這看起來不像 Trello 權杖。請檢查您的輸入。",

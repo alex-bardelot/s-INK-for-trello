@@ -32,7 +32,6 @@
   "storage.confirmSave": "Save anyway",
   "storage.saveFailed": "The token could not be saved on this tablet. It is kept until the tablet restarts.",
   "storage.writePermissionRationale": "SuperTrello needs access to its own plugin folder to save and read your settings on this tablet.",
-  "storage.diagnostics": "Storage diagnostics",
   "error.missingApiKey": "No Trello API key is configured in this build. See the README.",
   "error.permissionDenied": "Internet access was denied. Allow it so SuperTrello can reach Trello.",
   "error.malformedToken": "This does not look like a Trello token. Check what you typed.",

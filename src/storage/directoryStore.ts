@@ -36,22 +36,6 @@ export interface DirectoryStoreOptions {
   findSeedFile?: () => Promise<string | null>;
 }
 
-/** Diagnostic snapshot of a store, safe to show (values are masked). */
-export interface StoreDiagnostics {
-  backend: string;
-  rootDir: string | null;
-  rootExists?: boolean;
-  /** Entries found, as `key#index (n chars)`. */
-  entries: string[] | null;
-  entryKind: EntryKind;
-  lastError: string | null;
-}
-
-/** Store that can describe its state for troubleshooting on the device. */
-export interface DiagnosableStore extends KeyValueStore {
-  diagnose(): Promise<StoreDiagnostics>;
-}
-
 type EntryKind = 'directory' | 'file';
 
 /** Separates the key, the chunk index and the chunk in an entry name. */
@@ -96,10 +80,6 @@ export function listedPath(entry: unknown): string | null {
 function baseName(path: string): string {
   const trimmed = path.replace(/\/+$/, '');
   return trimmed.slice(trimmed.lastIndexOf('/') + 1);
-}
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 interface Entry {
@@ -168,27 +148,18 @@ export function createDirectoryStore(
   getRootDir: () => Promise<string | null>,
   fs: DirectoryFileSystem,
   options: DirectoryStoreOptions = {},
-): DiagnosableStore {
+): KeyValueStore {
   const {
     ensureWritable = async () => true,
     ensureReadable = async () => true,
     findSeedFile,
   } = options;
   let entryKind: EntryKind = 'directory';
-  let lastError: string | null = null;
 
   // Operations run one after the other so a read never sees half a write.
   let queue: Promise<unknown> = Promise.resolve();
   const serialize = <T>(operation: () => Promise<T>): Promise<T> => {
-    const run = async () => {
-      try {
-        return await operation();
-      } catch (error) {
-        lastError = errorMessage(error);
-        throw error;
-      }
-    };
-    const result = queue.then(run, run);
+    const result = queue.then(operation, operation);
     queue = result.catch(() => undefined);
     return result;
   };
@@ -327,7 +298,6 @@ export function createDirectoryStore(
           const failure = await writeAndVerify(dir, key, value, kind);
           if (!failure) {
             entryKind = kind;
-            lastError = null;
             return;
           }
           failures.push(failure);
@@ -342,31 +312,5 @@ export function createDirectoryStore(
           (await entriesOf(dir, key)).map(entry => entry.name),
         );
       }),
-    diagnose: async () => {
-      const diagnostics: StoreDiagnostics = {
-        backend: 'pluginDirectory',
-        rootDir: null,
-        entries: null,
-        entryKind,
-        lastError,
-      };
-      try {
-        diagnostics.rootDir = await getRootDir();
-        if (diagnostics.rootDir) {
-          diagnostics.rootExists = fs.exists
-            ? await fs.exists(diagnostics.rootDir)
-            : undefined;
-          diagnostics.entries = (await listAll(diagnostics.rootDir)).map(
-            entry =>
-              `${decodeURIComponent(entry.key)}#${entry.index} (${
-                entry.chunk.length
-              } chars)`,
-          );
-        }
-      } catch (error) {
-        diagnostics.lastError = `diagnose: ${errorMessage(error)}`;
-      }
-      return diagnostics;
-    },
   };
 }

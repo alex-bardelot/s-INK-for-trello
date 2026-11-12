@@ -32,7 +32,6 @@
   "storage.confirmSave": "保存する",
   "storage.saveFailed": "トークンをこのタブレットに保存できませんでした。タブレットの再起動まで保持されます。",
   "storage.writePermissionRationale": "このタブレットで設定を保存・読み込みするため、SuperTrello は自身のプラグインフォルダーにアクセスする必要があります。",
-  "storage.diagnostics": "ストレージ診断",
   "error.missingApiKey": "このビルドには Trello API キーが設定されていません。README を参照してください。",
   "error.permissionDenied": "インターネットへのアクセスが拒否されました。SuperTrello が Trello に接続できるよう許可してください。",
   "error.malformedToken": "Trello のトークンではないようです。入力内容を確認してください。",

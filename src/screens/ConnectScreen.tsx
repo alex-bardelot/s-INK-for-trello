@@ -10,7 +10,6 @@ import {
 
 import {Button} from '../components/Button';
 import {Checkbox} from '../components/Checkbox';
-import {StorageDiagnostics} from '../components/StorageDiagnostics';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {TranslationKey, useTranslation} from '../i18n';
 import {isClipboardAvailable, readClipboardText} from '../platform/clipboard';
@@ -176,9 +175,6 @@ export function ConnectScreen({
             {pasteError && (
               <Text style={styles.paragraph}>{t(pasteError)}</Text>
             )}
-            <View style={styles.step}>
-              <StorageDiagnostics />
-            </View>
           </>
         )}
       </ScrollView>

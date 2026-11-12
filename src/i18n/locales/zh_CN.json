@@ -32,7 +32,6 @@
   "storage.confirmSave": "仍然保存",
   "storage.saveFailed": "无法在此平板上保存令牌。它将保留到平板重启为止。",
   "storage.writePermissionRationale": "SuperTrello 需要访问自己的插件文件夹，以便在此平板上保存和读取您的设置。",
-  "storage.diagnostics": "存储诊断",
   "error.missingApiKey": "此版本未配置 Trello API 密钥。请参阅 README。",
   "error.permissionDenied": "网络访问被拒绝。请允许访问，以便 SuperTrello 连接 Trello。",
   "error.malformedToken": "这看起来不像 Trello 令牌。请检查您的输入。",

@@ -3,6 +3,13 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.6.4 — Remove the storage diagnostics
+
+- Saving the token now works on the device, so the "Storage diagnostics"
+  button is removed from the connect and boards screens, along with the
+  code behind it. The read-back check and the file fallback stay.
+- Bumped the plugin to version 0.6.4 (`versionCode` 14).
+
 ## 0.6.3 — Read the Android shape of FileUtils.listFiles
 
 - Likely cause of the token not being saved: on Android, `FileUtils.listFiles`

@@ -196,7 +196,12 @@ describe('createDirectoryStore on hosts that do not list directories', () => {
 
     await store.removeItem('token');
     expect(await store.getItem('token')).toBeNull();
-    expect(store.diagnose && (await store.diagnose()).entryKind).toBe('file');
+
+    // Later writes go straight to file entries.
+    const makeDir = jest.spyOn(fs, 'makeDir');
+    await store.setItem('token', 'B');
+    expect(makeDir).not.toHaveBeenCalledWith(`${ROOT}/token~000~B`);
+    expect(await store.getItem('token')).toBe('B');
   });
 
   it('reports why saving failed when nothing can be listed back', async () => {
@@ -205,17 +210,5 @@ describe('createDirectoryStore on hosts that do not list directories', () => {
     await expect(store.setItem('token', 'x')).rejects.toThrow(
       /not listed back.*no seed file/,
     );
-    expect((await store.diagnose()).lastError).toMatch(/not listed back/);
-  });
-
-  it('masks stored values in diagnostics', async () => {
-    const {fs} = makeFileSystem();
-    const store = createDirectoryStore(async () => ROOT, fs);
-    await store.setItem('supertrello.trello.token', 'SECRET');
-    const diagnostics = await store.diagnose();
-    expect(diagnostics.entries).toEqual([
-      'supertrello.trello.token#0 (6 chars)',
-    ]);
-    expect(JSON.stringify(diagnostics)).not.toContain('SECRET');
   });
 });
