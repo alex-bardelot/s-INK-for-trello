@@ -90,6 +90,10 @@
   "board.focusTagsTitle": "集中モードのタグ",
   "board.focusTagsHelp": "集中モードでは、自分に割り当てられた未完了のカードのうち、チェックしたタグのいずれかが付いたものを表示します。タグをチェックしない場合、タグは無視されます。",
   "board.focusTagsNone": "このボードのカードには名前付きのタグがありません。",
+  "board.review": "レビュー",
+  "board.reviewOffHint": "レビューモードはオフです。押すと完了済みのカードだけを表示します。",
+  "board.reviewOnHint": "レビューモードはオンです：完了済みのカードだけを表示しています。押すとすべてのカードを表示します。",
+  "board.reviewEmpty": "このボードには完了済みのカードがありません。",
   "board.focusPages": "ページ {page}/{total}",
   "board.previousPage": "前のページ",
   "board.nextPage": "次のページ"

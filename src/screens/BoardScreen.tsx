@@ -18,9 +18,11 @@ import {
   labelKey,
   ListBlock,
   loadFocusSettings,
+  reviewBoard,
   saveFocusSettings,
   stackLists,
   toggleFocusLabel,
+  toggleMode,
 } from '../board/focus';
 import {labelShade} from '../board/labels';
 import {
@@ -56,7 +58,7 @@ import {borders, colors, spacing, typography} from '../theme';
 
 const CARD_GAP = spacing.sm;
 const COLUMN_GAP = spacing.lg;
-/** Space between two lists stacked in the same column (Focus mode). */
+/** Space between two lists stacked in the same column (Focus, Review). */
 const LIST_GAP = spacing.lg;
 const AVATAR_SIZE = 36;
 const MAX_AVATARS = 3;
@@ -166,17 +168,35 @@ export function BoardScreen({
     [store],
   );
   const toggleFocus = useCallback(() => {
-    updateFocus({...focus, enabled: !focus.enabled});
+    updateFocus(toggleMode(focus, 'focus'));
     setTagsOpen(false);
   }, [focus, updateFocus]);
+  const toggleReview = useCallback(() => {
+    updateFocus(toggleMode(focus, 'review'));
+    setTagsOpen(false);
+  }, [focus, updateFocus]);
+  const focusOn = focus.mode === 'focus';
+  const reviewOn = focus.mode === 'review';
 
-  const focused = useMemo(
-    () =>
-      state.status === 'loaded' && focus.enabled
-        ? focusBoard(state.lists, state.cardsByList, memberId, focus.labels)
-        : null,
-    [focus.enabled, focus.labels, memberId, state],
-  );
+  // Focus and Review modes both show a filtered board, stacked.
+  const focused = useMemo(() => {
+    if (state.status !== 'loaded') {
+      return null;
+    }
+    switch (focus.mode) {
+      case 'focus':
+        return focusBoard(
+          state.lists,
+          state.cardsByList,
+          memberId,
+          focus.labels,
+        );
+      case 'review':
+        return reviewBoard(state.lists, state.cardsByList);
+      default:
+        return null;
+    }
+  }, [focus.labels, focus.mode, memberId, state]);
   const tagChoices = useMemo(
     () =>
       state.status === 'loaded'
@@ -221,12 +241,12 @@ export function BoardScreen({
           <SmallButton
             label={t('board.focus')}
             accessibilityLabel={t(
-              focus.enabled ? 'board.focusOnHint' : 'board.focusOffHint',
+              focusOn ? 'board.focusOnHint' : 'board.focusOffHint',
             )}
-            active={focus.enabled}
+            active={focusOn}
             onPress={toggleFocus}
           />
-          {focus.enabled && (
+          {focusOn && (
             <SmallButton
               label={t('board.focusTags')}
               accessibilityLabel={t('board.focusTagsHint')}
@@ -234,6 +254,14 @@ export function BoardScreen({
               onPress={() => setTagsOpen(open => !open)}
             />
           )}
+          <SmallButton
+            label={t('board.review')}
+            accessibilityLabel={t(
+              reviewOn ? 'board.reviewOnHint' : 'board.reviewOffHint',
+            )}
+            active={reviewOn}
+            onPress={toggleReview}
+          />
           <SmallButton
             label={t('board.refresh')}
             accessibilityLabel={t('board.refresh')}
@@ -256,7 +284,7 @@ export function BoardScreen({
         </View>
       )}
 
-      {state.status === 'loaded' && tagsOpen && focus.enabled && (
+      {state.status === 'loaded' && tagsOpen && focusOn && (
         <FocusTagsPanel
           choices={tagChoices}
           selected={focus.labels}
@@ -271,13 +299,14 @@ export function BoardScreen({
       )}
 
       {state.status === 'loaded' && !tagsOpen && focused && (
-        <FocusBoard
-          // Measured heights depend on the column width.
-          key={`${columns}-${width}`}
+        <StackedBoard
+          // Measured heights depend on the column width and on the mode.
+          key={`${focus.mode}-${columns}-${width}`}
           lists={focused.lists}
           cardsByList={focused.cardsByList}
           members={state.members}
           columns={columns}
+          emptyMessage={t(reviewOn ? 'board.reviewEmpty' : 'board.focusEmpty')}
         />
       )}
 
@@ -470,25 +499,28 @@ function ListHeader({
   );
 }
 
-interface FocusBoardProps {
+interface StackedBoardProps {
   lists: readonly TrelloList[];
   cardsByList: ReadonlyMap<string, TrelloBoardCard[]>;
   members: MembersById;
   columns: number;
+  /** Shown when no list is left. */
+  emptyMessage: string;
 }
 
 /**
- * Focus mode view. Lists hold few cards there, so they are stacked one under
+ * Focus and Review modes view. Lists hold few cards there, so they are stacked one under
  * another in the columns to show as much as possible on one page; what does
  * not fit goes to the next pages. As on the board view, lists and cards are
  * first laid out in an invisible layer to measure them.
  */
-function FocusBoard({
+function StackedBoard({
   lists,
   cardsByList,
   members,
   columns,
-}: FocusBoardProps): React.JSX.Element {
+  emptyMessage,
+}: StackedBoardProps): React.JSX.Element {
   const {t, locale} = useTranslation();
   const [area, setArea] = useState({width: 0, height: 0});
   const [heights, setHeights] = useState<Readonly<Record<string, number>>>({});
@@ -545,7 +577,7 @@ function FocusBoard({
   );
 
   if (lists.length === 0) {
-    return <Text style={styles.message}>{t('board.focusEmpty')}</Text>;
+    return <Text style={styles.message}>{emptyMessage}</Text>;
   }
 
   const listsById = new Map(lists.map(list => [list.id, list]));

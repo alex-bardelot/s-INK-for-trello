@@ -90,6 +90,10 @@
   "board.focusTagsTitle": "Focus mode tags",
   "board.focusTagsHelp": "Focus mode shows the cards assigned to you, not marked complete, that carry at least one of the checked tags. With no tag checked, the tags are ignored.",
   "board.focusTagsNone": "No card of this board has a named tag.",
+  "board.review": "Review",
+  "board.reviewOffHint": "Review mode is off. Press to show only the cards marked complete.",
+  "board.reviewOnHint": "Review mode is on: only the cards marked complete are shown. Press to show all cards.",
+  "board.reviewEmpty": "No card is marked complete on this board.",
   "board.focusPages": "Page {page}/{total}",
   "board.previousPage": "Previous page",
   "board.nextPage": "Next page"

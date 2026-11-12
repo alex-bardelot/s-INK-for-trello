@@ -90,6 +90,10 @@
   "board.focusTagsTitle": "Étiquettes du mode Focus",
   "board.focusTagsHelp": "Le mode Focus affiche les cartes qui vous sont attribuées, non terminées, et portant au moins une des étiquettes cochées. Sans étiquette cochée, les étiquettes sont ignorées.",
   "board.focusTagsNone": "Aucune carte de ce tableau n’a d’étiquette nommée.",
+  "board.review": "Revue",
+  "board.reviewOffHint": "Mode Revue désactivé. Appuyez pour n’afficher que les cartes terminées.",
+  "board.reviewOnHint": "Mode Revue activé : seules les cartes terminées sont affichées. Appuyez pour tout afficher.",
+  "board.reviewEmpty": "Aucune carte de ce tableau n’est terminée.",
   "board.focusPages": "Page {page}/{total}",
   "board.previousPage": "Page précédente",
   "board.nextPage": "Page suivante"

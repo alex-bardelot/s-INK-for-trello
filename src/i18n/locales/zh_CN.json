@@ -90,6 +90,10 @@
   "board.focusTagsTitle": "专注模式标签",
   "board.focusTagsHelp": "专注模式显示分配给您、未完成且至少带有一个已勾选标签的卡片。未勾选任何标签时，忽略标签。",
   "board.focusTagsNone": "此看板的卡片没有已命名的标签。",
+  "board.review": "回顾",
+  "board.reviewOffHint": "回顾模式已关闭。按下以仅显示已完成的卡片。",
+  "board.reviewOnHint": "回顾模式已开启：仅显示已完成的卡片。按下以显示所有卡片。",
+  "board.reviewEmpty": "此看板上没有已完成的卡片。",
   "board.focusPages": "第 {page}/{total} 页",
   "board.previousPage": "上一页",
   "board.nextPage": "下一页"

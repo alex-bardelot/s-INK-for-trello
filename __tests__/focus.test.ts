@@ -4,9 +4,11 @@ import {
   focusLabelChoices,
   isFocusCard,
   loadFocusSettings,
+  reviewBoard,
   saveFocusSettings,
   stackLists,
   toggleFocusLabel,
+  toggleMode,
 } from '../src/board/focus';
 import {createMemoryStore} from '../src/storage/keyValueStore';
 import {TrelloBoardCard, TrelloList} from '../src/trello';
@@ -77,6 +79,36 @@ describe('focusBoard', () => {
   });
 });
 
+describe('reviewBoard', () => {
+  it('keeps every completed card, whoever it is assigned to', () => {
+    const lists = [list('sprint'), list('backlog'), list('done')];
+    const cardsByList = new Map([
+      [
+        'sprint',
+        [
+          card('s1', 'sprint', {done: true, members: ['x']}),
+          card('s2', 'sprint'),
+        ],
+      ],
+      ['backlog', [card('b1', 'backlog')]],
+      ['done', [card('d1', 'done', {done: true}), card('d2', 'done')]],
+    ]);
+    const result = reviewBoard(lists, cardsByList);
+    expect(result.lists.map(l => l.id)).toEqual(['sprint', 'done']);
+    expect(result.cardsByList.get('sprint')?.map(c => c.id)).toEqual(['s1']);
+    expect(result.cardsByList.get('done')?.map(c => c.id)).toEqual(['d1']);
+  });
+});
+
+describe('toggleMode', () => {
+  it('keeps at most one mode on', () => {
+    const off = {mode: null, labels: ['TODO']};
+    expect(toggleMode(off, 'focus')).toEqual({mode: 'focus', labels: ['TODO']});
+    expect(toggleMode({...off, mode: 'focus'}, 'review').mode).toBe('review');
+    expect(toggleMode({...off, mode: 'review'}, 'review').mode).toBeNull();
+  });
+});
+
 describe('focus labels', () => {
   it('lists distinct named labels plus the selected ones', () => {
     const cards = [
@@ -96,25 +128,39 @@ describe('focus labels', () => {
     expect(toggleFocusLabel(['TODO', 'WIP'], 'todo')).toEqual(['WIP']);
   });
 
+  it('turns Focus mode on for settings saved by 0.7.0', async () => {
+    const store = createMemoryStore();
+    await store.setItem(
+      FOCUS_SETTINGS_KEY,
+      '{"enabled":true,"labels":["WIP"]}',
+    );
+    expect(await loadFocusSettings(store)).toEqual({
+      mode: 'focus',
+      labels: ['WIP'],
+    });
+  });
+
   it('round-trips the settings and survives corrupted values', async () => {
     const store = createMemoryStore();
     expect(await loadFocusSettings(store)).toEqual({
-      enabled: false,
+      mode: null,
       labels: [],
     });
-    await saveFocusSettings(store, {enabled: true, labels: ['TODO', 'WIP']});
+    await saveFocusSettings(store, {mode: 'review', labels: ['TODO', 'WIP']});
     expect(await loadFocusSettings(store)).toEqual({
-      enabled: true,
+      mode: 'review',
       labels: ['TODO', 'WIP'],
     });
     await store.setItem(FOCUS_SETTINGS_KEY, '{"enabled":"yes","labels":[1]}');
     expect(await loadFocusSettings(store)).toEqual({
-      enabled: false,
+      mode: null,
       labels: [],
     });
+    await store.setItem(FOCUS_SETTINGS_KEY, '{"mode":"zen"}');
+    expect((await loadFocusSettings(store)).mode).toBeNull();
     await store.setItem(FOCUS_SETTINGS_KEY, 'not json');
     expect(await loadFocusSettings(store)).toEqual({
-      enabled: false,
+      mode: null,
       labels: [],
     });
   });

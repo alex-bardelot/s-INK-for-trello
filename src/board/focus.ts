@@ -1,12 +1,21 @@
 import {KeyValueStore} from '../storage/keyValueStore';
 import {TrelloBoardCard, TrelloList} from '../trello';
 
-/** Storage key of the Focus mode settings, shared by every board. */
+/** Storage key of the board modes settings, shared by every board. */
 export const FOCUS_SETTINGS_KEY = 'supertrello.board.focus';
 
-/** Focus mode switch and the label names it keeps, e.g. `TODO` and `WIP`. */
+/**
+ * Filtered views of a board, of which at most one is on at a time: `focus`
+ * keeps the member's open work, `review` the cards marked complete.
+ */
+export type BoardMode = 'focus' | 'review';
+
+const BOARD_MODES: readonly BoardMode[] = ['focus', 'review'];
+
+/** The board mode that is on, and the label names Focus mode keeps. */
 export interface FocusSettings {
-  enabled: boolean;
+  /** `null`: the whole board is shown. */
+  mode: BoardMode | null;
   /**
    * Label names a card needs one of to stay in Focus mode, compared without
    * case. Empty: the labels are not checked.
@@ -15,9 +24,17 @@ export interface FocusSettings {
 }
 
 export const DEFAULT_FOCUS_SETTINGS: FocusSettings = {
-  enabled: false,
+  mode: null,
   labels: [],
 };
+
+/** Turns a mode on, or off when it is already on (the modes are exclusive). */
+export function toggleMode(
+  settings: FocusSettings,
+  mode: BoardMode,
+): FocusSettings {
+  return {...settings, mode: settings.mode === mode ? null : mode};
+}
 
 /** Normalized form of a label name, used to compare label names. */
 export function labelKey(name: string): string {
@@ -54,18 +71,42 @@ export function focusBoard(
   memberId: string,
   labels: readonly string[],
 ): {lists: TrelloList[]; cardsByList: Map<string, TrelloBoardCard[]>} {
-  const focused = new Map<string, TrelloBoardCard[]>();
+  return filterBoard(lists, cardsByList, card =>
+    isFocusCard(card, memberId, labels),
+  );
+}
+
+/** Whether a card belongs to the Review view: marked complete in Trello. */
+export function isReviewCard(card: TrelloBoardCard): boolean {
+  return card.dueComplete === true;
+}
+
+/**
+ * Keeps only the completed cards of a board, whoever they are assigned to,
+ * and only the lists that still hold at least one of them.
+ */
+export function reviewBoard(
+  lists: readonly TrelloList[],
+  cardsByList: ReadonlyMap<string, TrelloBoardCard[]>,
+): {lists: TrelloList[]; cardsByList: Map<string, TrelloBoardCard[]>} {
+  return filterBoard(lists, cardsByList, isReviewCard);
+}
+
+function filterBoard(
+  lists: readonly TrelloList[],
+  cardsByList: ReadonlyMap<string, TrelloBoardCard[]>,
+  keep: (card: TrelloBoardCard) => boolean,
+): {lists: TrelloList[]; cardsByList: Map<string, TrelloBoardCard[]>} {
+  const kept = new Map<string, TrelloBoardCard[]>();
   for (const list of lists) {
-    const cards = (cardsByList.get(list.id) ?? []).filter(card =>
-      isFocusCard(card, memberId, labels),
-    );
+    const cards = (cardsByList.get(list.id) ?? []).filter(keep);
     if (cards.length > 0) {
-      focused.set(list.id, cards);
+      kept.set(list.id, cards);
     }
   }
   return {
-    lists: lists.filter(list => focused.has(list.id)),
-    cardsByList: focused,
+    lists: lists.filter(list => kept.has(list.id)),
+    cardsByList: kept,
   };
 }
 
@@ -106,16 +147,21 @@ export function toggleFocusLabel(
     : [...labels, name.trim()];
 }
 
-/** Reads the Focus settings; any missing or corrupted value yields defaults. */
+/**
+ * Reads the board modes settings; any missing or corrupted value yields
+ * defaults. Settings saved before Review mode existed (`enabled: true`) turn
+ * Focus mode on.
+ */
 export async function loadFocusSettings(
   store: KeyValueStore,
 ): Promise<FocusSettings> {
   try {
     const raw = await store.getItem(FOCUS_SETTINGS_KEY);
-    const parsed: Partial<Record<keyof FocusSettings, unknown>> =
+    const parsed: Partial<Record<keyof FocusSettings | 'enabled', unknown>> =
       (raw ? JSON.parse(raw) : null) ?? {};
+    const mode = BOARD_MODES.find(candidate => candidate === parsed.mode);
     return {
-      enabled: parsed.enabled === true,
+      mode: mode ?? (parsed.enabled === true ? 'focus' : null),
       labels: Array.isArray(parsed.labels)
         ? parsed.labels.filter(
             (name): name is string =>
@@ -187,7 +233,8 @@ export function stackLists(
     let continued = false;
     do {
       const first = block.cards[index]?.height;
-      const opening = block.header + (first === undefined ? 0 : cardGap + first);
+      const opening =
+        block.header + (first === undefined ? 0 : cardGap + first);
       if (column.length > 0 && used + listGap + opening > columnHeight) {
         flush();
       }

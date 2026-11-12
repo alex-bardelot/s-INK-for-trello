@@ -3,6 +3,18 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.8.0 — Review mode
+
+- New **Review** switch in the board header, next to Focus. Review mode keeps
+  only the cards marked complete in Trello (`dueComplete`), whoever they are
+  assigned to; lists left without any card are hidden.
+- As in Focus mode, lists are stacked one under another in the columns so
+  that as much as possible fits on one page, with further pages when needed.
+- Focus and Review are exclusive: turning one on turns the other off. The
+  mode in use is remembered on the tablet; settings saved by 0.7.0 with Focus
+  on keep Focus on.
+- Bumped the plugin to version 0.8.0 (`versionCode` 18).
+
 ## 0.7.0 — Focus mode
 
 - New **Focus** switch in the board header (shown inverted when on). Focus
