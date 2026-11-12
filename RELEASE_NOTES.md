@@ -3,6 +3,15 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.6.1 — More legible labels
+
+- Reported on device: yellow labels did not stand out from the white card.
+  Label chips now have a light grey outline.
+- Mid-grey chips (e.g. purple, dark green) were hard to read with either
+  text color: chips are now pushed to a dark shade with white text or a
+  light shade with black text.
+- Bumped the plugin to version 0.6.1 (`versionCode` 11).
+
 ## 0.6.0 — Board view rendering, labels and members
 
 - List headers are now a dark grey band with white text; the outline around

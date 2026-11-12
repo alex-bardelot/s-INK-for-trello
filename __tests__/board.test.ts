@@ -129,6 +129,18 @@ describe('labelShade', () => {
     ).toBe(true);
   });
 
+  it('avoids mid greys: dark chips get white text, light chips black text', () => {
+    expect(labelShade('purple')).toEqual({
+      background: '#646464',
+      text: '#FFFFFF',
+    });
+    expect(labelShade('green_dark').text).toBe('#FFFFFF');
+    expect(labelShade('pink')).toEqual({
+      background: '#B4B4B4',
+      text: '#000000',
+    });
+  });
+
   it('falls back for unknown or missing colors', () => {
     expect(labelShade(null)).toEqual(labelShade('unknown'));
   });

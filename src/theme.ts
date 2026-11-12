@@ -10,6 +10,8 @@ export const colors = {
   /** Header band of the lists on the board view. */
   listHeader: '#5A5A5A',
   listHeaderText: '#FFFFFF',
+  /** Outline of label chips, so that light ones stand out on white cards. */
+  labelBorder: '#8A8A8A',
   /** Fallback disc behind member initials. */
   avatar: '#D0D0D0',
 } as const;

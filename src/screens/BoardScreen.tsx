@@ -584,6 +584,8 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
     justifyContent: 'center',
     borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: colors.labelBorder,
     paddingHorizontal: spacing.sm,
   },
   labelUnnamed: {
