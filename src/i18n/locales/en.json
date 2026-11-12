@@ -79,5 +79,6 @@
   "board.cardsPage": "{page}/{total}",
   "board.previousCards": "Previous cards",
   "board.nextCards": "Next cards",
-  "board.due": "Due {date}"
+  "board.due": "Due {date}",
+  "board.complete": "Complete"
 }

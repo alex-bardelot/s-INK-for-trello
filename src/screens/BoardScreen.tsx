@@ -397,9 +397,19 @@ function CardTile({
           ))}
         </View>
       )}
-      <Text style={styles.cardName} numberOfLines={3}>
-        {card.name}
-      </Text>
+      <View style={styles.cardTitle}>
+        {card.dueComplete && (
+          <View
+            style={styles.completeMark}
+            accessible
+            accessibilityLabel={t('board.complete')}>
+            <Text style={styles.completeMarkText}>✓</Text>
+          </View>
+        )}
+        <Text style={styles.cardName} numberOfLines={3}>
+          {card.name}
+        </Text>
+      </View>
       {(badges.length > 0 || cardMembers.length > 0) && (
         <View style={styles.cardFooter}>
           <Text style={styles.cardBadges} numberOfLines={1}>
@@ -596,7 +606,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
+  cardTitle: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+  },
+  completeMark: {
+    width: 24,
+    height: 24,
+    marginTop: 2,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.foreground,
+  },
+  completeMarkText: {
+    color: colors.background,
+    fontSize: 16,
+    fontWeight: '700',
+    lineHeight: 20,
+  },
   cardName: {
+    flex: 1,
     color: colors.foreground,
     fontSize: typography.body,
     lineHeight: 28,

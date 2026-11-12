@@ -79,5 +79,6 @@
   "board.cardsPage": "{page}/{total}",
   "board.previousCards": "上一頁卡片",
   "board.nextCards": "下一頁卡片",
-  "board.due": "截止 {date}"
+  "board.due": "截止 {date}",
+  "board.complete": "已完成"
 }

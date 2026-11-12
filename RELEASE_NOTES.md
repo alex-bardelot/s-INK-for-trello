@@ -3,6 +3,14 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.6.6 — Checkmark on completed cards
+
+- Cards marked complete in Trello (`dueComplete`, the checkbox next to the
+  card title) now show a black circle with a white ✓ before their name on the
+  board view, with or without a due date. Screen readers announce it as
+  "Complete" (translated in every locale).
+- Bumped the plugin to version 0.6.6 (`versionCode` 16).
+
 ## 0.6.5 — New plugin icon
 
 - Replaced the template's puzzle-piece icon with a SuperTrello icon: a board

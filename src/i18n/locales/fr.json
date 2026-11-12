@@ -79,5 +79,6 @@
   "board.cardsPage": "{page}/{total}",
   "board.previousCards": "Cartes précédentes",
   "board.nextCards": "Cartes suivantes",
-  "board.due": "Échéance {date}"
+  "board.due": "Échéance {date}",
+  "board.complete": "Terminée"
 }

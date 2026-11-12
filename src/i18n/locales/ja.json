@@ -79,5 +79,6 @@
   "board.cardsPage": "{page}/{total}",
   "board.previousCards": "前のカード",
   "board.nextCards": "次のカード",
-  "board.due": "期限 {date}"
+  "board.due": "期限 {date}",
+  "board.complete": "完了"
 }
