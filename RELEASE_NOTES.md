@@ -3,6 +3,11 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## Unreleased — Trello API key
+
+- Configured the SuperTrello Trello API key in `src/trello/config.ts`
+  (public by design; user tokens remain the only secret).
+
 ## 0.2.0 — Trello account connection
 
 - Added a dependency-free Trello REST client (`src/trello/`) built from the
