@@ -13,6 +13,7 @@ newest first.
   `name`, `fileName`), for the store and for the copy seed lookup.
 - Storage diagnostics show the shape of a listing entry (field names only).
 - Unit tests for both shapes.
+- Verified on device: the saved token is found again after the tablet restarts.
 - Bumped the plugin to version 0.6.3 (`versionCode` 13).
 
 ## 0.6.2 — More robust token saving, with storage diagnostics
