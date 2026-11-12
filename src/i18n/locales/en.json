@@ -80,5 +80,17 @@
   "board.previousCards": "Previous cards",
   "board.nextCards": "Next cards",
   "board.due": "Due {date}",
-  "board.complete": "Complete"
+  "board.complete": "Complete",
+  "board.focus": "Focus",
+  "board.focusOffHint": "Focus mode is off. Press to show only your open cards that carry a Focus tag.",
+  "board.focusOnHint": "Focus mode is on: only your open cards that carry a Focus tag are shown. Press to show all cards.",
+  "board.focusEmpty": "No open card with a Focus tag is assigned to you on this board.",
+  "board.focusTags": "Tags",
+  "board.focusTagsHint": "Choose the tags shown in Focus mode",
+  "board.focusTagsTitle": "Focus mode tags",
+  "board.focusTagsHelp": "Focus mode shows the cards assigned to you, not marked complete, that carry at least one of the checked tags. With no tag checked, the tags are ignored.",
+  "board.focusTagsNone": "No card of this board has a named tag.",
+  "board.focusPages": "Page {page}/{total}",
+  "board.previousPage": "Previous page",
+  "board.nextPage": "Next page"
 }

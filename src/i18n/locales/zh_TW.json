@@ -80,5 +80,17 @@
   "board.previousCards": "上一頁卡片",
   "board.nextCards": "下一頁卡片",
   "board.due": "截止 {date}",
-  "board.complete": "已完成"
+  "board.complete": "已完成",
+  "board.focus": "專注",
+  "board.focusOffHint": "專注模式已關閉。按下後僅顯示帶有專注標籤、指派給您且未完成的卡片。",
+  "board.focusOnHint": "專注模式已開啟：僅顯示帶有專注標籤、指派給您且未完成的卡片。按下以顯示所有卡片。",
+  "board.focusEmpty": "此看板上沒有帶專注標籤、指派給您的未完成卡片。",
+  "board.focusTags": "標籤",
+  "board.focusTagsHint": "選擇專注模式顯示的標籤",
+  "board.focusTagsTitle": "專注模式標籤",
+  "board.focusTagsHelp": "專注模式顯示指派給您、未完成且至少帶有一個已勾選標籤的卡片。未勾選任何標籤時，忽略標籤。",
+  "board.focusTagsNone": "此看板的卡片沒有已命名的標籤。",
+  "board.focusPages": "第 {page}/{total} 頁",
+  "board.previousPage": "上一頁",
+  "board.nextPage": "下一頁"
 }

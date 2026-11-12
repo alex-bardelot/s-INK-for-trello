@@ -1,0 +1,162 @@
+import {
+  FOCUS_SETTINGS_KEY,
+  focusBoard,
+  focusLabelChoices,
+  isFocusCard,
+  loadFocusSettings,
+  saveFocusSettings,
+  stackLists,
+  toggleFocusLabel,
+} from '../src/board/focus';
+import {createMemoryStore} from '../src/storage/keyValueStore';
+import {TrelloBoardCard, TrelloList} from '../src/trello';
+
+const ME = 'me';
+
+function card(
+  id: string,
+  idList: string,
+  options: {members?: string[]; labels?: string[]; done?: boolean} = {},
+): TrelloBoardCard {
+  return {
+    id,
+    name: id,
+    idList,
+    pos: 0,
+    due: null,
+    dueComplete: options.done ?? false,
+    badges: {checkItems: 0, checkItemsChecked: 0, description: false},
+    labels: (options.labels ?? []).map(name => ({
+      id: `${id}-${name}`,
+      name,
+      color: null,
+    })),
+    idMembers: options.members ?? [ME],
+  };
+}
+
+function list(id: string): TrelloList {
+  return {id, name: id, closed: false, pos: 0, idBoard: 'b'};
+}
+
+describe('isFocusCard', () => {
+  it('keeps open cards assigned to the member', () => {
+    expect(isFocusCard(card('a', 'l'), ME, [])).toBe(true);
+    expect(isFocusCard(card('a', 'l', {members: ['other']}), ME, [])).toBe(
+      false,
+    );
+    expect(isFocusCard(card('a', 'l', {done: true}), ME, [])).toBe(false);
+  });
+
+  it('requires one of the Focus labels, ignoring case', () => {
+    const labels = ['TODO', 'WIP'];
+    expect(isFocusCard(card('a', 'l', {labels: ['todo']}), ME, labels)).toBe(
+      true,
+    );
+    expect(
+      isFocusCard(card('a', 'l', {labels: ['Best Effort', 'WIP']}), ME, labels),
+    ).toBe(true);
+    expect(
+      isFocusCard(card('a', 'l', {labels: ['Best Effort']}), ME, labels),
+    ).toBe(false);
+    expect(isFocusCard(card('a', 'l'), ME, labels)).toBe(false);
+  });
+});
+
+describe('focusBoard', () => {
+  it('drops other cards and the lists left empty', () => {
+    const lists = [list('git'), list('sprint'), list('done')];
+    const cardsByList = new Map([
+      ['git', [card('g1', 'git', {labels: ['TODO']}), card('g2', 'git')]],
+      ['sprint', [card('s1', 'sprint', {labels: ['WIP'], members: ['x']})]],
+      ['done', [card('d1', 'done', {labels: ['TODO'], done: true})]],
+    ]);
+    const result = focusBoard(lists, cardsByList, ME, ['TODO', 'WIP']);
+    expect(result.lists.map(l => l.id)).toEqual(['git']);
+    expect(result.cardsByList.get('git')?.map(c => c.id)).toEqual(['g1']);
+  });
+});
+
+describe('focus labels', () => {
+  it('lists distinct named labels plus the selected ones', () => {
+    const cards = [
+      card('a', 'l', {labels: ['WIP', 'TODO', '']}),
+      card('b', 'l', {labels: ['todo', 'Best Effort']}),
+    ];
+    expect(focusLabelChoices(cards, ['Urgent'])).toEqual([
+      'Best Effort',
+      'TODO',
+      'Urgent',
+      'WIP',
+    ]);
+  });
+
+  it('toggles a label name, ignoring case', () => {
+    expect(toggleFocusLabel(['TODO'], 'WIP')).toEqual(['TODO', 'WIP']);
+    expect(toggleFocusLabel(['TODO', 'WIP'], 'todo')).toEqual(['WIP']);
+  });
+
+  it('round-trips the settings and survives corrupted values', async () => {
+    const store = createMemoryStore();
+    expect(await loadFocusSettings(store)).toEqual({
+      enabled: false,
+      labels: [],
+    });
+    await saveFocusSettings(store, {enabled: true, labels: ['TODO', 'WIP']});
+    expect(await loadFocusSettings(store)).toEqual({
+      enabled: true,
+      labels: ['TODO', 'WIP'],
+    });
+    await store.setItem(FOCUS_SETTINGS_KEY, '{"enabled":"yes","labels":[1]}');
+    expect(await loadFocusSettings(store)).toEqual({
+      enabled: false,
+      labels: [],
+    });
+    await store.setItem(FOCUS_SETTINGS_KEY, 'not json');
+    expect(await loadFocusSettings(store)).toEqual({
+      enabled: false,
+      labels: [],
+    });
+  });
+});
+
+describe('stackLists', () => {
+  const block = (listId: string, ...heights: number[]) => ({
+    listId,
+    header: 10,
+    cards: heights.map((height, i) => ({id: `${listId}${i}`, height})),
+  });
+
+  it('stacks short lists in the same column', () => {
+    // a: 10 + 1 + 20 = 31; b: 31 + 5 + 10 + 1 + 20 = 67 <= 100.
+    expect(stackLists([block('a', 20), block('b', 20)], 100, 1, 5)).toEqual([
+      [
+        {listId: 'a', cardIds: ['a0'], continued: false},
+        {listId: 'b', cardIds: ['b0'], continued: false},
+      ],
+    ]);
+  });
+
+  it('continues a long list in the next column with its header', () => {
+    expect(stackLists([block('a', 40, 40, 40)], 100, 0, 0)).toEqual([
+      [{listId: 'a', cardIds: ['a0', 'a1'], continued: false}],
+      [{listId: 'a', cardIds: ['a2'], continued: true}],
+    ]);
+  });
+
+  it('never leaves a header alone at the bottom of a column', () => {
+    // After a (10 + 70 = 80), b's header fits but not its first card.
+    expect(stackLists([block('a', 70), block('b', 30)], 100, 0, 0)).toEqual([
+      [{listId: 'a', cardIds: ['a0'], continued: false}],
+      [{listId: 'b', cardIds: ['b0'], continued: false}],
+    ]);
+  });
+
+  it('gives a card taller than a column a column of its own', () => {
+    expect(stackLists([block('a', 20, 500, 20)], 100, 0, 0)).toEqual([
+      [{listId: 'a', cardIds: ['a0'], continued: false}],
+      [{listId: 'a', cardIds: ['a1'], continued: true}],
+      [{listId: 'a', cardIds: ['a2'], continued: true}],
+    ]);
+  });
+});

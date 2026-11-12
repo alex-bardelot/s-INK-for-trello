@@ -3,6 +3,23 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.7.0 — Focus mode
+
+- New **Focus** switch in the board header (shown inverted when on). Focus
+  mode keeps only the cards assigned to you that are not marked complete and
+  that carry at least one of the Focus tags; lists left without any card are
+  hidden.
+- New **Tags** button, next to Focus while it is on, to pick the Focus tags
+  (e.g. `TODO` and `WIP`) among the label names used on the board. Names are
+  compared without case, so the choice applies to every board. With no tag
+  checked, the tags are ignored.
+- In Focus mode, lists are stacked one under another in the columns so that
+  as much as possible fits on one page; a list that does not fit goes on in
+  the next column with its header repeated (prefixed with `…`), and further
+  columns go to the next pages (◀ ▶ buttons or two-finger swipe).
+- The Focus switch and tags are remembered on the tablet.
+- Bumped the plugin to version 0.7.0 (`versionCode` 17).
+
 ## 0.6.6 — Checkmark on completed cards
 
 - Cards marked complete in Trello (`dueComplete`, the checkbox next to the

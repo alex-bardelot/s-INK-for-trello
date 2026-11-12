@@ -9,6 +9,19 @@ import {
   View,
 } from 'react-native';
 
+import {
+  ColumnSegment,
+  DEFAULT_FOCUS_SETTINGS,
+  FocusSettings,
+  focusBoard,
+  focusLabelChoices,
+  labelKey,
+  ListBlock,
+  loadFocusSettings,
+  saveFocusSettings,
+  stackLists,
+  toggleFocusLabel,
+} from '../board/focus';
 import {labelShade} from '../board/labels';
 import {
   clampPage,
@@ -26,6 +39,7 @@ import {
   saveBoardPreferences,
 } from '../board/preferences';
 import {useTwoFingerSwipe} from '../board/useTwoFingerSwipe';
+import {Checkbox} from '../components/Checkbox';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {Locale, useTranslation} from '../i18n';
 import {toSessionError} from '../session/trelloSession';
@@ -41,6 +55,9 @@ import {
 import {borders, colors, spacing, typography} from '../theme';
 
 const CARD_GAP = spacing.sm;
+const COLUMN_GAP = spacing.lg;
+/** Space between two lists stacked in the same column (Focus mode). */
+const LIST_GAP = spacing.lg;
 const AVATAR_SIZE = 36;
 const MAX_AVATARS = 3;
 
@@ -60,6 +77,8 @@ export interface BoardScreenProps {
   board: TrelloBoard;
   client: TrelloClient;
   store: KeyValueStore;
+  /** Id of the signed-in member, whose cards Focus mode keeps. */
+  memberId: string;
   onBack: () => void;
   /** Called when Trello rejects the token while loading. */
   onTokenRejected: () => void;
@@ -74,6 +93,7 @@ export function BoardScreen({
   board,
   client,
   store,
+  memberId,
   onBack,
   onTokenRejected,
 }: BoardScreenProps): React.JSX.Element {
@@ -85,12 +105,15 @@ export function BoardScreen({
   const [preferences, setPreferences] =
     useState<BoardPreferences>(DEFAULT_COLUMNS);
   const [firstList, setFirstList] = useState(0);
+  const [focus, setFocus] = useState<FocusSettings>(DEFAULT_FOCUS_SETTINGS);
+  const [tagsOpen, setTagsOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
     loadBoardPreferences(store).then(
       loaded => active && setPreferences(loaded),
     );
+    loadFocusSettings(store).then(loaded => active && setFocus(loaded));
     return () => {
       active = false;
     };
@@ -135,6 +158,36 @@ export function BoardScreen({
     saveBoardPreferences(store, next);
   }, [columns, orientation, preferences, store]);
 
+  const updateFocus = useCallback(
+    (next: FocusSettings) => {
+      setFocus(next);
+      saveFocusSettings(store, next);
+    },
+    [store],
+  );
+  const toggleFocus = useCallback(() => {
+    updateFocus({...focus, enabled: !focus.enabled});
+    setTagsOpen(false);
+  }, [focus, updateFocus]);
+
+  const focused = useMemo(
+    () =>
+      state.status === 'loaded' && focus.enabled
+        ? focusBoard(state.lists, state.cardsByList, memberId, focus.labels)
+        : null,
+    [focus.enabled, focus.labels, memberId, state],
+  );
+  const tagChoices = useMemo(
+    () =>
+      state.status === 'loaded'
+        ? focusLabelChoices(
+            Array.from(state.cardsByList.values()).flat(),
+            focus.labels,
+          )
+        : [],
+    [focus.labels, state],
+  );
+
   const lists = state.status === 'loaded' ? state.lists : [];
   const listPages = pageCount(lists.length, columns);
   const listPage = clampPage(
@@ -166,6 +219,22 @@ export function BoardScreen({
             onPress={cycleColumns}
           />
           <SmallButton
+            label={t('board.focus')}
+            accessibilityLabel={t(
+              focus.enabled ? 'board.focusOnHint' : 'board.focusOffHint',
+            )}
+            active={focus.enabled}
+            onPress={toggleFocus}
+          />
+          {focus.enabled && (
+            <SmallButton
+              label={t('board.focusTags')}
+              accessibilityLabel={t('board.focusTagsHint')}
+              active={tagsOpen}
+              onPress={() => setTagsOpen(open => !open)}
+            />
+          )}
+          <SmallButton
             label={t('board.refresh')}
             accessibilityLabel={t('board.refresh')}
             onPress={load}
@@ -187,11 +256,36 @@ export function BoardScreen({
         </View>
       )}
 
-      {state.status === 'loaded' && lists.length === 0 && (
+      {state.status === 'loaded' && tagsOpen && focus.enabled && (
+        <FocusTagsPanel
+          choices={tagChoices}
+          selected={focus.labels}
+          onToggle={name =>
+            updateFocus({
+              ...focus,
+              labels: toggleFocusLabel(focus.labels, name),
+            })
+          }
+          onClose={() => setTagsOpen(false)}
+        />
+      )}
+
+      {state.status === 'loaded' && !tagsOpen && focused && (
+        <FocusBoard
+          // Measured heights depend on the column width.
+          key={`${columns}-${width}`}
+          lists={focused.lists}
+          cardsByList={focused.cardsByList}
+          members={state.members}
+          columns={columns}
+        />
+      )}
+
+      {state.status === 'loaded' && !focused && lists.length === 0 && (
         <Text style={styles.message}>{t('board.noLists')}</Text>
       )}
 
-      {state.status === 'loaded' && lists.length > 0 && (
+      {state.status === 'loaded' && !focused && lists.length > 0 && (
         <>
           <View style={styles.columns}>
             {visibleLists.map(list => (
@@ -305,12 +399,7 @@ function BoardColumn({
 
   return (
     <View style={styles.column} {...swipeHandlers}>
-      <View style={styles.columnHeader}>
-        <Text style={styles.columnTitle} numberOfLines={2}>
-          {list.name}
-        </Text>
-        <Text style={styles.columnCount}>{cards.length}</Text>
-      </View>
+      <ListHeader name={list.name} count={cards.length} />
 
       <View
         style={styles.columnBody}
@@ -356,6 +445,247 @@ function BoardColumn({
             />
           </>
         )}
+      </View>
+    </View>
+  );
+}
+
+function ListHeader({
+  name,
+  count,
+  continued = false,
+}: {
+  name: string;
+  count: number;
+  /** The list started in a previous column. */
+  continued?: boolean;
+}): React.JSX.Element {
+  return (
+    <View style={styles.columnHeader}>
+      <Text style={styles.columnTitle} numberOfLines={2}>
+        {continued ? `… ${name}` : name}
+      </Text>
+      <Text style={styles.columnCount}>{count}</Text>
+    </View>
+  );
+}
+
+interface FocusBoardProps {
+  lists: readonly TrelloList[];
+  cardsByList: ReadonlyMap<string, TrelloBoardCard[]>;
+  members: MembersById;
+  columns: number;
+}
+
+/**
+ * Focus mode view. Lists hold few cards there, so they are stacked one under
+ * another in the columns to show as much as possible on one page; what does
+ * not fit goes to the next pages. As on the board view, lists and cards are
+ * first laid out in an invisible layer to measure them.
+ */
+function FocusBoard({
+  lists,
+  cardsByList,
+  members,
+  columns,
+}: FocusBoardProps): React.JSX.Element {
+  const {t, locale} = useTranslation();
+  const [area, setArea] = useState({width: 0, height: 0});
+  const [heights, setHeights] = useState<Readonly<Record<string, number>>>({});
+  const [page, setPage] = useState(0);
+
+  const columnWidth =
+    area.width > 0 ? (area.width - COLUMN_GAP * (columns - 1)) / columns : 0;
+
+  const measure = useCallback((key: string, event: LayoutChangeEvent) => {
+    const measured = Math.ceil(event.nativeEvent.layout.height);
+    setHeights(current =>
+      current[key] === measured ? current : {...current, [key]: measured},
+    );
+  }, []);
+
+  const pages = useMemo(() => {
+    if (columnWidth <= 0 || area.height <= 0) {
+      return null;
+    }
+    const blocks: ListBlock[] = [];
+    for (const list of lists) {
+      const header = heights[`list:${list.id}`];
+      if (header === undefined) {
+        return null;
+      }
+      const cards: {id: string; height: number}[] = [];
+      for (const card of cardsByList.get(list.id) ?? []) {
+        const height = heights[`card:${card.id}`];
+        if (height === undefined) {
+          return null;
+        }
+        cards.push({id: card.id, height});
+      }
+      blocks.push({listId: list.id, header, cards});
+    }
+    const stacked = stackLists(blocks, area.height, CARD_GAP, LIST_GAP);
+    const result: ColumnSegment[][][] = [];
+    for (let i = 0; i < stacked.length; i += columns) {
+      result.push(stacked.slice(i, i + columns));
+    }
+    return result;
+  }, [area.height, cardsByList, columnWidth, columns, heights, lists]);
+
+  const totalPages = Math.max(1, pages?.length ?? 1);
+  const pageIndex = Math.min(page, totalPages - 1);
+  const turnPage = useCallback(
+    (delta: number) =>
+      setPage(Math.min(Math.max(0, pageIndex + delta), totalPages - 1)),
+    [pageIndex, totalPages],
+  );
+  // Like turning pages in a document: swipe left or up for the next page.
+  const swipeHandlers = useTwoFingerSwipe((direction: SwipeDirection) =>
+    turnPage(direction === 'left' || direction === 'up' ? 1 : -1),
+  );
+
+  if (lists.length === 0) {
+    return <Text style={styles.message}>{t('board.focusEmpty')}</Text>;
+  }
+
+  const listsById = new Map(lists.map(list => [list.id, list]));
+  const cardsById = new Map(
+    Array.from(cardsByList.values())
+      .flat()
+      .map(card => [card.id, card]),
+  );
+  const pageColumns = pages?.[pageIndex] ?? [];
+
+  return (
+    <View style={styles.focusBoard} {...swipeHandlers}>
+      <View
+        style={styles.focusArea}
+        onLayout={event => {
+          const {width, height} = event.nativeEvent.layout;
+          setArea(current =>
+            current.width === width && current.height === height
+              ? current
+              : {width, height},
+          );
+        }}>
+        {columnWidth > 0 && (
+          <View
+            style={[styles.measureLayer, {width: columnWidth}]}
+            pointerEvents="none">
+            {lists.map(list => {
+              const cards = cardsByList.get(list.id) ?? [];
+              return (
+                <React.Fragment key={list.id}>
+                  <View onLayout={event => measure(`list:${list.id}`, event)}>
+                    <ListHeader name={list.name} count={cards.length} />
+                  </View>
+                  {cards.map(card => (
+                    <View
+                      key={card.id}
+                      onLayout={event => measure(`card:${card.id}`, event)}>
+                      <CardTile card={card} members={members} locale={locale} />
+                    </View>
+                  ))}
+                </React.Fragment>
+              );
+            })}
+          </View>
+        )}
+        <View style={styles.columns}>
+          {Array.from({length: columns}, (_, i) => (
+            <View key={i} style={styles.column}>
+              {(pageColumns[i] ?? []).map((segment, s) => (
+                <View
+                  key={`${segment.listId}-${s}`}
+                  style={[styles.segment, s > 0 && styles.segmentSpaced]}>
+                  <ListHeader
+                    name={listsById.get(segment.listId)?.name ?? ''}
+                    count={cardsByList.get(segment.listId)?.length ?? 0}
+                    continued={segment.continued}
+                  />
+                  {segment.cardIds.map(id => {
+                    const card = cardsById.get(id);
+                    return card ? (
+                      <CardTile
+                        key={id}
+                        card={card}
+                        members={members}
+                        locale={locale}
+                      />
+                    ) : null;
+                  })}
+                </View>
+              ))}
+            </View>
+          ))}
+        </View>
+      </View>
+
+      {/* Always present, so that the stacking area keeps the same height. */}
+      <View style={styles.focusFooter}>
+        {totalPages > 1 && (
+          <>
+            <SmallButton
+              label="◀"
+              accessibilityLabel={t('board.previousPage')}
+              disabled={pageIndex === 0}
+              onPress={() => turnPage(-1)}
+            />
+            <Text style={styles.footerText}>
+              {t('board.focusPages', {page: pageIndex + 1, total: totalPages})}
+            </Text>
+            <SmallButton
+              label="▶"
+              accessibilityLabel={t('board.nextPage')}
+              disabled={pageIndex >= totalPages - 1}
+              onPress={() => turnPage(1)}
+            />
+          </>
+        )}
+      </View>
+    </View>
+  );
+}
+
+/** Picks the label names Focus mode keeps, among those used on the board. */
+function FocusTagsPanel({
+  choices,
+  selected,
+  onToggle,
+  onClose,
+}: {
+  choices: readonly string[];
+  selected: readonly string[];
+  onToggle: (name: string) => void;
+  onClose: () => void;
+}): React.JSX.Element {
+  const {t} = useTranslation();
+  const selectedKeys = new Set(selected.map(labelKey));
+  return (
+    <View style={styles.panel}>
+      <Text style={styles.panelTitle}>{t('board.focusTagsTitle')}</Text>
+      <Text style={styles.message}>{t('board.focusTagsHelp')}</Text>
+      {choices.length === 0 ? (
+        <Text style={styles.message}>{t('board.focusTagsNone')}</Text>
+      ) : (
+        <View style={styles.tagGrid}>
+          {choices.map(name => (
+            <View key={labelKey(name)} style={styles.tagCell}>
+              <Checkbox
+                label={name}
+                checked={selectedKeys.has(labelKey(name))}
+                onChange={() => onToggle(name)}
+              />
+            </View>
+          ))}
+        </View>
+      )}
+      <View style={styles.panelActions}>
+        <SmallButton
+          label={t('common.close')}
+          accessibilityLabel={t('common.close')}
+          onPress={onClose}
+        />
       </View>
     </View>
   );
@@ -485,6 +815,8 @@ interface SmallButtonProps {
   accessibilityLabel: string;
   onPress: () => void;
   disabled?: boolean;
+  /** Shown inverted, for a switch that is on. */
+  active?: boolean;
 }
 
 function SmallButton({
@@ -492,22 +824,27 @@ function SmallButton({
   accessibilityLabel,
   onPress,
   disabled = false,
+  active = false,
 }: SmallButtonProps): React.JSX.Element {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      accessibilityState={{disabled}}
+      accessibilityState={{disabled, selected: active}}
       disabled={disabled}
       hitSlop={spacing.sm}
       onPress={onPress}
       style={({pressed}) => [
         styles.smallButton,
         disabled && styles.disabled,
-        pressed && styles.pressed,
+        (pressed || active) && styles.pressed,
       ]}>
       {({pressed}) => (
-        <Text style={[styles.smallButtonLabel, pressed && styles.pressedLabel]}>
+        <Text
+          style={[
+            styles.smallButtonLabel,
+            (pressed || active) && styles.pressedLabel,
+          ]}>
           {label}
         </Text>
       )}
@@ -527,7 +864,7 @@ const styles = StyleSheet.create({
   columns: {
     flex: 1,
     flexDirection: 'row',
-    gap: spacing.lg,
+    gap: COLUMN_GAP,
   },
   emptyColumn: {
     flex: 1,
@@ -663,6 +1000,45 @@ const styles = StyleSheet.create({
   },
   avatarImage: {
     ...StyleSheet.absoluteFillObject,
+  },
+  focusBoard: {
+    flex: 1,
+  },
+  focusArea: {
+    flex: 1,
+    overflow: 'hidden',
+  },
+  focusFooter: {
+    height: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.lg,
+  },
+  segment: {
+    gap: CARD_GAP,
+  },
+  segmentSpaced: {
+    marginTop: LIST_GAP,
+  },
+  panel: {
+    gap: spacing.md,
+  },
+  panelTitle: {
+    color: colors.foreground,
+    fontSize: typography.label,
+    fontWeight: '700',
+  },
+  tagGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  tagCell: {
+    width: '50%',
+    paddingRight: spacing.md,
+  },
+  panelActions: {
+    alignItems: 'flex-start',
   },
   footer: {
     flexDirection: 'row',

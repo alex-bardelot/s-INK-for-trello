@@ -80,5 +80,17 @@
   "board.previousCards": "Cartes précédentes",
   "board.nextCards": "Cartes suivantes",
   "board.due": "Échéance {date}",
-  "board.complete": "Terminée"
+  "board.complete": "Terminée",
+  "board.focus": "Focus",
+  "board.focusOffHint": "Mode Focus désactivé. Appuyez pour n’afficher que vos cartes non terminées portant une étiquette Focus.",
+  "board.focusOnHint": "Mode Focus activé : seules vos cartes non terminées portant une étiquette Focus sont affichées. Appuyez pour tout afficher.",
+  "board.focusEmpty": "Aucune carte non terminée avec une étiquette Focus ne vous est attribuée sur ce tableau.",
+  "board.focusTags": "Étiquettes",
+  "board.focusTagsHint": "Choisir les étiquettes affichées en mode Focus",
+  "board.focusTagsTitle": "Étiquettes du mode Focus",
+  "board.focusTagsHelp": "Le mode Focus affiche les cartes qui vous sont attribuées, non terminées, et portant au moins une des étiquettes cochées. Sans étiquette cochée, les étiquettes sont ignorées.",
+  "board.focusTagsNone": "Aucune carte de ce tableau n’a d’étiquette nommée.",
+  "board.focusPages": "Page {page}/{total}",
+  "board.previousPage": "Page précédente",
+  "board.nextPage": "Page suivante"
 }

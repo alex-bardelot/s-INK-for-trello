@@ -80,5 +80,17 @@
   "board.previousCards": "前のカード",
   "board.nextCards": "次のカード",
   "board.due": "期限 {date}",
-  "board.complete": "完了"
+  "board.complete": "完了",
+  "board.focus": "集中",
+  "board.focusOffHint": "集中モードはオフです。押すと、集中タグの付いた自分の未完了カードのみ表示します。",
+  "board.focusOnHint": "集中モードはオンです：集中タグの付いた自分の未完了カードのみ表示中。押すとすべてのカードを表示します。",
+  "board.focusEmpty": "このボードには、集中タグの付いた自分の未完了カードがありません。",
+  "board.focusTags": "タグ",
+  "board.focusTagsHint": "集中モードで表示するタグを選択",
+  "board.focusTagsTitle": "集中モードのタグ",
+  "board.focusTagsHelp": "集中モードでは、自分に割り当てられた未完了のカードのうち、チェックしたタグのいずれかが付いたものを表示します。タグをチェックしない場合、タグは無視されます。",
+  "board.focusTagsNone": "このボードのカードには名前付きのタグがありません。",
+  "board.focusPages": "ページ {page}/{total}",
+  "board.previousPage": "前のページ",
+  "board.nextPage": "次のページ"
 }

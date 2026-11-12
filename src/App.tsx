@@ -62,6 +62,7 @@ export default function App(): React.JSX.Element {
             board={openBoard}
             client={state.client}
             store={session.settingsStore}
+            memberId={state.member.id}
             onBack={() => setOpenBoard(null)}
             onTokenRejected={session.retry}
           />
