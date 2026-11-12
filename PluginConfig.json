@@ -1,0 +1,11 @@
+﻿{
+  "pluginID": "373ilax0ouxp1fnm",
+  "pluginKey": "SuperTrello",
+  "name": "SuperTrello",
+  "desc": "Trello boards on your Supernote.",
+  "author": "SuperTrello contributors",
+  "iconPath": "assets/icon.png",
+  "versionCode": "1",
+  "versionName": "0.1.0",
+  "jsMainPath": "index"
+}

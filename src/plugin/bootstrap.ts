@@ -1,0 +1,38 @@
+import {PluginManager} from 'sn-plugin-lib';
+
+import {getSystemLocale, i18n} from '../i18n';
+import {refreshButtons, registerButtons} from './buttons';
+
+const LOG_TAG = '[SuperTrello]';
+
+/**
+ * Initializes the plugin runtime.
+ *
+ * Must be called once, right after `AppRegistry.registerComponent`, as
+ * required by the Supernote SDK. Other SDK calls are only valid afterwards.
+ */
+export function bootstrapPlugin(): void {
+  PluginManager.init();
+
+  i18n.setLocale(getSystemLocale());
+
+  PluginManager.registerLangListener({
+    onMsg: (languageCode: string) => {
+      if (i18n.setLocale(languageCode)) {
+        refreshButtons().catch(error =>
+          console.warn(`${LOG_TAG} Failed to refresh buttons`, error),
+        );
+      }
+    },
+  });
+
+  registerButtons()
+    .then(registered => {
+      if (!registered) {
+        console.warn(`${LOG_TAG} Toolbar button registration was rejected`);
+      }
+    })
+    .catch(error =>
+      console.warn(`${LOG_TAG} Failed to register buttons`, error),
+    );
+}
