@@ -6,7 +6,11 @@ import {
   ensureStorageWritePermission,
   Permission,
 } from '../plugin/permissions';
-import {createDirectoryStore, DiagnosableStore} from './directoryStore';
+import {
+  createDirectoryStore,
+  DiagnosableStore,
+  listedPath,
+} from './directoryStore';
 import {
   createMemoryStore,
   findNativeStore,
@@ -35,9 +39,10 @@ async function findSeedFile(): Promise<string | null> {
     return null;
   }
   const paths = (await FileUtils.listFiles(dir)) ?? [];
-  const files = paths.map(path =>
-    path.includes('/') ? path : `${dir}/${path}`,
-  );
+  const files = paths
+    .map(listedPath)
+    .filter((path): path is string => path !== null)
+    .map(path => (path.includes('/') ? path : `${dir}/${path}`));
   for (const suffix of SEED_SUFFIXES) {
     const match = files.find(path => path.toLowerCase().endsWith(suffix));
     if (match) {
@@ -123,6 +128,24 @@ export async function getStorageDiagnostics(): Promise<string[]> {
         d.entries === null ? 'unreadable' : d.entries.join(', ') || 'none'
       }`,
     );
+    try {
+      // Shape of a listing entry (field names only, no values).
+      const dir = await pluginDir();
+      const first = dir ? ((await FileUtils.listFiles(dir)) ?? [])[0] : null;
+      lines.push(
+        `listFiles entry: ${
+          first && typeof first === 'object'
+            ? `object {${Object.keys(first).join(', ')}}`
+            : typeof first
+        }`,
+      );
+    } catch (error) {
+      lines.push(
+        `listFiles entry: error (${
+          error instanceof Error ? error.message : error
+        })`,
+      );
+    }
     try {
       lines.push(`seed: ${(await findSeedFile()) ?? 'none'}`);
     } catch (error) {

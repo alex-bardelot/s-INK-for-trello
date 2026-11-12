@@ -6,8 +6,14 @@ import {KeyValueStore} from './keyValueStore';
  */
 export interface DirectoryFileSystem {
   makeDir(dirPath: string): Promise<boolean>;
-  /** Paths (or names) of the entries of a directory, `null` if missing. */
-  listFiles(dirPath: string): Promise<Array<string> | null | undefined>;
+  /**
+   * Entries of a directory, `null` if missing. Typed as strings by the SDK,
+   * but the Android host returns `{path, type}` objects: see
+   * {@link listedPath}.
+   */
+  listFiles(
+    dirPath: string,
+  ): Promise<ReadonlyArray<unknown> | null | undefined>;
   deleteDir(dirPath: string): Promise<boolean>;
   deleteFile?(filePath: string): Promise<boolean>;
   exists?(path: string): Promise<boolean>;
@@ -63,6 +69,28 @@ export function encodeName(value: string): string {
     /[!'()*.~]/g,
     char => `%${char.charCodeAt(0).toString(16).toUpperCase()}`,
   );
+}
+
+/**
+ * Path of an entry returned by `FileUtils.listFiles`. The SDK typings
+ * declare strings, but the Android host resolves `{path, type}` maps (and
+ * some firmware returns bare names), so every shape is accepted.
+ *
+ * @returns The path or name, or `null` for an unknown shape.
+ */
+export function listedPath(entry: unknown): string | null {
+  if (typeof entry === 'string') {
+    return entry;
+  }
+  if (entry && typeof entry === 'object') {
+    const record = entry as Record<string, unknown>;
+    for (const field of ['path', 'filePath', 'name', 'fileName']) {
+      if (typeof record[field] === 'string') {
+        return record[field] as string;
+      }
+    }
+  }
+  return null;
 }
 
 function baseName(path: string): string {
@@ -185,6 +213,8 @@ export function createDirectoryStore(
     }
     const paths = (await fs.listFiles(dir)) ?? [];
     return paths
+      .map(listedPath)
+      .filter((path): path is string => path !== null)
       .map(path => parseName(baseName(path)))
       .filter((entry): entry is Entry => entry !== null);
   };

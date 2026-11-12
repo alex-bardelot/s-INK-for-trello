@@ -3,6 +3,18 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.6.3 — Read the Android shape of FileUtils.listFiles
+
+- Likely cause of the token not being saved: on Android, `FileUtils.listFiles`
+  resolves `{path, type}` objects although the SDK typings declare strings
+  (also noted by the community plugin emilesilvis/handwritten-blog-supernote-plugin).
+  Treating them as strings threw on every read, so nothing could be found.
+- Listing entries are now accepted as strings or objects (`path`, `filePath`,
+  `name`, `fileName`), for the store and for the copy seed lookup.
+- Storage diagnostics show the shape of a listing entry (field names only).
+- Unit tests for both shapes.
+- Bumped the plugin to version 0.6.3 (`versionCode` 13).
+
 ## 0.6.2 — More robust token saving, with storage diagnostics
 
 - Reported on device: saving the token on the tablet did not work.

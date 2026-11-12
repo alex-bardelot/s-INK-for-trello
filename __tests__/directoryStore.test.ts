@@ -2,6 +2,7 @@ import {
   createDirectoryStore,
   DirectoryFileSystem,
   encodeName,
+  listedPath,
 } from '../src/storage/directoryStore';
 
 const ROOT = '/plugin/state';
@@ -135,6 +136,29 @@ describe('createDirectoryStore permissions', () => {
       ensureReadable: async () => false,
     });
     await expect(store.getItem('token')).rejects.toThrow('FILE:READ');
+  });
+});
+
+describe('listFiles result shapes', () => {
+  it('accepts strings and the {path, type} maps of the Android host', () => {
+    expect(listedPath('/a/b')).toBe('/a/b');
+    expect(listedPath({path: '/a/b', type: 'dir'})).toBe('/a/b');
+    expect(listedPath({name: 'b'})).toBe('b');
+    expect(listedPath({type: 'dir'})).toBeNull();
+    expect(listedPath(null)).toBeNull();
+  });
+
+  it('stores and reads back when listFiles returns {path, type} maps', async () => {
+    const {fs} = makeFileSystem();
+    const store = createDirectoryStore(async () => ROOT, {
+      ...fs,
+      listFiles: async path =>
+        ((await fs.listFiles(path)) ?? []).map(p => ({path: p, type: 1})),
+    });
+    await store.setItem('token', 'ATTA1234');
+    expect(await store.getItem('token')).toBe('ATTA1234');
+    await store.removeItem('token');
+    expect(await store.getItem('token')).toBeNull();
   });
 });
 
