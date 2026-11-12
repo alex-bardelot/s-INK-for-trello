@@ -3,6 +3,13 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.6.5 — New plugin icon
+
+- Replaced the template's puzzle-piece icon with a SuperTrello icon: a board
+  outline holding three kanban columns (two filled, one empty), pure black on
+  transparent so it stays crisp on the e-ink screen.
+- Bumped the plugin to version 0.6.5 (`versionCode` 15).
+
 ## 0.6.4 — Remove the storage diagnostics
 
 - Saving the token now works on the device, so the "Storage diagnostics"
