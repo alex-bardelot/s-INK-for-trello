@@ -1,11 +1,12 @@
+import {labelShade} from '../src/board/labels';
 import {
-  cardsPerPage,
   clampPage,
   classifySwipe,
   groupCardsByList,
   nextColumnCount,
   orientationOf,
   pageCount,
+  paginate,
 } from '../src/board/layout';
 import {
   BOARD_PREFERENCES_KEY,
@@ -24,6 +25,8 @@ function card(id: string, idList: string): TrelloBoardCard {
     due: null,
     dueComplete: false,
     badges: {checkItems: 0, checkItemsChecked: 0, description: false},
+    labels: [],
+    idMembers: [],
   };
 }
 
@@ -46,12 +49,23 @@ describe('board layout', () => {
     expect(clampPage(-1, 7, 3)).toBe(0);
   });
 
-  it('only counts cards that fit entirely', () => {
-    // 3 cards of 100 + 2 gaps of 8 = 316.
-    expect(cardsPerPage(316, 100, 8)).toBe(3);
-    expect(cardsPerPage(315, 100, 8)).toBe(2);
-    expect(cardsPerPage(50, 100, 8)).toBe(1);
-    expect(cardsPerPage(0, 100, 8)).toBe(1);
+  it('paginates measured cards so that each page fits', () => {
+    // 100 + 8 + 100 + 8 + 100 = 316.
+    expect(paginate([100, 100, 100, 100], 316, 8)).toEqual([
+      {start: 0, end: 3},
+      {start: 3, end: 4},
+    ]);
+    expect(paginate([100, 100, 100], 315, 8)).toEqual([
+      {start: 0, end: 2},
+      {start: 2, end: 3},
+    ]);
+    // A card taller than the column gets its own page.
+    expect(paginate([50, 400, 50], 300, 8)).toEqual([
+      {start: 0, end: 1},
+      {start: 1, end: 2},
+      {start: 2, end: 3},
+    ]);
+    expect(paginate([], 300, 8)).toEqual([{start: 0, end: 0}]);
   });
 
   it('groups cards by list, keeping their order', () => {
@@ -102,5 +116,20 @@ describe('board preferences', () => {
       portrait: 2,
       landscape: 3,
     });
+  });
+});
+
+describe('labelShade', () => {
+  it('keeps the relative lightness of label colors', () => {
+    expect(labelShade('yellow').background).toBe('#E1E1E1');
+    expect(labelShade('yellow').text).toBe('#000000');
+    expect(labelShade('blue_dark').text).toBe('#FFFFFF');
+    expect(
+      labelShade('green_light').background > labelShade('green').background,
+    ).toBe(true);
+  });
+
+  it('falls back for unknown or missing colors', () => {
+    expect(labelShade(null)).toEqual(labelShade('unknown'));
   });
 });

@@ -132,7 +132,18 @@ describe('TrelloClient', () => {
     const cards = await clientWith(fetchImpl).getBoardCards('b1');
     expect(cards.map(c => c.id)).toEqual(['x', 'y']);
     expect(fetchImpl.mock.calls[0][0]).toBe(
-      'https://api.trello.com/1/boards/b1/cards?filter=open&fields=name%2CidList%2Cpos%2Cdue%2CdueComplete%2Cbadges',
+      'https://api.trello.com/1/boards/b1/cards?filter=open&fields=name%2CidList%2Cpos%2Cdue%2CdueComplete%2Cbadges%2Clabels%2CidMembers',
+    );
+  });
+
+  it('returns the members of a board', async () => {
+    const fetchImpl = jest
+      .fn()
+      .mockResolvedValue(jsonResponse([{id: 'm1', initials: 'AL'}]));
+    const members = await clientWith(fetchImpl).getBoardMembers('b1');
+    expect(members.map(m => m.id)).toEqual(['m1']);
+    expect(fetchImpl.mock.calls[0][0]).toBe(
+      'https://api.trello.com/1/boards/b1/members?fields=fullName%2Cinitials%2Cusername%2CavatarUrl',
     );
   });
 

@@ -3,6 +3,23 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.6.0 — Board view rendering, labels and members
+
+- List headers are now a dark grey band with white text; the outline around
+  each list is gone.
+- Cards show their labels as grey chips (each Trello color keeps its relative
+  lightness; unnamed labels are short bars) and their members as round
+  avatars (photo, or initials when there is none), up to 3 then "+N".
+- Cards now take the height they need (labels, title up to 3 lines, badges
+  and members). They are measured in an invisible layer first and pages hold
+  only the cards that fit entirely, so none is cut or drawn under the page
+  buttons.
+- The refresh button shows a text label: the ⟳ glyph is missing from the
+  tablet's font.
+- Trello client: card labels and members, board members
+  (`GET /1/boards/{id}/members`). Grey tokens added to the theme.
+- Bumped the plugin to version 0.6.0 (`versionCode` 10).
+
 ## 0.5.0 — Board view
 
 - Pressing a board in "Your boards" opens it: its open lists are shown side

@@ -41,6 +41,23 @@ export interface TrelloCardBadges {
   description: boolean;
 }
 
+/** A label of a board. `color` is a Trello color name, e.g. `green` or `red_dark`. */
+export interface TrelloLabel {
+  id: string;
+  name: string;
+  color: string | null;
+}
+
+/** A member of a board (`GET /1/boards/{id}/members`). */
+export interface TrelloBoardMember {
+  id: string;
+  fullName: string;
+  initials: string;
+  username: string;
+  /** Base URL of the avatar; append `/50.png` (or 30, 170) for an image. */
+  avatarUrl: string | null;
+}
+
 /** A card of a board, as shown on the board view (`GET /1/boards/{id}/cards`). */
 export interface TrelloBoardCard {
   id: string;
@@ -51,6 +68,8 @@ export interface TrelloBoardCard {
   due: string | null;
   dueComplete: boolean;
   badges: TrelloCardBadges;
+  labels: TrelloLabel[];
+  idMembers: string[];
 }
 
 /** A card, as returned by `POST /1/cards`. */

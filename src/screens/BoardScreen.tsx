@@ -1,5 +1,6 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
+  Image,
   LayoutChangeEvent,
   Pressable,
   StyleSheet,
@@ -8,14 +9,15 @@ import {
   View,
 } from 'react-native';
 
+import {labelShade} from '../board/labels';
 import {
-  cardsPerPage,
   clampPage,
   DEFAULT_COLUMNS,
   groupCardsByList,
   nextColumnCount,
   orientationOf,
   pageCount,
+  paginate,
   SwipeDirection,
 } from '../board/layout';
 import {
@@ -28,17 +30,21 @@ import {ScreenFrame} from '../components/ScreenFrame';
 import {Locale, useTranslation} from '../i18n';
 import {toSessionError} from '../session/trelloSession';
 import {KeyValueStore} from '../storage/keyValueStore';
-import {TrelloBoard, TrelloBoardCard, TrelloClient, TrelloList} from '../trello';
+import {
+  TrelloBoard,
+  TrelloBoardCard,
+  TrelloBoardMember,
+  TrelloClient,
+  TrelloLabel,
+  TrelloList,
+} from '../trello';
 import {borders, colors, spacing, typography} from '../theme';
 
-/**
- * Cards have a fixed height so that the number of cards per page can be
- * computed from the column height: a card is never drawn partially, nor
- * under the page controls of its column.
- */
-const CARD_HEIGHT = 104;
 const CARD_GAP = spacing.sm;
-const BODY_PADDING = spacing.sm;
+const AVATAR_SIZE = 36;
+const MAX_AVATARS = 3;
+
+type MembersById = ReadonlyMap<string, TrelloBoardMember>;
 
 type BoardState =
   | {status: 'loading'}
@@ -46,6 +52,7 @@ type BoardState =
       status: 'loaded';
       lists: TrelloList[];
       cardsByList: ReadonlyMap<string, TrelloBoardCard[]>;
+      members: MembersById;
     }
   | {status: 'failed'};
 
@@ -70,7 +77,7 @@ export function BoardScreen({
   onBack,
   onTokenRejected,
 }: BoardScreenProps): React.JSX.Element {
-  const {t, locale} = useTranslation();
+  const {t} = useTranslation();
   const {width, height} = useWindowDimensions();
   const orientation = orientationOf(width, height);
 
@@ -78,14 +85,12 @@ export function BoardScreen({
   const [preferences, setPreferences] =
     useState<BoardPreferences>(DEFAULT_COLUMNS);
   const [firstList, setFirstList] = useState(0);
-  const [cardPages, setCardPages] = useState<Readonly<Record<string, number>>>(
-    {},
-  );
-  const [bodyHeight, setBodyHeight] = useState(0);
 
   useEffect(() => {
     let active = true;
-    loadBoardPreferences(store).then(loaded => active && setPreferences(loaded));
+    loadBoardPreferences(store).then(
+      loaded => active && setPreferences(loaded),
+    );
     return () => {
       active = false;
     };
@@ -94,11 +99,21 @@ export function BoardScreen({
   const load = useCallback(async () => {
     setState({status: 'loading'});
     try {
-      const [lists, cards] = await Promise.all([
+      const [lists, cards, members] = await Promise.all([
         client.getBoardLists(board.id),
         client.getBoardCards(board.id),
+        // Avatars are a nicety: the board still shows without them.
+        client.getBoardMembers(board.id).catch(error => {
+          console.warn('[SuperTrello] Failed to load board members', error);
+          return [];
+        }),
       ]);
-      setState({status: 'loaded', lists, cardsByList: groupCardsByList(cards)});
+      setState({
+        status: 'loaded',
+        lists,
+        cardsByList: groupCardsByList(cards),
+        members: new Map(members.map(member => [member.id, member])),
+      });
     } catch (error) {
       console.warn('[SuperTrello] Failed to load board', error);
       if (toSessionError(error) === 'invalidToken') {
@@ -122,35 +137,22 @@ export function BoardScreen({
 
   const lists = state.status === 'loaded' ? state.lists : [];
   const listPages = pageCount(lists.length, columns);
-  const listPage = clampPage(Math.floor(firstList / columns), lists.length, columns);
+  const listPage = clampPage(
+    Math.floor(firstList / columns),
+    lists.length,
+    columns,
+  );
   const start = listPage * columns;
   const visibleLists = lists.slice(start, start + columns);
-  const perPage = cardsPerPage(bodyHeight - 2 * BODY_PADDING, CARD_HEIGHT, CARD_GAP);
 
   const turnListPage = useCallback(
     (delta: number) => {
-      const target = clampPage(listPage + delta, lists.length, columns);
-      setFirstList(target * columns);
+      setFirstList(
+        clampPage(listPage + delta, lists.length, columns) * columns,
+      );
     },
     [columns, listPage, lists.length],
   );
-
-  const turnCardPage = useCallback(
-    (listId: string, cardCount: number, delta: number) => {
-      setCardPages(pages => {
-        const current = clampPage(pages[listId] ?? 0, cardCount, perPage);
-        return {
-          ...pages,
-          [listId]: clampPage(current + delta, cardCount, perPage),
-        };
-      });
-    },
-    [perPage],
-  );
-
-  const handleBodyLayout = useCallback((event: LayoutChangeEvent) => {
-    setBodyHeight(event.nativeEvent.layout.height);
-  }, []);
 
   return (
     <ScreenFrame
@@ -158,13 +160,13 @@ export function BoardScreen({
       onBack={onBack}
       actions={
         <>
-          <HeaderButton
+          <SmallButton
             label={t('board.columns', {count: columns})}
             accessibilityLabel={t('board.columnsHint', {count: columns})}
             onPress={cycleColumns}
           />
-          <HeaderButton
-            label="⟳"
+          <SmallButton
+            label={t('board.refresh')}
             accessibilityLabel={t('board.refresh')}
             onPress={load}
           />
@@ -177,7 +179,7 @@ export function BoardScreen({
       {state.status === 'failed' && (
         <View style={styles.failure}>
           <Text style={styles.message}>{t('board.loadFailed')}</Text>
-          <HeaderButton
+          <SmallButton
             label={t('common.retry')}
             accessibilityLabel={t('common.retry')}
             onPress={load}
@@ -192,22 +194,15 @@ export function BoardScreen({
       {state.status === 'loaded' && lists.length > 0 && (
         <>
           <View style={styles.columns}>
-            {visibleLists.map(list => {
-              const cards = state.cardsByList.get(list.id) ?? [];
-              return (
-                <BoardColumn
-                  key={list.id}
-                  list={list}
-                  cards={cards}
-                  page={clampPage(cardPages[list.id] ?? 0, cards.length, perPage)}
-                  perPage={perPage}
-                  locale={locale}
-                  onBodyLayout={handleBodyLayout}
-                  onTurnCards={delta => turnCardPage(list.id, cards.length, delta)}
-                  onTurnLists={turnListPage}
-                />
-              );
-            })}
+            {visibleLists.map(list => (
+              <BoardColumn
+                key={list.id}
+                list={list}
+                cards={state.cardsByList.get(list.id) ?? []}
+                members={state.members}
+                onTurnLists={turnListPage}
+              />
+            ))}
             {Array.from({length: columns - visibleLists.length}, (_, i) => (
               <View key={`empty-${i}`} style={styles.emptyColumn} />
             ))}
@@ -215,7 +210,7 @@ export function BoardScreen({
 
           {listPages > 1 && (
             <View style={styles.footer}>
-              <PageButton
+              <SmallButton
                 label="◀"
                 accessibilityLabel={t('board.previousLists')}
                 disabled={listPage === 0}
@@ -228,7 +223,7 @@ export function BoardScreen({
                   total: lists.length,
                 })}
               </Text>
-              <PageButton
+              <SmallButton
                 label="▶"
                 accessibilityLabel={t('board.nextLists')}
                 disabled={listPage >= listPages - 1}
@@ -245,27 +240,53 @@ export function BoardScreen({
 interface BoardColumnProps {
   list: TrelloList;
   cards: readonly TrelloBoardCard[];
-  page: number;
-  perPage: number;
-  locale: Locale;
-  onBodyLayout: (event: LayoutChangeEvent) => void;
-  onTurnCards: (delta: number) => void;
+  members: MembersById;
   onTurnLists: (delta: number) => void;
 }
 
+/**
+ * A list and one page of its cards. Cards have variable heights (labels,
+ * title length, members), so they are first laid out in an invisible layer
+ * to measure them; pages then hold only the cards that fit entirely.
+ */
 function BoardColumn({
   list,
   cards,
-  page,
-  perPage,
-  locale,
-  onBodyLayout,
-  onTurnCards,
+  members,
   onTurnLists,
 }: BoardColumnProps): React.JSX.Element {
-  const {t} = useTranslation();
-  const pages = pageCount(cards.length, perPage);
-  const visibleCards = cards.slice(page * perPage, (page + 1) * perPage);
+  const {t, locale} = useTranslation();
+  const [bodyHeight, setBodyHeight] = useState(0);
+  const [heights, setHeights] = useState<Readonly<Record<string, number>>>({});
+  const [page, setPage] = useState(0);
+
+  const pages = useMemo(() => {
+    const measured = cards.map(card => heights[card.id]);
+    if (bodyHeight <= 0 || measured.some(h => h === undefined)) {
+      return null;
+    }
+    return paginate(measured as number[], bodyHeight, CARD_GAP);
+  }, [bodyHeight, cards, heights]);
+
+  const pageIndex = pages ? Math.min(page, pages.length - 1) : 0;
+  const visibleCards = pages
+    ? cards.slice(pages[pageIndex].start, pages[pageIndex].end)
+    : [];
+  const totalPages = pages?.length ?? 1;
+
+  const turnCards = useCallback(
+    (delta: number) => {
+      setPage(Math.min(Math.max(0, pageIndex + delta), totalPages - 1));
+    },
+    [pageIndex, totalPages],
+  );
+
+  const measureCard = useCallback((id: string, event: LayoutChangeEvent) => {
+    const measured = Math.ceil(event.nativeEvent.layout.height);
+    setHeights(current =>
+      current[id] === measured ? current : {...current, [id]: measured},
+    );
+  }, []);
 
   // Like turning pages in a document: swipe left for the next lists, up for
   // the next cards of this list.
@@ -276,48 +297,62 @@ function BoardColumn({
       case 'right':
         return onTurnLists(-1);
       case 'up':
-        return onTurnCards(1);
+        return turnCards(1);
       case 'down':
-        return onTurnCards(-1);
+        return turnCards(-1);
     }
   });
 
   return (
     <View style={styles.column} {...swipeHandlers}>
       <View style={styles.columnHeader}>
-        <Text style={styles.columnTitle} numberOfLines={1}>
+        <Text style={styles.columnTitle} numberOfLines={2}>
           {list.name}
         </Text>
         <Text style={styles.columnCount}>{cards.length}</Text>
       </View>
 
-      <View style={styles.columnBody} onLayout={onBodyLayout}>
+      <View
+        style={styles.columnBody}
+        onLayout={event => setBodyHeight(event.nativeEvent.layout.height)}>
+        <View style={styles.measureLayer} pointerEvents="none">
+          {cards.map(card => (
+            <View key={card.id} onLayout={event => measureCard(card.id, event)}>
+              <CardTile card={card} members={members} locale={locale} />
+            </View>
+          ))}
+        </View>
         {cards.length === 0 && (
           <Text style={styles.message}>{t('board.noCards')}</Text>
         )}
         {visibleCards.map(card => (
-          <CardTile key={card.id} card={card} locale={locale} />
+          <CardTile
+            key={card.id}
+            card={card}
+            members={members}
+            locale={locale}
+          />
         ))}
       </View>
 
       {/* Always present, so that every column body has the same height. */}
       <View style={styles.columnFooter}>
-        {pages > 1 && (
+        {totalPages > 1 && (
           <>
-            <PageButton
+            <SmallButton
               label="▲"
               accessibilityLabel={t('board.previousCards')}
-              disabled={page === 0}
-              onPress={() => onTurnCards(-1)}
+              disabled={pageIndex === 0}
+              onPress={() => turnCards(-1)}
             />
             <Text style={styles.footerText}>
-              {t('board.cardsPage', {page: page + 1, total: pages})}
+              {t('board.cardsPage', {page: pageIndex + 1, total: totalPages})}
             </Text>
-            <PageButton
+            <SmallButton
               label="▼"
               accessibilityLabel={t('board.nextCards')}
-              disabled={page >= pages - 1}
-              onPress={() => onTurnCards(1)}
+              disabled={pageIndex >= totalPages - 1}
+              onPress={() => turnCards(1)}
             />
           </>
         )}
@@ -328,35 +363,94 @@ function BoardColumn({
 
 function CardTile({
   card,
+  members,
   locale,
 }: {
   card: TrelloBoardCard;
+  members: MembersById;
   locale: Locale;
 }): React.JSX.Element {
   const {t} = useTranslation();
   const {checkItems, checkItemsChecked, description} = card.badges ?? {};
-  const meta: string[] = [];
+  const badges: string[] = [];
   if (card.due) {
     const date = formatDueDate(card.due, locale);
-    meta.push(
-      card.dueComplete ? `✓ ${date}` : t('board.due', {date}),
-    );
+    badges.push(card.dueComplete ? `✓ ${date}` : t('board.due', {date}));
   }
   if (checkItems) {
-    meta.push(`☐ ${checkItemsChecked ?? 0}/${checkItems}`);
+    badges.push(`☐ ${checkItemsChecked ?? 0}/${checkItems}`);
   }
   if (description) {
-    meta.push('≡');
+    badges.push('≡');
   }
+  const cardMembers = (card.idMembers ?? [])
+    .map(id => members.get(id))
+    .filter((member): member is TrelloBoardMember => member !== undefined);
+  const labels = card.labels ?? [];
 
   return (
     <View style={styles.card}>
-      <Text style={styles.cardName} numberOfLines={2}>
+      {labels.length > 0 && (
+        <View style={styles.labels}>
+          {labels.map(label => (
+            <LabelChip key={label.id} label={label} />
+          ))}
+        </View>
+      )}
+      <Text style={styles.cardName} numberOfLines={3}>
         {card.name}
       </Text>
-      <Text style={styles.cardMeta} numberOfLines={1}>
-        {meta.join('   ')}
-      </Text>
+      {(badges.length > 0 || cardMembers.length > 0) && (
+        <View style={styles.cardFooter}>
+          <Text style={styles.cardBadges} numberOfLines={1}>
+            {badges.join('   ')}
+          </Text>
+          <View style={styles.avatars}>
+            {cardMembers.slice(0, MAX_AVATARS).map(member => (
+              <Avatar key={member.id} member={member} />
+            ))}
+            {cardMembers.length > MAX_AVATARS && (
+              <Text style={styles.cardBadges}>
+                +{cardMembers.length - MAX_AVATARS}
+              </Text>
+            )}
+          </View>
+        </View>
+      )}
+    </View>
+  );
+}
+
+function LabelChip({label}: {label: TrelloLabel}): React.JSX.Element {
+  const shade = labelShade(label.color);
+  return (
+    <View
+      style={[
+        styles.label,
+        !label.name && styles.labelUnnamed,
+        {backgroundColor: shade.background},
+      ]}>
+      {!!label.name && (
+        <Text style={[styles.labelText, {color: shade.text}]} numberOfLines={1}>
+          {label.name}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+function Avatar({member}: {member: TrelloBoardMember}): React.JSX.Element {
+  const [imageFailed, setImageFailed] = useState(false);
+  return (
+    <View style={styles.avatar} accessible accessibilityLabel={member.fullName}>
+      <Text style={styles.avatarInitials}>{member.initials}</Text>
+      {member.avatarUrl && !imageFailed && (
+        <Image
+          source={{uri: `${member.avatarUrl}/50.png`}}
+          style={styles.avatarImage}
+          onError={() => setImageFailed(true)}
+        />
+      )}
     </View>
   );
 }
@@ -383,28 +477,7 @@ interface SmallButtonProps {
   disabled?: boolean;
 }
 
-function HeaderButton({
-  label,
-  accessibilityLabel,
-  onPress,
-}: SmallButtonProps): React.JSX.Element {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      hitSlop={spacing.sm}
-      onPress={onPress}
-      style={({pressed}) => [styles.smallButton, pressed && styles.pressed]}>
-      {({pressed}) => (
-        <Text style={[styles.smallButtonLabel, pressed && styles.pressedLabel]}>
-          {label}
-        </Text>
-      )}
-    </Pressable>
-  );
-}
-
-function PageButton({
+function SmallButton({
   label,
   accessibilityLabel,
   onPress,
@@ -444,7 +517,7 @@ const styles = StyleSheet.create({
   columns: {
     flex: 1,
     flexDirection: 'row',
-    gap: spacing.md,
+    gap: spacing.lg,
   },
   emptyColumn: {
     flex: 1,
@@ -452,70 +525,118 @@ const styles = StyleSheet.create({
   column: {
     flex: 1,
     minWidth: 0,
-    borderColor: colors.foreground,
-    borderWidth: borders.width,
-    borderRadius: borders.radius,
   },
   columnHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderBottomColor: colors.foreground,
-    borderBottomWidth: borders.width,
+    borderRadius: borders.radius,
+    backgroundColor: colors.listHeader,
   },
   columnTitle: {
     flex: 1,
-    color: colors.foreground,
+    color: colors.listHeaderText,
     fontSize: typography.label,
     fontWeight: '700',
   },
   columnCount: {
-    color: colors.foreground,
+    color: colors.listHeaderText,
     fontSize: typography.body,
+    fontWeight: '600',
   },
   columnBody: {
     flex: 1,
-    padding: BODY_PADDING,
+    marginTop: CARD_GAP,
     gap: CARD_GAP,
     overflow: 'hidden',
+  },
+  measureLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    opacity: 0,
   },
   columnFooter: {
     height: 56,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.sm,
-    borderTopColor: colors.foreground,
-    borderTopWidth: borders.width,
   },
   card: {
-    height: CARD_HEIGHT,
-    overflow: 'hidden',
-    justifyContent: 'space-between',
+    gap: spacing.xs,
     borderColor: colors.foreground,
     borderWidth: borders.width,
     borderRadius: borders.radius,
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm - 2,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.background,
+  },
+  labels: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  label: {
+    minHeight: 26,
+    maxWidth: '100%',
+    justifyContent: 'center',
+    borderRadius: 4,
+    paddingHorizontal: spacing.sm,
+  },
+  labelUnnamed: {
+    minHeight: 12,
+    width: 48,
+  },
+  labelText: {
+    fontSize: 16,
+    fontWeight: '700',
   },
   cardName: {
     color: colors.foreground,
     fontSize: typography.body,
     lineHeight: 28,
   },
-  cardMeta: {
+  cardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  cardBadges: {
+    flex: 1,
     color: colors.foreground,
     fontSize: 18,
-    lineHeight: 24,
+  },
+  avatars: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  avatar: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.avatar,
+  },
+  avatarInitials: {
+    color: colors.foreground,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  avatarImage: {
+    ...StyleSheet.absoluteFillObject,
   },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.lg,
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
   },
   footerText: {
     color: colors.foreground,

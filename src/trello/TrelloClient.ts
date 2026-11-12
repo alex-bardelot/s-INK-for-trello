@@ -4,6 +4,7 @@ import {
   NewCard,
   TrelloBoard,
   TrelloBoardCard,
+  TrelloBoardMember,
   TrelloCard,
   TrelloList,
   TrelloMember,
@@ -30,7 +31,9 @@ interface RequestOptions {
 const MEMBER_FIELDS = 'username,fullName,initials,url';
 const BOARD_FIELDS = 'name,url,closed,starred,idOrganization';
 const LIST_FIELDS = 'name,closed,pos,idBoard';
-const BOARD_CARD_FIELDS = 'name,idList,pos,due,dueComplete,badges';
+const BOARD_CARD_FIELDS =
+  'name,idList,pos,due,dueComplete,badges,labels,idMembers';
+const BOARD_MEMBER_FIELDS = 'fullName,initials,username,avatarUrl';
 
 /** Trello limits, from the REST reference of `POST /1/cards`. */
 export const CARD_NAME_MAX_LENGTH = 16384;
@@ -109,6 +112,18 @@ export class TrelloClient {
       throw new TrelloApiError('invalidResponse', 'Expected a list of cards');
     }
     return [...cards].sort((a, b) => a.pos - b.pos);
+  }
+
+  /** Returns the members of a board. */
+  async getBoardMembers(boardId: string): Promise<TrelloBoardMember[]> {
+    const members = await this.request<TrelloBoardMember[]>(
+      `/boards/${encodeURIComponent(boardId)}/members`,
+      {query: {fields: BOARD_MEMBER_FIELDS}},
+    );
+    if (!Array.isArray(members)) {
+      throw new TrelloApiError('invalidResponse', 'Expected a list of members');
+    }
+    return members;
   }
 
   /** Creates a card at the bottom of a list. */

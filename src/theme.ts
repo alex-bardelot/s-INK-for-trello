@@ -1,11 +1,17 @@
 /**
- * Design tokens tuned for the Supernote E Ink display: pure black on white
- * (no greys, which render poorly), generous sizes for pen and finger input.
+ * Design tokens tuned for the Supernote E Ink display: black on white, with
+ * a few well separated greys for surfaces only (fine shades render poorly),
+ * and generous sizes for pen and finger input.
  */
 
 export const colors = {
   background: '#FFFFFF',
   foreground: '#000000',
+  /** Header band of the lists on the board view. */
+  listHeader: '#5A5A5A',
+  listHeaderText: '#FFFFFF',
+  /** Fallback disc behind member initials. */
+  avatar: '#D0D0D0',
 } as const;
 
 export const spacing = {

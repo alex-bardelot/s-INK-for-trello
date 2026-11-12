@@ -11,7 +11,9 @@ export type {
   NewCard,
   TrelloBoard,
   TrelloBoardCard,
+  TrelloBoardMember,
   TrelloCard,
+  TrelloLabel,
   TrelloList,
   TrelloMember,
 } from './types';

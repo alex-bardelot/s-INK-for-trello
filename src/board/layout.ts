@@ -37,19 +37,36 @@ export function clampPage(
   return Math.min(Math.max(0, page), pageCount(itemCount, perPage) - 1);
 }
 
+/** A page of cards: indexes `[start, end)` in the list. */
+export interface CardPage {
+  start: number;
+  end: number;
+}
+
 /**
- * Number of fixed-height cards that fit entirely in a column body, so that
- * no card is ever drawn under the column's page controls.
+ * Splits cards of measured heights into pages that fit in `available`
+ * pixels, so that no card is ever cut or drawn under the page controls.
+ * A card taller than the column gets a page of its own.
  */
-export function cardsPerPage(
-  bodyHeight: number,
-  cardHeight: number,
+export function paginate(
+  heights: readonly number[],
+  available: number,
   gap: number,
-): number {
-  if (bodyHeight <= 0) {
-    return 1;
-  }
-  return Math.max(1, Math.floor((bodyHeight + gap) / (cardHeight + gap)));
+): CardPage[] {
+  const pages: CardPage[] = [];
+  let start = 0;
+  let used = 0;
+  heights.forEach((height, index) => {
+    if (index > start && used + gap + height > available) {
+      pages.push({start, end: index});
+      start = index;
+      used = height;
+    } else {
+      used = index === start ? height : used + gap + height;
+    }
+  });
+  pages.push({start, end: heights.length});
+  return pages;
 }
 
 /** Groups cards by list id, keeping their order. */
