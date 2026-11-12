@@ -4,13 +4,16 @@
   "private": true,
   "scripts": {
     "android": "react-native run-android",
-    "lint": "eslint .",
+    "lint": "eslint . --ext .js,.mjs,.ts,.tsx",
     "start": "react-native start",
     "test": "jest",
     "typecheck": "tsc --noEmit",
     "build:plugin": "powershell -ExecutionPolicy Bypass -File ./buildPlugin.ps1",
     "build:plugin:unix": "./buildPlugin.sh",
-    "format": "prettier --write \"src/**/*.{ts,tsx}\" \"__tests__/**/*.{ts,tsx}\" index.js"
+    "format": "prettier --write \"src/**/*.{ts,tsx}\" \"__tests__/**/*.{ts,tsx}\" \"scripts/**/*.mjs\" index.js",
+    "deploy": "node scripts/deploy.mjs",
+    "deploy:adb": "node scripts/deploy.mjs --method adb",
+    "build:deploy": "npm run build:plugin && npm run deploy"
   },
   "dependencies": {
     "react": "19.0.0",

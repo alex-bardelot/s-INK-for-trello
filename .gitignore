@@ -79,3 +79,6 @@ yarn-error.log
 
 # Local Claude Code settings
 .claude/settings.local.json
+
+# Local tablet deployment settings (see deploy.config.example.json)
+/deploy.config.json

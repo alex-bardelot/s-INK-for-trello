@@ -57,16 +57,47 @@ npm run build:plugin:unix   # Linux / macOS
 
 The package is written to `build/outputs/SuperTrello.snplg`.
 
+### Send the package to the tablet
+
+The package has to land in the `MyStyle` folder of the device. Three options:
+
+**Wi-Fi push (recommended).** Uses the tablet's built-in *Browse & Access*
+server, no cable needed.
+
+1. On the tablet, swipe down from the top and tap **Browse & Access**. Keep the
+   popup open; it shows an address such as `http://192.168.1.42:8089`.
+2. From the computer (same Wi-Fi network):
+
+   ```bash
+   npm run deploy -- --host 192.168.1.42
+   ```
+
+   To avoid typing the address each time, copy `deploy.config.example.json` to
+   `deploy.config.json` (git-ignored) and set `host`. Then
+   `npm run build:deploy` builds and pushes in one step.
+
+> The Browse & Access upload protocol is not officially documented by Ratta;
+> it is the one used by community tools and may change with firmware updates.
+
+**USB with adb.** Requires sideloading / USB debugging enabled on the tablet
+and Android platform-tools on the `PATH`:
+
+```bash
+npm run deploy:adb
+```
+
+**Manual copy.** Copy `build/outputs/SuperTrello.snplg` into `MyStyle` over
+USB (MTP) or Supernote Partner.
+
 ### Install on the tablet
 
-1. Connect the tablet over USB (or use Supernote Partner / Browse & Access).
-2. Copy `SuperTrello.snplg` into the `MyStyle` folder of the device.
-3. On the tablet, open **Settings → Apps → Plugins → Add Plugin** and pick
-   `SuperTrello.snplg`.
-4. Open a note or a document: the SuperTrello button appears in the toolbar.
+1. Open **Settings → Apps → Plugins → Add Plugin** and pick
+   `SuperTrello.snplg`. The SDK offers no way to install a plugin
+   programmatically, so this tap stays manual.
+2. Open a note or a document: the SuperTrello button appears in the toolbar.
 
-To update, bump `versionCode` / `versionName` in `PluginConfig.json`, rebuild
-and install the new package the same way.
+To update, bump `versionCode` / `versionName` in `PluginConfig.json`, rebuild,
+push and install the new package the same way.
 
 ## Project layout
 
@@ -85,6 +116,7 @@ and install the new package the same way.
 ├── __tests__/               # Jest unit tests
 ├── android/                 # Native Android project (only used for native modules)
 ├── buildPlugin.ps1 / .sh    # Official packaging scripts (from the SDK template)
+├── scripts/deploy.mjs       # Pushes the package to the tablet (Wi-Fi or adb)
 └── RELEASE_NOTES.md
 ```
 
