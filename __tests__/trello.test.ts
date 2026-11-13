@@ -54,7 +54,7 @@ describe('TrelloClient', () => {
 
     const [url, init] = fetchImpl.mock.calls[0];
     expect(url).toBe(
-      'https://api.trello.com/1/members/me?fields=username%2CfullName%2Cinitials%2Curl',
+      'https://api.trello.com/1/members/me?fields=username%2CfullName%2Cinitials%2Curl%2CavatarUrl',
     );
     expect(url).not.toContain(TOKEN);
     expect(init.headers.Authorization).toBe(

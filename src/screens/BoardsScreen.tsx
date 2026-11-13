@@ -19,14 +19,18 @@ import {
   paginateRows,
   RowHeights,
 } from '../boards/directory';
+import {describeLastActivity} from '../boards/activity';
 import {Button} from '../components/Button';
+import {GearIcon} from '../components/GearIcon';
+import {MemberAvatar} from '../components/MemberAvatar';
 import {ScreenFrame} from '../components/ScreenFrame';
-import {useTranslation} from '../i18n';
+import {Locale, useTranslation} from '../i18n';
 import {toSessionError} from '../session/trelloSession';
 import {
   SUPERNOTE_ROADMAP_SHORT_LINK,
   TrelloBoard,
   TrelloClient,
+  TrelloMember,
 } from '../trello';
 import {borders, colors, spacing, typography} from '../theme';
 
@@ -46,9 +50,16 @@ const ROW_HEIGHTS: RowHeights = {
   gap: spacing.md,
 };
 
-const TILE_BAND_HEIGHT = 44;
+/** Height of the colored part of a board tile, as on Trello's tiles. */
+const TILE_BAND_HEIGHT = 56;
+const AVATAR_SIZE = 44;
+
+function settingsIcon(color: string, background: string): React.ReactNode {
+  return <GearIcon size={24} color={color} holeColor={background} />;
+}
 
 export interface BoardsScreenProps {
+  member: TrelloMember;
   client: TrelloClient;
   /** Shows the Supernote section with the roadmap card. */
   showRoadmap: boolean;
@@ -65,6 +76,7 @@ export interface BoardsScreenProps {
  * buttons at the bottom or a two-finger swipe.
  */
 export function BoardsScreen({
+  member,
   client,
   showRoadmap,
   onOpenBoard,
@@ -185,7 +197,23 @@ export function BoardsScreen({
     <ScreenFrame
       title={t('boards.title')}
       actions={
-        <Button label={t('settings.open')} onPress={onOpenSettings} />
+        <>
+          <View style={styles.account}>
+            <MemberAvatar
+              initials={member.initials}
+              avatarUrl={member.avatarUrl}
+              size={AVATAR_SIZE}
+            />
+            <Text style={styles.accountText} numberOfLines={1}>
+              {t('boards.loggedInAs', {name: member.fullName})}
+            </Text>
+          </View>
+          <Button
+            label={t('settings.open')}
+            onPress={onOpenSettings}
+            icon={settingsIcon}
+          />
+        </>
       }>
       <View
         style={styles.body}
@@ -222,7 +250,6 @@ function SectionHeader({
 }): React.JSX.Element {
   const {t} = useTranslation();
   const label = {
-    supernote: t('boards.sectionSupernote'),
     starred: `★ ${t('boards.sectionStarred')}`,
     all: t('boards.sectionAll'),
   }[section];
@@ -288,13 +315,18 @@ function BoardTile({
   board: TrelloBoard;
   onPress: () => void;
 }): React.JSX.Element {
-  const {t} = useTranslation();
+  const {t, locale} = useTranslation();
+  const activity = lastActivityLabel(board.dateLastActivity, t, locale);
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={
-        board.starred ? `${board.name}, ${t('boards.starred')}` : board.name
-      }
+      accessibilityLabel={[
+        board.name,
+        board.starred ? t('boards.starred') : null,
+        activity,
+      ]
+        .filter(Boolean)
+        .join(', ')}
       onPress={onPress}
       style={({pressed}) => [styles.tile, pressed && styles.pressed]}>
       {({pressed}) => (
@@ -306,18 +338,74 @@ function BoardTile({
               </View>
             )}
           </View>
-          <Text
-            style={[styles.tileName, pressed && styles.pressedText]}
-            numberOfLines={2}>
-            {board.name}
-          </Text>
+          <View style={styles.tileFooter}>
+            <Text
+              style={[styles.tileName, pressed && styles.pressedText]}
+              numberOfLines={1}>
+              {board.name}
+            </Text>
+            {activity && (
+              <Text
+                style={[styles.tileActivity, pressed && styles.pressedText]}
+                numberOfLines={1}>
+                {activity}
+              </Text>
+            )}
+          </View>
         </>
       )}
     </Pressable>
   );
 }
 
+/** "Modified today", "Modified 3 days ago", "Modified on 12 Oct"… */
+function lastActivityLabel(
+  iso: string | null | undefined,
+  t: ReturnType<typeof useTranslation>['t'],
+  locale: Locale,
+): string | null {
+  const activity = describeLastActivity(iso);
+  switch (activity?.kind) {
+    case undefined:
+      return null;
+    case 'today':
+      return t('boards.modifiedToday');
+    case 'yesterday':
+      return t('boards.modifiedYesterday');
+    case 'daysAgo':
+      return t('boards.modifiedDaysAgo', {days: activity.days});
+    case 'date':
+      return t('boards.modifiedOn', {
+        date: formatDate(activity.date, locale),
+      });
+  }
+}
+
+function formatDate(date: Date, locale: Locale): string {
+  const sameYear = date.getFullYear() === new Date().getFullYear();
+  try {
+    return date.toLocaleDateString(locale.replace('_', '-'), {
+      day: 'numeric',
+      month: 'short',
+      ...(sameYear ? {} : {year: 'numeric'}),
+    });
+  } catch {
+    return date.toISOString().slice(0, 10);
+  }
+}
+
 const styles = StyleSheet.create({
+  account: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flexShrink: 1,
+  },
+  accountText: {
+    color: colors.foreground,
+    fontSize: typography.body,
+    flexShrink: 1,
+  },
   body: {
     flex: 1,
     gap: ROW_HEIGHTS.gap,
@@ -326,8 +414,6 @@ const styles = StyleSheet.create({
   header: {
     height: ROW_HEIGHTS.header,
     justifyContent: 'flex-end',
-    borderBottomColor: colors.foreground,
-    borderBottomWidth: borders.width / 2,
   },
   headerText: {
     color: colors.foreground,
@@ -378,20 +464,31 @@ const styles = StyleSheet.create({
   tileSpacer: {
     flex: 1,
   },
+  // Trello's board tile: a colored top with the star in its corner, and a
+  // white footer with the name. A thin grey outline replaces Trello's
+  // shadow, which E Ink cannot render.
   tile: {
     flex: 1,
-    borderColor: colors.foreground,
-    borderRadius: borders.radius,
-    borderWidth: borders.width,
+    borderColor: colors.labelBorder,
+    borderRadius: borders.radius + 2,
+    borderWidth: borders.width / 2,
     backgroundColor: colors.background,
     overflow: 'hidden',
   },
   band: {
     height: TILE_BAND_HEIGHT,
-    borderBottomColor: colors.foreground,
-    borderBottomWidth: borders.width / 2,
     alignItems: 'flex-end',
-    padding: spacing.xs,
+    padding: spacing.sm,
+  },
+  tileFooter: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    gap: 2,
+  },
+  tileActivity: {
+    color: colors.foreground,
+    fontSize: 18,
   },
   star: {
     width: 30,
@@ -410,10 +507,7 @@ const styles = StyleSheet.create({
   tileName: {
     color: colors.foreground,
     fontSize: typography.body,
-    lineHeight: 28,
     fontWeight: '600',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
   },
   pressed: {
     backgroundColor: colors.foreground,

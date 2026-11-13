@@ -28,9 +28,9 @@ interface RequestOptions {
   body?: Readonly<Record<string, unknown>>;
 }
 
-const MEMBER_FIELDS = 'username,fullName,initials,url';
+const MEMBER_FIELDS = 'username,fullName,initials,url,avatarUrl';
 const BOARD_FIELDS =
-  'name,url,shortLink,closed,starred,idOrganization,prefs';
+  'name,url,shortLink,closed,starred,idOrganization,prefs,dateLastActivity';
 const LIST_FIELDS = 'name,closed,pos,idBoard';
 const BOARD_CARD_FIELDS =
   'name,idList,pos,due,dueComplete,badges,labels,idMembers';

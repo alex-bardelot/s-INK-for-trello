@@ -1,3 +1,4 @@
+import {describeLastActivity} from '../src/boards/activity';
 import {
   BOARD_SHADES,
   boardShade,
@@ -66,16 +67,16 @@ describe('boardShade', () => {
 });
 
 describe('buildDirectoryRows', () => {
-  it('lists the Supernote section, the starred boards, then all boards', () => {
+  it('lists the roadmap, the starred boards, then the other boards', () => {
     const boards = [
       board('a', {starred: true}),
       board('b'),
       board('c'),
       board('d'),
+      board('e'),
     ];
     const rows = buildDirectoryRows(boards, 3);
     expect(rows.map(row => row.key)).toEqual([
-      'header:supernote',
       'roadmap',
       'header:starred',
       'starred:0',
@@ -83,8 +84,11 @@ describe('buildDirectoryRows', () => {
       'all:0',
       'all:3',
     ]);
-    const last = rows[rows.length - 1];
-    expect(last.kind === 'tiles' && last.boards.map(b => b.id)).toEqual(['d']);
+    const tileIds = rows.flatMap(row =>
+      row.kind === 'tiles' ? row.boards.map(b => b.id) : [],
+    );
+    // Each board appears once: starred ones are not repeated.
+    expect(tileIds).toEqual(['a', 'b', 'c', 'd', 'e']);
   });
 
   it('skips the starred section when nothing is starred', () => {
@@ -92,16 +96,22 @@ describe('buildDirectoryRows', () => {
     expect(keys).not.toContain('header:starred');
   });
 
+  it('skips the other boards section when every board is starred', () => {
+    const keys = buildDirectoryRows([board('a', {starred: true})], 3).map(
+      row => row.key,
+    );
+    expect(keys).toEqual(['roadmap', 'header:starred', 'starred:0']);
+  });
+
   it('shows a message row while the boards are not loaded', () => {
     expect(buildDirectoryRows(null, 3).map(row => row.kind)).toEqual([
-      'header',
       'roadmap',
       'header',
       'message',
     ]);
   });
 
-  it('leaves out the Supernote section when hidden', () => {
+  it('leaves out the roadmap when hidden', () => {
     const keys = buildDirectoryRows([board('a')], 3, false).map(r => r.key);
     expect(keys).toEqual(['header:all', 'all:0']);
   });
@@ -122,12 +132,12 @@ describe('paginateRows', () => {
   });
 
   it('never leaves a section header alone at the bottom of a page', () => {
-    // header 10 + roadmap 30 + header 10 = 60 with gaps: the "all" header
-    // would fit, but not with its first row of tiles.
+    // roadmap 30 + gap 5 + header 10 = 45: the "all" header would fit, but
+    // not with its first row of tiles.
     const rows = buildDirectoryRows([board('a'), board('b')], 1);
-    const pages = paginateRows(rows, 62, heights);
+    const pages = paginateRows(rows, 50, heights);
     expect(pages.map(page => page.map(row => row.key))).toEqual([
-      ['header:supernote', 'roadmap'],
+      ['roadmap'],
       ['header:all', 'all:0'],
       ['all:1'],
     ]);
@@ -142,6 +152,36 @@ describe('paginateRows', () => {
 
   it('returns one empty page for no rows', () => {
     expect(paginateRows([], 100, heights)).toEqual([[]]);
+  });
+});
+
+describe('describeLastActivity', () => {
+  const now = new Date(2026, 10, 13, 9, 0);
+  const at = (day: number, hour = 12) =>
+    new Date(2026, 10, day, hour).toISOString();
+
+  it('counts calendar days, not 24-hour periods', () => {
+    expect(describeLastActivity(at(13, 8), now)).toEqual({kind: 'today'});
+    expect(describeLastActivity(at(12, 23), now)).toEqual({
+      kind: 'yesterday',
+    });
+    expect(describeLastActivity(at(10), now)).toEqual({
+      kind: 'daysAgo',
+      days: 3,
+    });
+  });
+
+  it('gives the date beyond a week', () => {
+    const activity = describeLastActivity(at(1), now);
+    expect(activity?.kind).toBe('date');
+  });
+
+  it('treats future dates as today', () => {
+    expect(describeLastActivity(at(20), now)).toEqual({kind: 'today'});
+  });
+
+  it.each([null, undefined, '', 'not a date'])('ignores %p', value => {
+    expect(describeLastActivity(value, now)).toBeNull();
   });
 });
 

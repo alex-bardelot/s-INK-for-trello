@@ -76,14 +76,14 @@ export type DirectoryRow =
   | {kind: 'tiles'; key: string; boards: TrelloBoard[]}
   | {kind: 'message'; key: string};
 
-export type DirectorySection = 'supernote' | 'starred' | 'all';
+export type DirectorySection = 'starred' | 'all';
 
 /**
- * Rows of the boards page: the Supernote section with its roadmap card,
- * the starred boards, then every board (starred ones included, as on
- * Trello), the tiles grouped `columns` per row. When `boards` is `null`
- * (loading, failure), a message row stands for the user's boards. The
- * Supernote section is left out when `showRoadmap` is `false`.
+ * Rows of the boards page: the Supernote roadmap card, the starred boards,
+ * then the other boards (each board appears once), the tiles grouped
+ * `columns` per row. When `boards` is `null` (loading, failure), a message
+ * row stands for the user's boards. The roadmap card is left out when
+ * `showRoadmap` is `false`.
  */
 export function buildDirectoryRows(
   boards: readonly TrelloBoard[] | null,
@@ -91,10 +91,7 @@ export function buildDirectoryRows(
   showRoadmap = true,
 ): DirectoryRow[] {
   const rows: DirectoryRow[] = showRoadmap
-    ? [
-        {kind: 'header', key: 'header:supernote', section: 'supernote'},
-        {kind: 'roadmap', key: 'roadmap'},
-      ]
+    ? [{kind: 'roadmap', key: 'roadmap'}]
     : [];
   const addSection = (
     section: DirectorySection,
@@ -117,10 +114,13 @@ export function buildDirectoryRows(
     return rows;
   }
   const starred = boards.filter(board => board.starred);
+  const others = boards.filter(board => !board.starred);
   if (starred.length > 0) {
     addSection('starred', starred);
   }
-  addSection('all', boards);
+  if (others.length > 0) {
+    addSection('all', others);
+  }
   return rows;
 }
 

@@ -12,6 +12,8 @@ export interface TrelloMember {
   fullName: string;
   initials: string;
   url: string;
+  /** Base URL of the avatar image (`{avatarUrl}/50.png`), `null` without one. */
+  avatarUrl?: string | null;
 }
 
 /** A board the member belongs to (`GET /1/members/me/boards`). */
@@ -24,6 +26,8 @@ export interface TrelloBoard {
   closed: boolean;
   starred: boolean;
   idOrganization: string | null;
+  /** ISO date of the last activity on the board, by any member. */
+  dateLastActivity?: string | null;
   /** Display preferences; only the background colors are used. */
   prefs?: TrelloBoardPrefs | null;
 }

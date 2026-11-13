@@ -3,6 +3,22 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.10.1 — Board tiles and account header
+
+- Starred boards are no longer repeated under "Your boards", which now
+  lists only the other boards.
+- Section titles lose their underline, and the "Supernote" title above the
+  roadmap card is gone.
+- Board tiles look like Trello's: a larger colored top with the star in its
+  corner, and a white footer with the name and the date of the last
+  change ("Modified today", "Modified 3 days ago", "Modified on 12 Oct"),
+  from the board's `dateLastActivity`.
+- The title bar shows the Trello avatar and "Logged in as {name}", and the
+  Settings button has a gear icon (drawn with views, as the tablet fonts
+  lack the ⚙ sign).
+- The member is fetched with its `avatarUrl`.
+- Bumped the plugin to version 0.10.1 (`versionCode` 27).
+
 ## 0.10.0 — Boards page redesign and Settings
 
 - The boards page is laid out like Trello's: boards are tiles in a grid

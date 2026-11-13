@@ -1,5 +1,5 @@
 import React from 'react';
-import {Pressable, StyleSheet, Text} from 'react-native';
+import {Pressable, StyleSheet, Text, View} from 'react-native';
 
 import {borders, colors, spacing, typography} from '../theme';
 
@@ -9,6 +9,11 @@ export interface ButtonProps {
   /** Filled (black) style for the main action of a screen. */
   primary?: boolean;
   disabled?: boolean;
+  /**
+   * Icon drawn before the label, given the label color and the button
+   * background, which swap while pressed.
+   */
+  icon?: (color: string, background: string) => React.ReactNode;
 }
 
 /**
@@ -20,6 +25,7 @@ export function Button({
   onPress,
   primary = false,
   disabled = false,
+  icon,
 }: ButtonProps): React.JSX.Element {
   return (
     <Pressable
@@ -32,11 +38,25 @@ export function Button({
         primary !== pressed && styles.filled,
         disabled && styles.disabled,
       ]}>
-      {({pressed}) => (
-        <Text style={[styles.label, primary !== pressed && styles.filledLabel]}>
-          {label}
-        </Text>
-      )}
+      {({pressed}) => {
+        const filled = primary !== pressed;
+        const text = (
+          <Text style={[styles.label, filled && styles.filledLabel]}>
+            {label}
+          </Text>
+        );
+        if (!icon) {
+          return text;
+        }
+        return (
+          <View style={styles.withIcon}>
+            {filled
+              ? icon(colors.background, colors.foreground)
+              : icon(colors.foreground, colors.background)}
+            {text}
+          </View>
+        );
+      }}
     </Pressable>
   );
 }
@@ -64,5 +84,10 @@ const styles = StyleSheet.create({
   },
   filledLabel: {
     color: colors.background,
+  },
+  withIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
 });

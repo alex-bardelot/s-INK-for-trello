@@ -124,6 +124,7 @@ export default function App(): React.JSX.Element {
       }
       return (
         <BoardsScreen
+          member={state.member}
           client={state.client}
           showRoadmap={boardsPreferences.showSupernoteRoadmap}
           onOpenBoard={setOpenBoard}
