@@ -3,6 +3,12 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## Tooling — deploy at the end of each task
+
+- New project `CLAUDE.md`: Claude Code sessions run `deployPlugin.ps1` at
+  the end of every development task, as a single command so it needs no
+  confirmation.
+
 ## Tooling — one-command build and deploy
 
 - New `deployPlugin.ps1`: runs `buildPlugin.ps1`, checks the package was
