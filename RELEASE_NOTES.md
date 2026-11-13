@@ -3,6 +3,15 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.9.1 — Plugin name and author
+
+- The plugin list showed the name as "sINK for TrelloA(R)": the Supernote
+  plugin manager does not decode the "®" sign of `PluginConfig.json`. The
+  plugin is now listed as plain "sINK for Trello" (the sign stays in the
+  in-app strings and the README, where it renders correctly).
+- The author shown in the plugin list is now "AlexandreB".
+- Bumped the plugin to version 0.9.1 (`versionCode` 23).
+
 ## Tooling — deploy at the end of each task
 
 - New project `CLAUDE.md`: Claude Code sessions run `deployPlugin.ps1` at

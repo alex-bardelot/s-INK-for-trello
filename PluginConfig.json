@@ -1,12 +1,12 @@
 {
   "pluginID": "373ilax0ouxp1fnm",
   "pluginKey": "sINK",
-  "name": "sINK for Trello®",
+  "name": "sINK for Trello",
   "desc": "Trello boards on your Supernote.",
-  "author": "sINK contributors",
+  "author": "AlexandreB",
   "iconPath": "assets/icon.png",
-  "versionCode": "22",
-  "versionName": "0.9.0",
+  "versionCode": "23",
+  "versionName": "0.9.1",
   "jsMainPath": "index",
   "uses-permissions": [
     "plugin.permission.INTERNET",
