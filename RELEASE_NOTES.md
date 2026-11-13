@@ -3,6 +3,13 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.8.2 — Plugin icon redrawn
+
+- Redrew the plugin icon in the clean style of the 0.6.5 kanban-board icon
+  (rounded frame, two filled columns and one outlined), now with a pencil
+  across the bottom-right corner, tip pointing down-left.
+- Bumped the plugin to version 0.8.2 (`versionCode` 20).
+
 ## 0.8.1 — New plugin icon
 
 - Replaced the plugin icon with a hand-drawn design: a kanban board with
