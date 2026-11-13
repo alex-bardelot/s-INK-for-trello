@@ -44,6 +44,7 @@
   "settings.disconnect": "断开连接",
   "settings.disconnectConfirm": "要断开与 Trello 的连接吗？重新连接需要新的令牌。",
   "settings.token": "令牌存储",
+  "settings.disclaimer": "sINK for Trello 是一个独立的社区项目，与 Trello, Inc.、Atlassian 或 Ratta（Supernote）没有任何隶属、关联、授权或认可关系，也无任何官方联系。Trello® 是 Atlassian 的注册商标；Supernote 是 Ratta 的商标。此处使用这些名称仅为说明本插件可配合使用的产品。",
   "boards.roadmapFailedShort": "无法打开，请重试。",
   "storage.savedOnDevice": "您的令牌已保存在此平板上。",
   "storage.sessionOnly": "您的令牌未保存：平板重启后需要重新连接。",

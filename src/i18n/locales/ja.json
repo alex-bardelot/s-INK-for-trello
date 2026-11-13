@@ -44,6 +44,7 @@
   "settings.disconnect": "接続を解除",
   "settings.disconnectConfirm": "Trello との接続を解除しますか？再接続には新しいトークンが必要です。",
   "settings.token": "トークンの保存",
+  "settings.disclaimer": "sINK for Trello は独立したコミュニティプロジェクトです。Trello, Inc.、Atlassian、Ratta（Supernote）とは提携・関連しておらず、これらの企業による承認・推奨も受けておらず、いかなる形でも公式な関係はありません。Trello® は Atlassian の登録商標、Supernote は Ratta の商標です。これらの名称は、本プラグインの連携先を示す目的でのみ使用しています。",
   "boards.roadmapFailedShort": "開けませんでした。もう一度お試しください。",
   "storage.savedOnDevice": "トークンはこのタブレットに保存されています。",
   "storage.sessionOnly": "トークンは保存されていません：タブレットの再起動後に再度接続が必要です。",

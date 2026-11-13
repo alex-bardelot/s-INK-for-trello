@@ -44,6 +44,7 @@
   "settings.disconnect": "中斷連接",
   "settings.disconnectConfirm": "要中斷與 Trello 的連接嗎？重新連接需要新的權杖。",
   "settings.token": "權杖儲存",
+  "settings.disclaimer": "sINK for Trello 是一個獨立的社群專案，與 Trello, Inc.、Atlassian 或 Ratta（Supernote）沒有任何隸屬、關聯、授權或認可關係，也無任何官方聯繫。Trello® 是 Atlassian 的註冊商標；Supernote 是 Ratta 的商標。此處使用這些名稱僅為說明本外掛可搭配使用的產品。",
   "boards.roadmapFailedShort": "無法開啟，請再試一次。",
   "storage.savedOnDevice": "您的權杖已儲存在此平板上。",
   "storage.sessionOnly": "您的權杖未儲存：平板重新啟動後需要再次連接。",

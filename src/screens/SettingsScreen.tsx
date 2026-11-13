@@ -63,6 +63,8 @@ export function SettingsScreen({
           onDisconnect={onDisconnect}
         />
       )}
+
+      <Text style={styles.disclaimer}>{t('settings.disclaimer')}</Text>
     </ScreenFrame>
   );
 }
@@ -187,5 +189,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.md,
+  },
+  disclaimer: {
+    color: colors.foreground,
+    fontSize: typography.small,
+    borderTopColor: colors.foreground,
+    borderTopWidth: borders.width / 2,
+    paddingTop: spacing.md,
   },
 });

@@ -25,6 +25,7 @@ export const spacing = {
 } as const;
 
 export const typography = {
+  small: 18,
   body: 22,
   label: 24,
   heading: 30,

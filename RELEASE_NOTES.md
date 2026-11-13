@@ -3,6 +3,14 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.11.5 — Non-affiliation notice in Settings
+
+- The bottom of the Settings page shows the non-affiliation and trademark
+  notice from the README (not affiliated with Trello, Inc., Atlassian or
+  Ratta), in small text, in every supported language.
+- Added a `small` (18) size to the theme typography.
+- Bumped the plugin to version 0.11.5 (`versionCode` 34).
+
 ## 0.11.4 — Official roadmap name, plainer titles
 
 - The roadmap tile spans the whole width of the page and shows the board's

@@ -45,6 +45,7 @@
   "settings.disconnect": "Disconnect",
   "settings.disconnectConfirm": "Disconnect from Trello? You will need a new token to connect again.",
   "settings.token": "Token storage",
+  "settings.disclaimer": "sINK for Trello is an independent community project. It is not affiliated, associated, authorized, endorsed by, or in any way officially connected with Trello, Inc., Atlassian or Ratta (Supernote). Trello® is a registered trademark of Atlassian; Supernote is a trademark of Ratta. Both are used here only to describe what the plugin works with.",
   "storage.savedOnDevice": "Your token is saved on this tablet.",
   "storage.sessionOnly": "Your token is not saved: you will need to connect again after the tablet restarts.",
   "storage.save": "Save on this tablet",
