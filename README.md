@@ -145,6 +145,7 @@ and install the new package the same way.
 ├── __tests__/               # Jest unit tests
 ├── android/                 # Native Android project (only used for native modules)
 ├── buildPlugin.ps1 / .sh    # Official packaging scripts (from the SDK template)
+├── deployPlugin.ps1         # Build + copy the .snplg to the Partner app's MyStyle folder
 └── RELEASE_NOTES.md
 ```
 

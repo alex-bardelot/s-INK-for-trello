@@ -3,6 +3,13 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## Tooling — one-command build and deploy
+
+- New `deployPlugin.ps1`: runs `buildPlugin.ps1`, checks the package was
+  rebuilt, then copies the `.snplg` to the Supernote Partner app's MyStyle
+  folder so it syncs to the tablet. `-SkipBuild` copies the last package;
+  `SUPERNOTE_MYSTYLE_DIR` overrides the detected folder.
+
 ## 0.9.0 — Supernote roadmap
 
 - New **Supernote roadmap** button on the boards list. It opens Supernote's
