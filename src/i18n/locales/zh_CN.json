@@ -25,6 +25,8 @@
   "boards.loadFailed": "无法加载您的看板。",
   "boards.empty": "您没有打开的看板。",
   "boards.loggedInAs": "已登录：{name}",
+  "boards.connectTitle": "连接您的 Trello 账户",
+  "boards.connectHint": "在这里查看您的看板，并将手写笔记转换为 Trello 卡片。",
   "boards.sectionStarred": "已加星标的看板",
   "boards.sectionAll": "其他看板",
   "boards.starred": "已加星标",

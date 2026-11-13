@@ -12,8 +12,9 @@ import {borders, colors, spacing, typography} from '../theme';
 import {APP_VERSION} from '../version';
 
 export interface SettingsScreenProps {
-  member: TrelloMember;
-  tokenStorage: TokenStorage;
+  /** The connected member; the account settings are hidden without one. */
+  member: TrelloMember | null;
+  tokenStorage?: TokenStorage;
   saveFailed?: boolean;
   showRoadmap: boolean;
   onShowRoadmapChange: (show: boolean) => void;
@@ -38,7 +39,6 @@ export function SettingsScreen({
   onBack,
 }: SettingsScreenProps): React.JSX.Element {
   const {t} = useTranslation();
-  const [confirmingDisconnect, setConfirmingDisconnect] = useState(false);
 
   return (
     <ScreenFrame
@@ -53,6 +53,37 @@ export function SettingsScreen({
         />
       </Section>
 
+      {member && tokenStorage && (
+        <AccountSettings
+          member={member}
+          tokenStorage={tokenStorage}
+          saveFailed={saveFailed}
+          onRememberChange={onRememberChange}
+          onDisconnect={onDisconnect}
+        />
+      )}
+    </ScreenFrame>
+  );
+}
+
+function AccountSettings({
+  member,
+  tokenStorage,
+  saveFailed,
+  onRememberChange,
+  onDisconnect,
+}: {
+  member: TrelloMember;
+  tokenStorage: TokenStorage;
+  saveFailed?: boolean;
+  onRememberChange: (remember: boolean) => void;
+  onDisconnect: () => void;
+}): React.JSX.Element {
+  const {t} = useTranslation();
+  const [confirmingDisconnect, setConfirmingDisconnect] = useState(false);
+
+  return (
+    <>
       <Section title={t('settings.account')}>
         <Text style={styles.text}>
           {t('settings.signedInAs', {
@@ -92,7 +123,7 @@ export function SettingsScreen({
           onChange={onRememberChange}
         />
       </Section>
-    </ScreenFrame>
+    </>
   );
 }
 

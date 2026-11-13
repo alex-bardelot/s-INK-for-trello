@@ -14,7 +14,11 @@ type QueryValue = string | number | boolean | undefined;
 
 export interface TrelloClientOptions {
   apiKey: string;
-  token: string;
+  /**
+   * Member token. Without one, the client is anonymous: it can only read
+   * public boards, such as Supernote's roadmap.
+   */
+  token?: string;
   /** Injected for tests; defaults to the global `fetch`. */
   fetchImpl?: typeof fetch;
   baseUrl?: string;
@@ -50,7 +54,7 @@ export const CARD_DESC_MAX_LENGTH = 16384;
  */
 export class TrelloClient {
   private readonly apiKey: string;
-  private readonly token: string;
+  private readonly token: string | undefined;
   private readonly fetchImpl: typeof fetch;
   private readonly baseUrl: string;
   private readonly timeoutMs: number;
@@ -153,6 +157,9 @@ export class TrelloClient {
 
   /** Revokes the token on Trello's side (used when disconnecting). */
   async revokeToken(): Promise<void> {
+    if (!this.token) {
+      return;
+    }
     await this.request<unknown>(`/tokens/${encodeURIComponent(this.token)}`, {
       method: 'DELETE',
     });
@@ -162,7 +169,13 @@ export class TrelloClient {
     path: string,
     {method = 'GET', query = {}, body}: RequestOptions = {},
   ): Promise<T> {
-    const url = this.baseUrl + path + buildQueryString(query);
+    // Anonymous requests identify the application with the key in the query
+    // string, the form Trello documents for public resources; the key is
+    // not a secret, unlike the token.
+    const url =
+      this.baseUrl +
+      path +
+      buildQueryString(this.token ? query : {...query, key: this.apiKey});
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
 
@@ -174,7 +187,11 @@ export class TrelloClient {
         headers: {
           Accept: 'application/json',
           ...(body ? {'Content-Type': 'application/json'} : {}),
-          Authorization: `OAuth oauth_consumer_key="${this.apiKey}", oauth_token="${this.token}"`,
+          ...(this.token
+            ? {
+                Authorization: `OAuth oauth_consumer_key="${this.apiKey}", oauth_token="${this.token}"`,
+              }
+            : {}),
         },
         signal: controller.signal,
       });

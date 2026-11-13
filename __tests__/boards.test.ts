@@ -145,6 +145,15 @@ describe('buildDirectoryRows', () => {
     ]);
   });
 
+  it('invites to connect an account when signed out', () => {
+    expect(
+      buildDirectoryRows(null, 3, true, false).map(row => row.key),
+    ).toEqual(['roadmap', 'connect']);
+    expect(
+      buildDirectoryRows(null, 3, false, false).map(row => row.key),
+    ).toEqual(['connect']);
+  });
+
   it('leaves out the roadmap when hidden', () => {
     const keys = buildDirectoryRows([board('a')], 3, false).map(r => r.key);
     expect(keys).toEqual(['header:all', 'all:0']);
@@ -155,6 +164,7 @@ describe('paginateRows', () => {
   const heights: RowHeights = {
     header: 10,
     roadmap: 30,
+    connect: 60,
     tiles: 30,
     message: 30,
     gap: 5,

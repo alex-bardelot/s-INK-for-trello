@@ -24,8 +24,9 @@ import {TrelloBoard} from './trello';
  *
  * On every opening it looks for a linked Trello account: if one is found and
  * still valid, the requested feature is shown (boards from the toolbar
- * button, card creation from the lasso button); otherwise the user is asked
- * to connect first.
+ * button, card creation from the lasso button). Without an account, the
+ * boards page still opens, with Supernote's public roadmap and a card
+ * leading to the connection screen; card creation asks to connect first.
  */
 export default function App(): React.JSX.Element {
   const {t} = useTranslation();
@@ -34,6 +35,7 @@ export default function App(): React.JSX.Element {
   const {state} = session;
   const [openBoard, setOpenBoard] = useState<TrelloBoard | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [connectOpen, setConnectOpen] = useState(false);
   const [boardsPreferences, setBoardsPreferences] = useState(
     DEFAULT_BOARDS_PREFERENCES,
   );
@@ -72,75 +74,98 @@ export default function App(): React.JSX.Element {
     }
   }, [sessionChecked, t]);
 
-  switch (state.status) {
-    case 'checking':
-      return <StatusScreen message={t('session.checking')} />;
-    case 'signedIn':
-      if (intent.kind === 'lassoCreateCard') {
-        return (
-          <CreateCardScreen
-            key={intent.requestId}
-            lasso={intent.lasso}
-            client={state.client}
-            store={session.settingsStore}
-            onTokenRejected={session.retry}
-          />
-        );
-      }
-      if (openBoard) {
-        return (
-          <BoardScreen
-            key={openBoard.id}
-            board={openBoard}
-            client={state.client}
-            store={session.settingsStore}
-            memberId={state.member.id}
-            onBack={() => setOpenBoard(null)}
-            onTokenRejected={session.retry}
-          />
-        );
-      }
-      if (settingsOpen) {
-        return (
-          <SettingsScreen
-            member={state.member}
-            tokenStorage={state.tokenStorage}
-            saveFailed={state.saveFailed}
-            showRoadmap={boardsPreferences.showSupernoteRoadmap}
-            onShowRoadmapChange={show =>
-              updateBoardsPreferences({
-                ...boardsPreferences,
-                showSupernoteRoadmap: show,
-              })
-            }
-            onRememberChange={session.setRemembered}
-            onDisconnect={() => {
-              setSettingsOpen(false);
-              session.disconnect();
-            }}
-            onBack={() => setSettingsOpen(false)}
-          />
-        );
-      }
-      return (
-        <BoardsScreen
-          member={state.member}
-          client={state.client}
-          showRoadmap={boardsPreferences.showSupernoteRoadmap}
-          onOpenBoard={setOpenBoard}
-          onOpenSettings={() => setSettingsOpen(true)}
-          onTokenRejected={session.retry}
-        />
-      );
-    case 'signedOut':
-    case 'connecting':
-      return (
-        <ConnectScreen
-          busy={state.status === 'connecting'}
-          error={state.status === 'signedOut' ? state.error : undefined}
-          onConnect={session.connect}
-          onRetry={session.retry}
-        />
-      );
+  // The connection screen opens from the boards page, and by itself when
+  // a stored account could not be restored (the error is explained there).
+  const signedOutError = state.status === 'signedOut' ? state.error : undefined;
+  useEffect(() => {
+    if (signedOutError) {
+      setConnectOpen(true);
+    }
+  }, [signedOutError]);
+  const signedIn = state.status === 'signedIn';
+  useEffect(() => {
+    if (signedIn) {
+      setConnectOpen(false);
+    }
+  }, [signedIn]);
+
+  if (state.status === 'checking') {
+    return <StatusScreen message={t('session.checking')} />;
   }
+  const account = state.status === 'signedIn' ? state : null;
+  const lasso = intent.kind === 'lassoCreateCard' ? intent : null;
+
+  if (!account && (lasso || connectOpen || state.status === 'connecting')) {
+    return (
+      <ConnectScreen
+        busy={state.status === 'connecting'}
+        error={signedOutError}
+        onConnect={session.connect}
+        onRetry={session.retry}
+        // Card creation needs an account: there is no page to go back to.
+        onBack={lasso ? undefined : () => setConnectOpen(false)}
+      />
+    );
+  }
+  if (account && lasso) {
+    return (
+      <CreateCardScreen
+        key={lasso.requestId}
+        lasso={lasso.lasso}
+        client={account.client}
+        store={session.settingsStore}
+        onTokenRejected={session.retry}
+      />
+    );
+  }
+
+  // Signed out, public boards (Supernote's roadmap) are read anonymously.
+  const client = account?.client ?? session.anonymousClient;
+  if (openBoard) {
+    return (
+      <BoardScreen
+        key={openBoard.id}
+        board={openBoard}
+        client={client}
+        store={session.settingsStore}
+        memberId={account?.member.id ?? ''}
+        onBack={() => setOpenBoard(null)}
+        onTokenRejected={session.retry}
+      />
+    );
+  }
+  if (settingsOpen) {
+    return (
+      <SettingsScreen
+        member={account?.member ?? null}
+        tokenStorage={account?.tokenStorage}
+        saveFailed={account?.saveFailed}
+        showRoadmap={boardsPreferences.showSupernoteRoadmap}
+        onShowRoadmapChange={show =>
+          updateBoardsPreferences({
+            ...boardsPreferences,
+            showSupernoteRoadmap: show,
+          })
+        }
+        onRememberChange={session.setRemembered}
+        onDisconnect={() => {
+          setSettingsOpen(false);
+          session.disconnect();
+        }}
+        onBack={() => setSettingsOpen(false)}
+      />
+    );
+  }
+  return (
+    <BoardsScreen
+      member={account?.member ?? null}
+      client={client}
+      showRoadmap={boardsPreferences.showSupernoteRoadmap}
+      ensureNetwork={session.ensureNetwork}
+      onOpenBoard={setOpenBoard}
+      onOpenSettings={() => setSettingsOpen(true)}
+      onConnect={() => setConnectOpen(true)}
+      onTokenRejected={session.retry}
+    />
+  );
 }

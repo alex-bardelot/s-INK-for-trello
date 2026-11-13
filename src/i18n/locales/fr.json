@@ -25,6 +25,8 @@
   "boards.loadFailed": "Impossible de charger vos tableaux.",
   "boards.empty": "Vous n’avez aucun tableau ouvert.",
   "boards.loggedInAs": "Connecté : {name}",
+  "boards.connectTitle": "Connectez votre compte Trello",
+  "boards.connectHint": "Retrouvez ici vos tableaux et transformez vos notes manuscrites en cartes Trello.",
   "boards.sectionStarred": "Tableaux favoris",
   "boards.sectionAll": "Autres tableaux",
   "boards.starred": "favori",

@@ -62,6 +62,25 @@ describe('TrelloClient', () => {
     );
   });
 
+  it('reads public boards anonymously with the key in the query', async () => {
+    const fetchImpl = jest
+      .fn()
+      .mockResolvedValue(jsonResponse({id: 'b', name: 'Roadmap'}));
+    const client = new TrelloClient({apiKey: API_KEY, fetchImpl});
+    await client.getBoard('l0COP24j');
+
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(url).toContain('/boards/l0COP24j?');
+    expect(url).toContain(`key=${API_KEY}`);
+    expect(init.headers.Authorization).toBeUndefined();
+  });
+
+  it('does nothing when revoking without a token', async () => {
+    const fetchImpl = jest.fn();
+    await new TrelloClient({apiKey: API_KEY, fetchImpl}).revokeToken();
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
   it('sorts boards starred first, then by name', async () => {
     const fetchImpl = jest.fn().mockResolvedValue(
       jsonResponse([

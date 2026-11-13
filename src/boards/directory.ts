@@ -94,6 +94,7 @@ export function boardImageUrl(
 export type DirectoryRow =
   | {kind: 'header'; key: string; section: DirectorySection}
   | {kind: 'roadmap'; key: string}
+  | {kind: 'connect'; key: string}
   | {kind: 'tiles'; key: string; boards: TrelloBoard[]}
   | {kind: 'message'; key: string};
 
@@ -104,16 +105,22 @@ export type DirectorySection = 'starred' | 'all';
  * then the other boards (each board appears once), the tiles grouped
  * `columns` per row. When `boards` is `null` (loading, failure), a message
  * row stands for the user's boards. The roadmap card is left out when
- * `showRoadmap` is `false`.
+ * `showRoadmap` is `false`. Without a connected account, a card inviting
+ * to connect one takes the place of the boards.
  */
 export function buildDirectoryRows(
   boards: readonly TrelloBoard[] | null,
   columns: number,
   showRoadmap = true,
+  signedIn = true,
 ): DirectoryRow[] {
   const rows: DirectoryRow[] = showRoadmap
     ? [{kind: 'roadmap', key: 'roadmap'}]
     : [];
+  if (!signedIn) {
+    rows.push({kind: 'connect', key: 'connect'});
+    return rows;
+  }
   const addSection = (
     section: DirectorySection,
     list: readonly TrelloBoard[],
@@ -149,6 +156,7 @@ export function buildDirectoryRows(
 export interface RowHeights {
   header: number;
   roadmap: number;
+  connect: number;
   tiles: number;
   message: number;
   /** Space between two rows. */

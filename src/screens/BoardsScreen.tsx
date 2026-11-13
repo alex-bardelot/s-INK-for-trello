@@ -37,6 +37,7 @@ import {borders, colors, spacing, typography} from '../theme';
 import {APP_VERSION} from '../version';
 
 const SUPERNOTE_LOGO = require('../../assets/supernote-logo.png');
+const TRELLO_ICON = require('../../assets/trello-icon.png');
 
 type BoardsState =
   | {status: 'loading'}
@@ -47,6 +48,7 @@ type BoardsState =
 const ROW_HEIGHTS: RowHeights = {
   header: 44,
   roadmap: 148,
+  connect: 340,
   tiles: 148,
   message: 120,
   gap: spacing.md,
@@ -61,32 +63,42 @@ function settingsIcon(color: string, background: string): React.ReactNode {
 }
 
 export interface BoardsScreenProps {
-  member: TrelloMember;
+  /** The connected member, or `null` when no account is connected yet. */
+  member: TrelloMember | null;
+  /** The member's client, or an anonymous one when signed out. */
   client: TrelloClient;
-  /** Shows the Supernote section with the roadmap card. */
+  /** Shows the roadmap tile. */
   showRoadmap: boolean;
+  /** Asks for network access; resolves `false` if refused. */
+  ensureNetwork: () => Promise<boolean>;
   onOpenBoard: (board: TrelloBoard) => void;
   onOpenSettings: () => void;
+  /** Opens the connection screen (signed out only). */
+  onConnect: () => void;
   /** Called when Trello rejects the token while loading. */
   onTokenRejected: () => void;
 }
 
 /**
- * Boards page, laid out like Trello's: a Supernote section with the
- * official roadmap, the starred boards, then all the boards, as tiles in a
- * grid. The page never scrolls: rows are split into pages turned with the
- * buttons at the bottom or a two-finger swipe.
+ * Boards page, laid out like Trello's: Supernote's official roadmap, the
+ * starred boards, then the other boards, as tiles in a grid. Without a
+ * connected account, a large card invites to connect one. The page never
+ * scrolls: rows are split into pages turned with the buttons at the bottom
+ * or a two-finger swipe.
  */
 export function BoardsScreen({
   member,
   client,
   showRoadmap,
+  ensureNetwork,
   onOpenBoard,
   onOpenSettings,
+  onConnect,
   onTokenRejected,
 }: BoardsScreenProps): React.JSX.Element {
   const {t} = useTranslation();
   const {width, height} = useWindowDimensions();
+  const signedIn = member !== null;
   const [state, setState] = useState<BoardsState>({status: 'loading'});
   const [roadmap, setRoadmap] = useState<'idle' | 'opening' | 'failed'>('idle');
   const [bodyHeight, setBodyHeight] = useState<number | null>(null);
@@ -107,26 +119,33 @@ export function BoardsScreen({
   }, [client, onTokenRejected]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (signedIn) {
+      load();
+    }
+  }, [load, signedIn]);
 
   // Supernote's roadmap is a public board: the user usually is not a member
   // of it, so it is fetched by its short link rather than found in the list.
+  // Signed out, network access may not have been granted yet.
   const openRoadmap = useCallback(async () => {
     setRoadmap('opening');
     try {
+      if (!(await ensureNetwork())) {
+        setRoadmap('failed');
+        return;
+      }
       const board = await client.getBoard(SUPERNOTE_ROADMAP_SHORT_LINK);
       setRoadmap('idle');
       onOpenBoard(board);
     } catch (error) {
       console.warn('[sINK] Failed to open the Supernote roadmap', error);
-      if (toSessionError(error) === 'invalidToken') {
+      if (signedIn && toSessionError(error) === 'invalidToken') {
         onTokenRejected();
         return;
       }
       setRoadmap('failed');
     }
-  }, [client, onOpenBoard, onTokenRejected]);
+  }, [client, ensureNetwork, onOpenBoard, onTokenRejected, signedIn]);
 
   const columns = directoryColumns(width, height);
   const boards = state.status === 'loaded' ? state.boards : null;
@@ -135,11 +154,11 @@ export function BoardsScreen({
       bodyHeight === null
         ? null
         : paginateRows(
-            buildDirectoryRows(boards, columns, showRoadmap),
+            buildDirectoryRows(boards, columns, showRoadmap, signedIn),
             bodyHeight,
             ROW_HEIGHTS,
           ),
-    [boards, columns, showRoadmap, bodyHeight],
+    [boards, columns, showRoadmap, signedIn, bodyHeight],
   );
   const totalPages = pages?.length ?? 1;
   const pageIndex = Math.min(page, totalPages - 1);
@@ -167,6 +186,8 @@ export function BoardsScreen({
             ))}
           </View>
         );
+      case 'connect':
+        return <ConnectCard key={row.key} onPress={onConnect} />;
       case 'tiles':
         return (
           <View key={row.key} style={styles.tileRow}>
@@ -207,16 +228,18 @@ export function BoardsScreen({
       subtitle={t('app.version', {version: APP_VERSION})}
       actions={
         <>
-          <View style={styles.account}>
-            <MemberAvatar
-              initials={member.initials}
-              avatarUrl={member.avatarUrl}
-              size={AVATAR_SIZE}
-            />
-            <Text style={styles.accountText} numberOfLines={1}>
-              {t('boards.loggedInAs', {name: member.fullName})}
-            </Text>
-          </View>
+          {member && (
+            <View style={styles.account}>
+              <MemberAvatar
+                initials={member.initials}
+                avatarUrl={member.avatarUrl}
+                size={AVATAR_SIZE}
+              />
+              <Text style={styles.accountText} numberOfLines={1}>
+                {t('boards.loggedInAs', {name: member.fullName})}
+              </Text>
+            </View>
+          )}
           <Button
             label={t('settings.open')}
             onPress={onOpenSettings}
@@ -268,6 +291,37 @@ function SectionHeader({
         {label}
       </Text>
     </View>
+  );
+}
+
+/**
+ * Large card with a dashed outline standing for the boards of an account
+ * not connected yet; pressing it opens the connection screen.
+ */
+function ConnectCard({onPress}: {onPress: () => void}): React.JSX.Element {
+  const {t} = useTranslation();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({pressed}) => [styles.connect, pressed && styles.pressed]}>
+      {({pressed}) => (
+        <>
+          <Image
+            source={TRELLO_ICON}
+            style={styles.trelloIcon}
+            resizeMode="contain"
+            accessibilityIgnoresInvertColors
+          />
+          <Text style={[styles.connectTitle, pressed && styles.pressedText]}>
+            {t('boards.connectTitle')}
+          </Text>
+          <Text style={[styles.connectHint, pressed && styles.pressedText]}>
+            {t('boards.connectHint')}
+          </Text>
+        </>
+      )}
+    </Pressable>
   );
 }
 
@@ -462,6 +516,33 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     fontSize: typography.label,
     fontWeight: '700',
+  },
+  connect: {
+    height: ROW_HEIGHTS.connect,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+    padding: spacing.lg,
+    borderColor: colors.foreground,
+    borderRadius: borders.radius + 2,
+    borderStyle: 'dashed',
+    borderWidth: borders.width,
+    backgroundColor: colors.background,
+  },
+  trelloIcon: {
+    width: 112,
+    height: 112,
+  },
+  connectTitle: {
+    color: colors.foreground,
+    fontSize: typography.heading,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  connectHint: {
+    color: colors.foreground,
+    fontSize: typography.body,
+    textAlign: 'center',
   },
   logoBand: {
     alignItems: 'center',

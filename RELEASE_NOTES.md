@@ -3,6 +3,21 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.11.0 — Boards page without an account
+
+- Without a connected account, the boards page opens instead of the
+  connection screen. It shows the Supernote roadmap tile, which can be
+  opened anonymously (a public board read with the API key only), and a
+  large dashed card with the Trello mark, "Connect your Trello account",
+  that leads to the connection screen. That screen has a back button.
+- The connection screen still opens by itself when a stored account could
+  not be restored, to explain why, and for the lasso button, as card
+  creation needs an account.
+- Settings without an account only show the display options.
+- `TrelloClient` accepts no token: requests then carry the key in the
+  query string and no `Authorization` header.
+- Bumped the plugin to version 0.11.0 (`versionCode` 29).
+
 ## 0.10.2 — Board background images and version number
 
 - Board tiles show the board's background photo when it has one (the

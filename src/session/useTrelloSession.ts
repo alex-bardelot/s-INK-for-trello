@@ -18,6 +18,10 @@ export interface UseTrelloSessionResult {
   state: SessionState;
   /** Store for non-sensitive plugin settings (kept on the tablet). */
   settingsStore: KeyValueStore;
+  /** Client without a token, for public boards while signed out. */
+  anonymousClient: TrelloClient;
+  /** Asks for network access; resolves `false` if refused. */
+  ensureNetwork: () => Promise<boolean>;
   /** Connects; the token is saved on the tablet only if `remember` is set. */
   connect: (rawToken: string, remember: boolean) => Promise<void>;
   /** Saves the token on the tablet, or removes it from there. */
@@ -41,6 +45,10 @@ function createDefaultDeps(): SessionDeps {
 /** Holds the Trello connection of the plugin view. */
 export function useTrelloSession(): UseTrelloSessionResult {
   const deps = useMemo(createDefaultDeps, []);
+  const anonymousClient = useMemo(
+    () => new TrelloClient({apiKey: deps.apiKey}),
+    [deps],
+  );
   const [state, setState] = useState<SessionState>({status: 'checking'});
   const mounted = useRef(true);
 
@@ -86,6 +94,8 @@ export function useTrelloSession(): UseTrelloSessionResult {
   return {
     state,
     settingsStore: deps.deviceStore,
+    anonymousClient,
+    ensureNetwork: deps.ensureNetwork,
     connect,
     setRemembered,
     disconnect: signOut,

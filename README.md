@@ -92,7 +92,12 @@ The package is written to `build/outputs/sINK.snplg`.
 
 ### Connect a Trello account
 
-1. Press the sINK button and allow Internet access when asked.
+Without an account, the boards page already shows Supernote's public
+roadmap (read with the API key only) and a **Connect your Trello account**
+card that opens the connection screen.
+
+1. Press the sINK button, then **Connect your Trello account**, and allow
+   Internet access when asked.
 2. Open the displayed address in a browser (the tablet's, or any other
    device's), sign in to Trello and press **Allow**.
 3. Trello displays a token: copy it and press **Paste token** in the plugin

@@ -34,6 +34,8 @@ export interface ConnectScreenProps {
   onConnect: (token: string, remember: boolean) => void;
   /** Checks the stored account again after a transient failure. */
   onRetry: () => void;
+  /** When set, a back button returns to the boards page. */
+  onBack?: () => void;
 }
 
 /** Failures worth retrying without typing the token again. */
@@ -53,6 +55,7 @@ export function ConnectScreen({
   busy,
   onConnect,
   onRetry,
+  onBack,
 }: ConnectScreenProps): React.JSX.Element {
   const {t} = useTranslation();
   const [token, setToken] = useState('');
@@ -98,7 +101,7 @@ export function ConnectScreen({
   }, [onConnect, remember]);
 
   return (
-    <ScreenFrame title={t('connect.title')}>
+    <ScreenFrame title={t('connect.title')} onBack={onBack}>
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled">
