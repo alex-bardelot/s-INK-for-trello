@@ -3,6 +3,17 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.17.0 — Connect as soon as the token is copied
+
+- While the connection page is open, the plugin reads the clipboard every
+  1.5 seconds and connects by itself as soon as it holds a Trello token:
+  copy the token in the browser, come back, and there is nothing else to
+  press. A note in step 2 says so.
+- Each clipboard text is tried at most once, so a token Trello rejected is
+  not sent again until something else is copied, and nothing is read while
+  a connection is in progress. **Paste token** still works as before.
+- Bumped the plugin to version 0.17.0 (`versionCode` 44).
+
 ## 0.16.0 — Clearer Trello connection page
 
 - The connection page is laid out as two framed, numbered steps:

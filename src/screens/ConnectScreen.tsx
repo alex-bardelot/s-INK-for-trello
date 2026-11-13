@@ -1,4 +1,4 @@
-import React, {useCallback, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   Linking,
   Pressable,
@@ -15,6 +15,7 @@ import {QrCodeView} from '../components/QrCodeView';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {TranslationKey, useTranslation} from '../i18n';
 import {isClipboardAvailable, readClipboardText} from '../platform/clipboard';
+import {watchClipboardForToken} from '../session/clipboardTokenWatch';
 import {SessionErrorCode} from '../session/trelloSession';
 import {buildAuthorizeUrl, normalizeToken, TRELLO_API_KEY} from '../trello';
 import {borders, colors, spacing, typography} from '../theme';
@@ -78,6 +79,29 @@ export function ConnectScreen({
     [],
   );
   const canConnect = error !== 'missingApiKey';
+  const [clipboardWatched] = useState(isClipboardAvailable);
+
+  // The watcher outlives renders: it reads the latest values through refs.
+  const latest = useRef({busy, remember, onConnect});
+  latest.current = {busy, remember, onConnect};
+
+  // Connect by itself as soon as a token is copied (typically in the
+  // browser), so coming back to the plugin is enough.
+  useEffect(() => {
+    if (!canConnect || !clipboardWatched) {
+      return undefined;
+    }
+    return watchClipboardForToken({
+      read: readClipboardText,
+      isPaused: () => latest.current.busy,
+      onToken: text => {
+        setToken(text.trim());
+        setPasteError(null);
+        latest.current.onConnect(text, latest.current.remember);
+      },
+    });
+  }, [canConnect, clipboardWatched]);
+
   const typed = token.replace(/\s+/g, '');
   const validToken = normalizeToken(token) !== null;
 
@@ -178,6 +202,11 @@ export function ConnectScreen({
 
             <StepCard number={2} title={t('connect.step2Title')}>
               <Text style={styles.paragraph}>{t('connect.step2')}</Text>
+              {clipboardWatched && (
+                <Text style={[styles.paragraph, styles.valid]}>
+                  {t('connect.clipboardWatch')}
+                </Text>
+              )}
               <TextInput
                 accessibilityLabel={t('connect.tokenPlaceholder')}
                 autoCapitalize="none"

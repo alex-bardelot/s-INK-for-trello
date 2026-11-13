@@ -16,6 +16,7 @@
   "connect.hideAddress": "Hide the address",
   "connect.step2Title": "Paste the token",
   "connect.step2": "Trello then displays a token. Copy it and press Paste token, or type it below.",
+  "connect.clipboardWatch": "As soon as you copy the token, even in the browser, sINK connects by itself when you come back.",
   "connect.tokenValid": "Token recognized ({count} characters).",
   "connect.tokenInvalid": "This is not a Trello token yet ({count} characters): a token is made of 64 or more letters and digits, often starting with ATTA.",
   "connect.tokenPlaceholder": "Trello token",

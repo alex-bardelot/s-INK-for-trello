@@ -16,6 +16,7 @@
   "connect.hideAddress": "Masquer l’adresse",
   "connect.step2Title": "Coller le jeton",
   "connect.step2": "Trello affiche alors un jeton. Copiez-le puis appuyez sur Coller le jeton, ou saisissez-le ci-dessous.",
+  "connect.clipboardWatch": "Dès que vous copiez le jeton, même dans le navigateur, sINK se connecte tout seul à votre retour.",
   "connect.tokenValid": "Jeton reconnu ({count} caractères).",
   "connect.tokenInvalid": "Ce n’est pas encore un jeton Trello ({count} caractères) : un jeton compte au moins 64 lettres et chiffres, et commence souvent par ATTA.",
   "connect.tokenPlaceholder": "Jeton Trello",

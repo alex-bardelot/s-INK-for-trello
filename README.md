@@ -101,9 +101,11 @@ that opens the connection screen.
    Internet access when asked.
 2. In step 1, press **Open in browser** (or scan the QR code with a phone),
    sign in to Trello and press **Allow**.
-3. In step 2, copy the token Trello displays and press **Paste token** (or
-   type it: the plugin says when it looks like a complete token, and only
-   then enables **Connect**).
+3. Copy the token Trello displays and come back to the plugin: while the
+   connection page is open, it watches the clipboard and connects by itself
+   as soon as a token is copied. You can also press **Paste token**, or type
+   it: the plugin says when it looks like a complete token, and only then
+   enables **Connect**.
 
 How the connection works and why:
 
