@@ -3,6 +3,12 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.9.2 — Full name on the toolbar button
+
+- The plugins menu of the toolbar now shows "sINK for Trello" instead of
+  "sINK" (all locales).
+- Bumped the plugin to version 0.9.2 (`versionCode` 24).
+
 ## 0.9.1 — Plugin name and author
 
 - The plugin list showed the name as "sINK for TrelloA(R)": the Supernote
