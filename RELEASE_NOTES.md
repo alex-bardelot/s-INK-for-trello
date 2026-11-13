@@ -3,6 +3,12 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.8.1 — New plugin icon
+
+- Replaced the plugin icon with a hand-drawn design: a kanban board with
+  three columns and a pencil, in black on a transparent background (48×48).
+- Bumped the plugin to version 0.8.1 (`versionCode` 19).
+
 ## 0.8.0 — Review mode
 
 - New **Review** switch in the board header, next to Focus. Review mode keeps
