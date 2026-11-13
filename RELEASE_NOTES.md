@@ -3,6 +3,16 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.11.4 — Official roadmap name, plainer titles
+
+- The roadmap tile spans the whole width of the page and shows the board's
+  official name as read from Trello ("Supernote A5 X/A6 X/Manta/Nomad
+  Software Roadmap 2026" until it is read, as Ratta renames it yearly),
+  with "Public Trello board, read-only" under it.
+- The title bars drop the "®" sign and the version line:
+  "sINK for Trello: Boards", "sINK for Trello: Settings".
+- Bumped the plugin to version 0.11.4 (`versionCode` 33).
+
 ## 0.11.3 — Account shown in Settings only
 
 - The boards page title bar no longer shows the avatar and "Logged in as";

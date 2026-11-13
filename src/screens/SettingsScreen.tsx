@@ -10,7 +10,6 @@ import {useTranslation} from '../i18n';
 import {TokenStorage} from '../session/trelloSession';
 import {TrelloMember} from '../trello';
 import {borders, colors, spacing, typography} from '../theme';
-import {APP_VERSION} from '../version';
 
 const AVATAR_SIZE = 56;
 
@@ -46,7 +45,6 @@ export function SettingsScreen({
   return (
     <ScreenFrame
       title={t('settings.title')}
-      subtitle={t('app.version', {version: APP_VERSION})}
       onBack={onBack}>
       <Section title={t('settings.display')}>
         <Checkbox

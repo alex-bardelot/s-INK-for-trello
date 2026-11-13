@@ -3,6 +3,7 @@ export {hasApiKey, TRELLO_API_KEY} from './config';
 export {isTrelloApiError, TrelloApiError} from './errors';
 export {
   isSupernoteRoadmap,
+  SUPERNOTE_ROADMAP_NAME,
   SUPERNOTE_ROADMAP_SHORT_LINK,
 } from './supernoteRoadmap';
 export type {TrelloErrorKind} from './errors';

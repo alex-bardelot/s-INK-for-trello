@@ -5,8 +5,8 @@
   "desc": "Trello boards on your Supernote.",
   "author": "AlexandreB",
   "iconPath": "assets/icon.png",
-  "versionCode": "32",
-  "versionName": "0.11.3",
+  "versionCode": "33",
+  "versionName": "0.11.4",
   "jsMainPath": "index",
   "uses-permissions": [
     "plugin.permission.INTERNET",

@@ -27,13 +27,13 @@ import {ScreenFrame} from '../components/ScreenFrame';
 import {Locale, useTranslation} from '../i18n';
 import {toSessionError} from '../session/trelloSession';
 import {
+  SUPERNOTE_ROADMAP_NAME,
   SUPERNOTE_ROADMAP_SHORT_LINK,
   TrelloBoard,
   TrelloClient,
   TrelloMember,
 } from '../trello';
 import {borders, colors, spacing, typography} from '../theme';
-import {APP_VERSION} from '../version';
 
 const SUPERNOTE_LOGO = require('../../assets/supernote-logo.png');
 const TRELLO_ICON = require('../../assets/trello-icon.png');
@@ -124,8 +124,35 @@ export function BoardsScreen({
 
   // Supernote's roadmap is a public board: the user usually is not a member
   // of it, so it is fetched by its short link rather than found in the list.
-  // Signed out, network access may not have been granted yet.
+  // Its official name changes every year, so the tile shows the name read
+  // from Trello once known. Signed out, network access may not have been
+  // granted yet: the board is only read when the tile is pressed.
+  const [roadmapBoard, setRoadmapBoard] = useState<TrelloBoard | null>(null);
+  useEffect(() => {
+    if (!signedIn || !showRoadmap) {
+      return;
+    }
+    let cancelled = false;
+    client
+      .getBoard(SUPERNOTE_ROADMAP_SHORT_LINK)
+      .then(board => {
+        if (!cancelled) {
+          setRoadmapBoard(board);
+        }
+      })
+      .catch(error =>
+        console.warn('[sINK] Failed to read the Supernote roadmap', error),
+      );
+    return () => {
+      cancelled = true;
+    };
+  }, [client, signedIn, showRoadmap]);
+
   const openRoadmap = useCallback(async () => {
+    if (roadmapBoard) {
+      onOpenBoard(roadmapBoard);
+      return;
+    }
     setRoadmap('opening');
     try {
       if (!(await ensureNetwork())) {
@@ -133,6 +160,7 @@ export function BoardsScreen({
         return;
       }
       const board = await client.getBoard(SUPERNOTE_ROADMAP_SHORT_LINK);
+      setRoadmapBoard(board);
       setRoadmap('idle');
       onOpenBoard(board);
     } catch (error) {
@@ -143,7 +171,14 @@ export function BoardsScreen({
       }
       setRoadmap('failed');
     }
-  }, [client, ensureNetwork, onOpenBoard, onTokenRejected, signedIn]);
+  }, [
+    client,
+    ensureNetwork,
+    onOpenBoard,
+    onTokenRejected,
+    roadmapBoard,
+    signedIn,
+  ]);
 
   const columns = directoryColumns(width, height);
   const boards = state.status === 'loaded' ? state.boards : null;
@@ -178,10 +213,11 @@ export function BoardsScreen({
       case 'roadmap':
         return (
           <View key={row.key} style={styles.tileRow}>
-            <RoadmapTile status={roadmap} onPress={openRoadmap} />
-            {Array.from({length: columns - 1}, (_, i) => (
-              <View key={`spacer:${i}`} style={styles.tileSpacer} />
-            ))}
+            <RoadmapTile
+              name={roadmapBoard?.name || SUPERNOTE_ROADMAP_NAME}
+              status={roadmap}
+              onPress={openRoadmap}
+            />
           </View>
         );
       case 'connect':
@@ -223,7 +259,6 @@ export function BoardsScreen({
   return (
     <ScreenFrame
       title={t('boards.title')}
-      subtitle={t('app.version', {version: APP_VERSION})}
       actions={
         <Button
           label={t('settings.open')}
@@ -310,20 +345,22 @@ function ConnectCard({onPress}: {onPress: () => void}): React.JSX.Element {
 }
 
 /**
- * Supernote's roadmap, shown as a board tile with the Supernote logo as its
- * background image.
+ * Supernote's roadmap, shown as a full-width board tile with the Supernote
+ * logo as its background image and the board's official name.
  */
 function RoadmapTile({
+  name,
   status,
   onPress,
 }: {
+  name: string;
   status: 'idle' | 'opening' | 'failed';
   onPress: () => void;
 }): React.JSX.Element {
   const {t} = useTranslation();
   return (
     <Tile
-      name={t('boards.roadmapTitle')}
+      name={name}
       detail={
         status === 'opening'
           ? t('boards.roadmapOpening')
