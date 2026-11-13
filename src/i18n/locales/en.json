@@ -109,8 +109,6 @@
   "board.noLists": "This board has no open list.",
   "board.noCards": "No cards",
   "board.refresh": "Refresh",
-  "board.columns": "{count} ▥",
-  "board.columnsHint": "{count} lists shown side by side. Press to change.",
   "board.listsRange": "Lists {from}–{to} of {total}",
   "board.previousLists": "Previous lists",
   "board.nextLists": "Next lists",

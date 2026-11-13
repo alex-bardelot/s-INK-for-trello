@@ -3,7 +3,6 @@ import {
   clampPage,
   classifySwipe,
   groupCardsByList,
-  nextColumnCount,
   orientationOf,
   pageCount,
   paginate,
@@ -31,12 +30,6 @@ function card(id: string, idList: string): TrelloBoardCard {
 }
 
 describe('board layout', () => {
-  it('cycles the column count 1 → 2 → 3 → 1', () => {
-    expect(nextColumnCount(1)).toBe(2);
-    expect(nextColumnCount(2)).toBe(3);
-    expect(nextColumnCount(3)).toBe(1);
-  });
-
   it('detects the orientation', () => {
     expect(orientationOf(2560, 1920)).toBe('landscape');
     expect(orientationOf(1920, 2560)).toBe('portrait');

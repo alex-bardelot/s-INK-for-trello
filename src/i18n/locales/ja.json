@@ -109,8 +109,6 @@
   "board.noLists": "このボードには開いているリストがありません。",
   "board.noCards": "カードなし",
   "board.refresh": "更新",
-  "board.columns": "{count} ▥",
-  "board.columnsHint": "{count} 個のリストを並べて表示。押すと変更します。",
   "board.listsRange": "リスト {from}–{to} / {total}",
   "board.previousLists": "前のリスト",
   "board.nextLists": "次のリスト",

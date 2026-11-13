@@ -13,12 +13,6 @@ export const DEFAULT_COLUMNS: Readonly<Record<Orientation, ColumnCount>> = {
   landscape: 3,
 };
 
-/** Returns the column count that follows `current` (1 → 2 → 3 → 1). */
-export function nextColumnCount(current: ColumnCount): ColumnCount {
-  const index = COLUMN_COUNTS.indexOf(current);
-  return COLUMN_COUNTS[(index + 1) % COLUMN_COUNTS.length];
-}
-
 export function orientationOf(width: number, height: number): Orientation {
   return width > height ? 'landscape' : 'portrait';
 }

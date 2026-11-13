@@ -109,8 +109,6 @@
   "board.noLists": "Ce tableau n’a aucune liste ouverte.",
   "board.noCards": "Aucune carte",
   "board.refresh": "Actualiser",
-  "board.columns": "{count} ▥",
-  "board.columnsHint": "{count} listes côte à côte. Appuyez pour changer.",
   "board.listsRange": "Listes {from}–{to} sur {total}",
   "board.previousLists": "Listes précédentes",
   "board.nextLists": "Listes suivantes",

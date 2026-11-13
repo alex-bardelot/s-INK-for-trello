@@ -9,14 +9,16 @@ export interface RefreshIconProps {
 /**
  * Clockwise "refresh" arrow drawn with plain views, like the settings gear:
  * the tablet's fonts do not reliably include ↻ and the plugin cannot ship
- * native SVG support. The arc is a ring with one quarter left transparent,
- * and the arrowhead a triangle made of borders at the top end of the arc.
+ * native SVG support. The arc is a ring whose top quarter is transparent,
+ * turned so the gap sits between 12 and 3 o'clock; a triangle made of
+ * borders starts at the 12 o'clock end of the arc and points into the gap.
  */
 export function RefreshIcon({size, color}: RefreshIconProps): React.JSX.Element {
-  const ring = size * 0.78;
-  const stroke = Math.max(2, Math.round(size * 0.13));
-  const head = size * 0.2;
-  const headLength = size * 0.28;
+  const ring = size * 0.74;
+  const stroke = Math.max(3, Math.round(size * 0.11));
+  // Half the height of the arrowhead, and its length along the arc.
+  const headHalf = Math.round(size * 0.21);
+  const headLength = Math.round(size * 0.26);
   // Centre line of the ring stroke at the top of the icon.
   const strokeTop = (size - ring) / 2 + stroke / 2;
   return (
@@ -41,11 +43,12 @@ export function RefreshIcon({size, color}: RefreshIconProps): React.JSX.Element 
         style={[
           styles.triangle,
           {
-            left: size / 2 - headLength / 3,
-            top: strokeTop - head,
+            // The base overlaps the end of the arc by a pixel, no seam.
+            left: size / 2 - 1,
+            top: strokeTop - headHalf,
             borderLeftWidth: headLength,
-            borderTopWidth: head,
-            borderBottomWidth: head,
+            borderTopWidth: headHalf,
+            borderBottomWidth: headHalf,
             borderLeftColor: color,
           },
         ]}

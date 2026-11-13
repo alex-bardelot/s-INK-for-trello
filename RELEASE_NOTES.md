@@ -3,6 +3,15 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.14.3 — Lighter board page header
+
+- The column count button ("2 ▥") is gone from the board page header:
+  the number of lists side by side is set in Settings.
+- The refresh icon has no outline any more, like the close sign next to
+  it, and is redrawn to read better on E Ink: a slightly larger arc with
+  a clear gap and an arrowhead about three times the stroke width.
+- Bumped the plugin to version 0.14.3 (`versionCode` 41).
+
 ## 0.14.2 — Refresh icon on the board page
 
 - The "Refresh" text button in the board page header is now a clockwise

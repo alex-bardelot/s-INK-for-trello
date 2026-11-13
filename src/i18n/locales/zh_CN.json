@@ -109,8 +109,6 @@
   "board.noLists": "此看板没有打开的列表。",
   "board.noCards": "没有卡片",
   "board.refresh": "刷新",
-  "board.columns": "{count} ▥",
-  "board.columnsHint": "并排显示 {count} 个列表。点按以更改。",
   "board.listsRange": "列表 {from}–{to}，共 {total}",
   "board.previousLists": "上一组列表",
   "board.nextLists": "下一组列表",

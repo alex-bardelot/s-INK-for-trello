@@ -29,7 +29,6 @@ import {
   clampPage,
   DEFAULT_COLUMNS,
   groupCardsByList,
-  nextColumnCount,
   orientationOf,
   pageCount,
   paginate,
@@ -38,7 +37,6 @@ import {
 import {
   BoardPreferences,
   loadBoardPreferences,
-  saveBoardPreferences,
 } from '../board/preferences';
 import {useTwoFingerSwipe} from '../board/useTwoFingerSwipe';
 import {Checkbox} from '../components/Checkbox';
@@ -64,6 +62,8 @@ const COLUMN_GAP = spacing.lg;
 const LIST_GAP = spacing.lg;
 const AVATAR_SIZE = 36;
 const MAX_AVATARS = 3;
+/** Matches the visual weight of the ✕ close sign next to it. */
+const REFRESH_ICON_SIZE = 32;
 
 type MembersById = ReadonlyMap<string, TrelloBoardMember>;
 
@@ -156,11 +156,6 @@ export function BoardScreen({
   }, [load]);
 
   const columns = preferences[orientation];
-  const cycleColumns = useCallback(() => {
-    const next = {...preferences, [orientation]: nextColumnCount(columns)};
-    setPreferences(next);
-    saveBoardPreferences(store, next);
-  }, [columns, orientation, preferences, store]);
 
   const updateFocus = useCallback(
     (next: FocusSettings) => {
@@ -239,11 +234,6 @@ export function BoardScreen({
       onBack={onBack}
       actions={
         <>
-          <SmallButton
-            label={t('board.columns', {count: columns})}
-            accessibilityLabel={t('board.columnsHint', {count: columns})}
-            onPress={cycleColumns}
-          />
           {modesAvailable && (
             <SmallButton
               label={t('board.focus')}
@@ -272,12 +262,14 @@ export function BoardScreen({
               onPress={toggleReview}
             />
           )}
-          <SmallButton
-            label={t('board.refresh')}
+          <Pressable
+            accessibilityRole="button"
             accessibilityLabel={t('board.refresh')}
-            icon={refreshIcon}
+            hitSlop={spacing.md}
             onPress={load}
-          />
+            style={styles.iconButton}>
+            <RefreshIcon size={REFRESH_ICON_SIZE} color={colors.foreground} />
+          </Pressable>
         </>
       }>
       {state.status === 'loading' && (
@@ -860,15 +852,6 @@ interface SmallButtonProps {
   disabled?: boolean;
   /** Shown inverted, for a switch that is on. */
   active?: boolean;
-  /**
-   * Icon shown instead of the label (which is then only read out), given
-   * the current foreground color, which swaps while pressed.
-   */
-  icon?: (color: string) => React.ReactNode;
-}
-
-function refreshIcon(color: string): React.ReactNode {
-  return <RefreshIcon size={typography.icon} color={color} />;
 }
 
 function SmallButton({
@@ -877,7 +860,6 @@ function SmallButton({
   onPress,
   disabled = false,
   active = false,
-  icon,
 }: SmallButtonProps): React.JSX.Element {
   return (
     <Pressable
@@ -892,19 +874,15 @@ function SmallButton({
         disabled && styles.disabled,
         (pressed || active) && styles.pressed,
       ]}>
-      {({pressed}) =>
-        icon ? (
-          icon(pressed || active ? colors.background : colors.foreground)
-        ) : (
-          <Text
-            style={[
-              styles.smallButtonLabel,
-              (pressed || active) && styles.pressedLabel,
-            ]}>
-            {label}
-          </Text>
-        )
-      }
+      {({pressed}) => (
+        <Text
+          style={[
+            styles.smallButtonLabel,
+            (pressed || active) && styles.pressedLabel,
+          ]}>
+          {label}
+        </Text>
+      )}
     </Pressable>
   );
 }
@@ -1107,6 +1085,9 @@ const styles = StyleSheet.create({
   footerText: {
     color: colors.foreground,
     fontSize: typography.body,
+  },
+  iconButton: {
+    padding: spacing.sm,
   },
   smallButton: {
     borderColor: colors.foreground,
