@@ -24,7 +24,7 @@ Other Supernote devices that support plugins may work but are not tested.
   account and validates it; otherwise it guides the user through Trello's
   authorization page. Once connected, the open boards are listed (starred
   first).
-- **Add a Trello card** lasso button in NOTE: circle handwriting or text,
+- **New Trello Card** lasso button in NOTE: circle handwriting or text,
   press the button, pick a board (favorites, the last used one on top, or all
   boards on demand), pick a list (the last used one on top), review the
   recognized title and description, and create the card. The first line

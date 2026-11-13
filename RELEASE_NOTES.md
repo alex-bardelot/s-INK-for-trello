@@ -3,6 +3,14 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.9.3 — "New Trello Card" label
+
+- The lasso button and the card screen title now read "New Trello Card"
+  instead of "Add a Trello card" (French "Nouvelle carte Trello", Japanese
+  "新しい Trello カード", Simplified Chinese "新建 Trello 卡片"; Traditional
+  Chinese "新增 Trello 卡片" already meant "new").
+- Bumped the plugin to version 0.9.3 (`versionCode` 25).
+
 ## 0.9.2 — Full name on the toolbar button
 
 - The plugins menu of the toolbar now shows "sINK for Trello" instead of
