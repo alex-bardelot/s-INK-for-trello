@@ -5,6 +5,10 @@ newest first.
 
 ## 0.12.0 — Board view settings, one account card, modern toggles
 
+- The roadmap tile is back to the size of the other board tiles and reads
+  "Supernote Roadmap" (the board's yearly official name is no longer read
+  from Trello for the tile).
+
 - New "Board view" section in Settings: the number of lists side by side
   in portrait and in landscape (1, 2 or 3), and the board mode boards open
   in (All cards, Focus, Review). These are the same settings the board
