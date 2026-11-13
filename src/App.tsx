@@ -119,7 +119,8 @@ export default function App(): React.JSX.Element {
     );
   }
 
-  // Signed out, public boards (Supernote's roadmap) are read anonymously.
+  // Signed out, public boards (Supernote's roadmap, the ones added in
+  // Settings) are read anonymously.
   const client = account?.client ?? session.anonymousClient;
   if (openBoard) {
     return (
@@ -141,13 +142,10 @@ export default function App(): React.JSX.Element {
         member={account?.member ?? null}
         tokenStorage={account?.tokenStorage}
         saveFailed={account?.saveFailed}
-        showRoadmap={boardsPreferences.showSupernoteRoadmap}
-        onShowRoadmapChange={show =>
-          updateBoardsPreferences({
-            ...boardsPreferences,
-            showSupernoteRoadmap: show,
-          })
-        }
+        client={client}
+        ensureNetwork={session.ensureNetwork}
+        boardsPreferences={boardsPreferences}
+        onBoardsPreferencesChange={updateBoardsPreferences}
         onRememberChange={session.setRemembered}
         onDisconnect={() => {
           setSettingsOpen(false);
@@ -162,6 +160,7 @@ export default function App(): React.JSX.Element {
       member={account?.member ?? null}
       client={client}
       showRoadmap={boardsPreferences.showSupernoteRoadmap}
+      publicBoards={boardsPreferences.publicBoards}
       ensureNetwork={session.ensureNetwork}
       onOpenBoard={setOpenBoard}
       onOpenSettings={() => setSettingsOpen(true)}

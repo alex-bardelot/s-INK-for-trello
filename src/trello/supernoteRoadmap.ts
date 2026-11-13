@@ -9,11 +9,10 @@ import {TrelloBoard} from './types';
 export const SUPERNOTE_ROADMAP_SHORT_LINK = 'l0COP24j';
 
 /**
- * Official name of the roadmap board, shown until the current one is read
- * from Trello (Ratta renames the board every year).
+ * Name shown on the roadmap tile. The board's own name is long and changes
+ * every year ("Supernote A5 X/A6 X/Manta/Nomad Software Roadmap 2026").
  */
-export const SUPERNOTE_ROADMAP_NAME =
-  'Supernote A5 X/A6 X/Manta/Nomad Software Roadmap 2026';
+export const SUPERNOTE_ROADMAP_NAME = 'Supernote Roadmap';
 
 /**
  * `true` for Supernote's roadmap board. That board is read only for

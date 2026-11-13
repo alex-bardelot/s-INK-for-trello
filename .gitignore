@@ -76,6 +76,9 @@ yarn-error.log
 
 # Trello brand kit as downloaded; only assets/trello-icon.png is used
 /assets/Trello Logo assets/
+# Supernote logo kit as provided; only assets/supernote-logo.png and
+# assets/supernote-wordmark.png are used
+/assets/Supernote_logos/
 
 # Supernote plugin packaging output
 /build/

@@ -38,6 +38,8 @@ export interface TrelloBoard {
  * `backgroundTopColor` / `backgroundBottomColor`.
  */
 export interface TrelloBoardPrefs {
+  /** Who can see the board: `public`, `org`, `private`… */
+  permissionLevel?: string;
   backgroundColor?: string | null;
   backgroundTopColor?: string | null;
   backgroundBottomColor?: string | null;
@@ -51,6 +53,18 @@ export interface TrelloScaledImage {
   width: number;
   height: number;
   url: string;
+}
+
+/** A workspace owning boards (`GET /1/organizations/{id}`). */
+export interface TrelloOrganization {
+  id: string;
+  /** Name shown to people, e.g. "Acme Design". */
+  displayName: string;
+  /** Short name used in URLs. */
+  name: string;
+  /** Base URL of the logo, `null` without one. */
+  logoUrl?: string | null;
+  logoHash?: string | null;
 }
 
 /** A list (column) of a board (`GET /1/boards/{id}/lists`). */

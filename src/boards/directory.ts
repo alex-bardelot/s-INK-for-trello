@@ -93,49 +93,72 @@ export function boardImageUrl(
 /** One row of the boards page. */
 export type DirectoryRow =
   | {kind: 'header'; key: string; section: DirectorySection}
-  | {kind: 'roadmap'; key: string}
   | {kind: 'connect'; key: string}
-  | {kind: 'tiles'; key: string; boards: TrelloBoard[]}
+  | {kind: 'tiles'; key: string; tiles: DirectoryTile[]}
   | {kind: 'message'; key: string};
 
-export type DirectorySection = 'starred' | 'all';
+/** A tile of the grid: Supernote's roadmap, or a board. */
+export type DirectoryTile = {kind: 'roadmap'} | {kind: 'board'; board: TrelloBoard};
+
+export type DirectorySection = 'public' | 'starred' | 'all';
+
+export interface DirectoryInput {
+  /** The user's boards; `null` while loading or after a failure. */
+  boards: readonly TrelloBoard[] | null;
+  /** Public boards added by the user. */
+  publicBoards?: readonly TrelloBoard[];
+  /** Shows Supernote's roadmap first in the Public section. */
+  showRoadmap?: boolean;
+  /** Without an account, a card inviting to connect one replaces the boards. */
+  signedIn?: boolean;
+  /** Tiles per row. */
+  columns: number;
+}
 
 /**
- * Rows of the boards page: the Supernote roadmap card, the starred boards,
- * then the other boards (each board appears once), the tiles grouped
- * `columns` per row. When `boards` is `null` (loading, failure), a message
- * row stands for the user's boards. The roadmap card is left out when
- * `showRoadmap` is `false`. Without a connected account, a card inviting
- * to connect one takes the place of the boards.
+ * Rows of the boards page: the Public section (Supernote's roadmap, then
+ * the public boards the user added; left out when empty), the starred
+ * boards, then the other boards (each board appears once), the tiles
+ * grouped `columns` per row. When `boards` is `null` (loading, failure), a
+ * message row stands for the user's boards.
  */
-export function buildDirectoryRows(
-  boards: readonly TrelloBoard[] | null,
-  columns: number,
+export function buildDirectoryRows({
+  boards,
+  publicBoards = [],
   showRoadmap = true,
   signedIn = true,
-): DirectoryRow[] {
-  const rows: DirectoryRow[] = showRoadmap
-    ? [{kind: 'roadmap', key: 'roadmap'}]
-    : [];
+  columns,
+}: DirectoryInput): DirectoryRow[] {
+  const rows: DirectoryRow[] = [];
+  const addSection = (
+    section: DirectorySection,
+    tiles: readonly DirectoryTile[],
+  ) => {
+    rows.push({kind: 'header', key: `header:${section}`, section});
+    const perRow = Math.max(1, columns);
+    for (let i = 0; i < tiles.length; i += perRow) {
+      rows.push({
+        kind: 'tiles',
+        key: `${section}:${i}`,
+        tiles: tiles.slice(i, i + perRow),
+      });
+    }
+  };
+  const asTiles = (list: readonly TrelloBoard[]): DirectoryTile[] =>
+    list.map(board => ({kind: 'board', board}));
+
+  const publicTiles: DirectoryTile[] = [
+    ...(showRoadmap ? [{kind: 'roadmap'} as const] : []),
+    ...asTiles(publicBoards),
+  ];
+  if (publicTiles.length > 0) {
+    addSection('public', publicTiles);
+  }
+
   if (!signedIn) {
     rows.push({kind: 'connect', key: 'connect'});
     return rows;
   }
-  const addSection = (
-    section: DirectorySection,
-    list: readonly TrelloBoard[],
-  ) => {
-    rows.push({kind: 'header', key: `header:${section}`, section});
-    const perRow = Math.max(1, columns);
-    for (let i = 0; i < list.length; i += perRow) {
-      rows.push({
-        kind: 'tiles',
-        key: `${section}:${i}`,
-        boards: list.slice(i, i + perRow),
-      });
-    }
-  };
-
   if (!boards || boards.length === 0) {
     rows.push({kind: 'header', key: 'header:all', section: 'all'});
     rows.push({kind: 'message', key: 'message'});
@@ -144,10 +167,10 @@ export function buildDirectoryRows(
   const starred = boards.filter(board => board.starred);
   const others = boards.filter(board => !board.starred);
   if (starred.length > 0) {
-    addSection('starred', starred);
+    addSection('starred', asTiles(starred));
   }
   if (others.length > 0) {
-    addSection('all', others);
+    addSection('all', asTiles(others));
   }
   return rows;
 }
@@ -155,7 +178,6 @@ export function buildDirectoryRows(
 /** Fixed heights of the rows, in pixels, so that pages can be computed upfront. */
 export interface RowHeights {
   header: number;
-  roadmap: number;
   connect: number;
   tiles: number;
   message: number;

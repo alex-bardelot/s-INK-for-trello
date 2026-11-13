@@ -8,6 +8,7 @@ import {
   TrelloCard,
   TrelloList,
   TrelloMember,
+  TrelloOrganization,
 } from './types';
 
 type QueryValue = string | number | boolean | undefined;
@@ -39,6 +40,28 @@ const LIST_FIELDS = 'name,closed,pos,idBoard';
 const BOARD_CARD_FIELDS =
   'name,idList,pos,due,dueComplete,badges,labels,idMembers';
 const BOARD_MEMBER_FIELDS = 'fullName,initials,username,avatarUrl';
+const ORGANIZATION_FIELDS = 'displayName,name,logoUrl,logoHash';
+
+/**
+ * URL of a workspace logo at about `size` pixels. Trello gives `logoUrl` as
+ * a base URL to complete with `/{size}.png`, like member avatars; older
+ * workspaces only have a `logoHash`.
+ */
+export function organizationLogoUrl(
+  organization: Pick<TrelloOrganization, 'id' | 'logoUrl' | 'logoHash'>,
+  size: 30 | 50 | 170,
+): string | null {
+  const {logoUrl, logoHash} = organization;
+  if (logoUrl) {
+    return /\.(png|jpe?g|gif)$/i.test(logoUrl)
+      ? logoUrl
+      : `${logoUrl.replace(/\/$/, '')}/${size}.png`;
+  }
+  if (logoHash) {
+    return `https://trello-logos.s3.amazonaws.com/${organization.id}/${logoHash}/${size}.png`;
+  }
+  return null;
+}
 
 /** Trello limits, from the REST reference of `POST /1/cards`. */
 export const CARD_NAME_MAX_LENGTH = 16384;
@@ -103,6 +126,14 @@ export class TrelloClient {
     return this.request<TrelloBoard>(
       `/boards/${encodeURIComponent(idOrShortLink)}`,
       {query: {fields: BOARD_FIELDS}},
+    );
+  }
+
+  /** Returns a workspace by id (its logo is shown on the board tiles). */
+  getOrganization(id: string): Promise<TrelloOrganization> {
+    return this.request<TrelloOrganization>(
+      `/organizations/${encodeURIComponent(id)}`,
+      {query: {fields: ORGANIZATION_FIELDS}},
     );
   }
 

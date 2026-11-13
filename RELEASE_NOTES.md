@@ -3,6 +3,26 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.13.0 — Public boards and workspace logos
+
+- New "Public" section at the top of the boards page, hidden when empty.
+  It holds Supernote's roadmap, now titled "Roadmap" with no line under
+  it, and the public boards added in Settings.
+- Settings has a "Public boards" section: the Supernote Roadmap can be
+  hidden (not removed), and "+ Add a public board" takes a board link
+  (`https://trello.com/b/{id}/…`) or its 8-character id, typed or pasted.
+  The board is read from Trello first, to check it exists and is public
+  and to get its name; added boards can be removed.
+- Signed in, public boards are read when the page opens to show their
+  background and last change; signed out, they are read when pressed.
+- The roadmap tile background is made from the new Supernote logos: the
+  round logo, much larger than the band and cut by it, on both sides of
+  the SUPERNOTE wordmark.
+- Board tiles show the logo of the Trello workspace owning the board in
+  their bottom right corner, like the avatars on cards (its initial when
+  it has no logo).
+- Bumped the plugin to version 0.13.0 (`versionCode` 36).
+
 ## 0.12.0 — Board view settings, one account card, modern toggles
 
 - The roadmap tile is back to the size of the other board tiles and reads

@@ -18,11 +18,12 @@ import {Button} from '../components/Button';
 import {MemberAvatar} from '../components/MemberAvatar';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {SegmentedControl} from '../components/SegmentedControl';
-import {Switch} from '../components/Switch';
+import {BoardsPreferences} from '../boards/preferences';
 import {useTranslation} from '../i18n';
 import {TokenStorage} from '../session/trelloSession';
 import {KeyValueStore} from '../storage/keyValueStore';
-import {TrelloMember} from '../trello';
+import {TrelloClient, TrelloMember} from '../trello';
+import {PublicBoardsSettings} from './PublicBoardsSettings';
 import {borders, colors, spacing, typography} from '../theme';
 
 const AVATAR_SIZE = 64;
@@ -37,8 +38,12 @@ export interface SettingsScreenProps {
   member: TrelloMember | null;
   tokenStorage?: TokenStorage;
   saveFailed?: boolean;
-  showRoadmap: boolean;
-  onShowRoadmapChange: (show: boolean) => void;
+  /** Reads public boards being added (anonymous when signed out). */
+  client: TrelloClient;
+  /** Asks for network access; resolves `false` if refused. */
+  ensureNetwork: () => Promise<boolean>;
+  boardsPreferences: BoardsPreferences;
+  onBoardsPreferencesChange: (preferences: BoardsPreferences) => void;
   /** Saves the token on the tablet, or removes it from there. */
   onRememberChange: (remember: boolean) => void;
   onDisconnect: () => void;
@@ -55,8 +60,10 @@ export function SettingsScreen({
   member,
   tokenStorage,
   saveFailed,
-  showRoadmap,
-  onShowRoadmapChange,
+  client,
+  ensureNetwork,
+  boardsPreferences,
+  onBoardsPreferencesChange,
   onRememberChange,
   onDisconnect,
   onBack,
@@ -65,11 +72,12 @@ export function SettingsScreen({
 
   return (
     <ScreenFrame title={t('settings.title')} onBack={onBack}>
-      <Section title={t('settings.display')}>
-        <Switch
-          label={t('settings.showRoadmap')}
-          value={showRoadmap}
-          onChange={onShowRoadmapChange}
+      <Section title={t('settings.publicBoards')}>
+        <PublicBoardsSettings
+          client={client}
+          ensureNetwork={ensureNetwork}
+          preferences={boardsPreferences}
+          onChange={onBoardsPreferencesChange}
         />
       </Section>
 

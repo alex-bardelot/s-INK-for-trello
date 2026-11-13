@@ -6,17 +6,22 @@ import {
   buildDirectoryRows,
   DEFAULT_BOARD_SHADE,
   directoryColumns,
+  DirectoryRow,
   paginateRows,
   parseHexColor,
   RowHeights,
 } from '../src/boards/directory';
 import {
+  addPublicBoard,
   BOARDS_PREFERENCES_KEY,
+  DEFAULT_BOARDS_PREFERENCES,
   loadBoardsPreferences,
+  parseBoardShortLink,
+  removePublicBoard,
   saveBoardsPreferences,
 } from '../src/boards/preferences';
 import {createMemoryStore} from '../src/storage/keyValueStore';
-import {TrelloBoard} from '../src/trello';
+import {organizationLogoUrl, TrelloBoard} from '../src/trello';
 
 function board(id: string, extra: Partial<TrelloBoard> = {}): TrelloBoard {
   return {
@@ -101,7 +106,18 @@ describe('boardImageUrl', () => {
 });
 
 describe('buildDirectoryRows', () => {
-  it('lists the roadmap, the starred boards, then the other boards', () => {
+  const keys = (input: Parameters<typeof buildDirectoryRows>[0]) =>
+    buildDirectoryRows(input).map(row => row.key);
+  const tileIds = (rows: DirectoryRow[]) =>
+    rows.flatMap(row =>
+      row.kind === 'tiles'
+        ? row.tiles.map(tile =>
+            tile.kind === 'roadmap' ? 'roadmap' : tile.board.id,
+          )
+        : [],
+    );
+
+  it('lists the public boards, the starred boards, then the others', () => {
     const boards = [
       board('a', {starred: true}),
       board('b'),
@@ -109,61 +125,73 @@ describe('buildDirectoryRows', () => {
       board('d'),
       board('e'),
     ];
-    const rows = buildDirectoryRows(boards, 3);
+    const rows = buildDirectoryRows({
+      boards,
+      publicBoards: [board('p')],
+      columns: 3,
+    });
     expect(rows.map(row => row.key)).toEqual([
-      'roadmap',
+      'header:public',
+      'public:0',
       'header:starred',
       'starred:0',
       'header:all',
       'all:0',
       'all:3',
     ]);
-    const tileIds = rows.flatMap(row =>
-      row.kind === 'tiles' ? row.boards.map(b => b.id) : [],
-    );
     // Each board appears once: starred ones are not repeated.
-    expect(tileIds).toEqual(['a', 'b', 'c', 'd', 'e']);
+    expect(tileIds(rows)).toEqual(['roadmap', 'p', 'a', 'b', 'c', 'd', 'e']);
   });
 
   it('skips the starred section when nothing is starred', () => {
-    const keys = buildDirectoryRows([board('a')], 3).map(row => row.key);
-    expect(keys).not.toContain('header:starred');
+    expect(keys({boards: [board('a')], columns: 3})).not.toContain(
+      'header:starred',
+    );
   });
 
   it('skips the other boards section when every board is starred', () => {
-    const keys = buildDirectoryRows([board('a', {starred: true})], 3).map(
-      row => row.key,
-    );
-    expect(keys).toEqual(['roadmap', 'header:starred', 'starred:0']);
+    expect(
+      keys({boards: [board('a', {starred: true})], columns: 3}),
+    ).toEqual(['header:public', 'public:0', 'header:starred', 'starred:0']);
   });
 
   it('shows a message row while the boards are not loaded', () => {
-    expect(buildDirectoryRows(null, 3).map(row => row.kind)).toEqual([
-      'roadmap',
-      'header',
-      'message',
-    ]);
+    expect(
+      buildDirectoryRows({boards: null, columns: 3}).map(row => row.kind),
+    ).toEqual(['header', 'tiles', 'header', 'message']);
   });
 
   it('invites to connect an account when signed out', () => {
+    expect(keys({boards: null, signedIn: false, columns: 3})).toEqual([
+      'header:public',
+      'public:0',
+      'connect',
+    ]);
     expect(
-      buildDirectoryRows(null, 3, true, false).map(row => row.key),
-    ).toEqual(['roadmap', 'connect']);
-    expect(
-      buildDirectoryRows(null, 3, false, false).map(row => row.key),
+      keys({boards: null, showRoadmap: false, signedIn: false, columns: 3}),
     ).toEqual(['connect']);
   });
 
-  it('leaves out the roadmap when hidden', () => {
-    const keys = buildDirectoryRows([board('a')], 3, false).map(r => r.key);
-    expect(keys).toEqual(['header:all', 'all:0']);
+  it('hides the Public section when it is empty', () => {
+    expect(
+      keys({boards: [board('a')], showRoadmap: false, columns: 3}),
+    ).toEqual(['header:all', 'all:0']);
+  });
+
+  it('keeps the public boards when the roadmap is hidden', () => {
+    const rows = buildDirectoryRows({
+      boards: [],
+      publicBoards: [board('p')],
+      showRoadmap: false,
+      columns: 3,
+    });
+    expect(tileIds(rows)).toEqual(['p']);
   });
 });
 
 describe('paginateRows', () => {
   const heights: RowHeights = {
     header: 10,
-    roadmap: 30,
     connect: 60,
     tiles: 30,
     message: 30,
@@ -171,24 +199,27 @@ describe('paginateRows', () => {
   };
 
   it('keeps everything on one page when it fits', () => {
-    const rows = buildDirectoryRows([board('a')], 3);
+    const rows = buildDirectoryRows({boards: [board('a')], columns: 3});
     expect(paginateRows(rows, 1000, heights)).toHaveLength(1);
   });
 
   it('never leaves a section header alone at the bottom of a page', () => {
-    // roadmap 30 + gap 5 + header 10 = 45: the "all" header would fit, but
-    // not with its first row of tiles.
-    const rows = buildDirectoryRows([board('a'), board('b')], 1);
-    const pages = paginateRows(rows, 50, heights);
+    // header 10 + gap 5 + tiles 30 + gap 5 + header 10 = 60: the "all"
+    // header would fit, but not with its first row of tiles.
+    const rows = buildDirectoryRows({
+      boards: [board('a'), board('b')],
+      columns: 1,
+    });
+    const pages = paginateRows(rows, 65, heights);
     expect(pages.map(page => page.map(row => row.key))).toEqual([
-      ['roadmap'],
+      ['header:public', 'public:0'],
       ['header:all', 'all:0'],
       ['all:1'],
     ]);
   });
 
   it('puts a row taller than the page on a page of its own', () => {
-    const rows = buildDirectoryRows([board('a')], 3);
+    const rows = buildDirectoryRows({boards: [board('a')], columns: 3});
     const pages = paginateRows(rows, 5, heights);
     expect(pages.every(page => page.length > 0)).toBe(true);
     expect(pages.flat()).toHaveLength(rows.length);
@@ -237,29 +268,97 @@ describe('directoryColumns', () => {
 });
 
 describe('boards preferences', () => {
-  it('shows the roadmap by default', async () => {
-    expect(await loadBoardsPreferences(createMemoryStore())).toEqual({
-      showSupernoteRoadmap: true,
-    });
+  const ref = {shortLink: 'AbCd1234', name: 'Public board'};
+
+  it('shows the roadmap and no public board by default', async () => {
+    expect(await loadBoardsPreferences(createMemoryStore())).toEqual(
+      DEFAULT_BOARDS_PREFERENCES,
+    );
   });
 
-  it('saves and reads the roadmap choice', async () => {
+  it('saves and reads the roadmap choice and the public boards', async () => {
     const store = createMemoryStore();
-    await saveBoardsPreferences(store, {showSupernoteRoadmap: false});
-    expect(await loadBoardsPreferences(store)).toEqual({
-      showSupernoteRoadmap: false,
-    });
+    const preferences = {showSupernoteRoadmap: false, publicBoards: [ref]};
+    await saveBoardsPreferences(store, preferences);
+    expect(await loadBoardsPreferences(store)).toEqual(preferences);
   });
 
   it('ignores corrupted values', async () => {
     const store = createMemoryStore();
-    await store.setItem(BOARDS_PREFERENCES_KEY, '{"showSupernoteRoadmap":1}');
+    await store.setItem(
+      BOARDS_PREFERENCES_KEY,
+      JSON.stringify({
+        showSupernoteRoadmap: 1,
+        publicBoards: [ref, {shortLink: 'bad'}, 'x'],
+      }),
+    );
     expect(await loadBoardsPreferences(store)).toEqual({
       showSupernoteRoadmap: true,
+      publicBoards: [ref],
     });
     await store.setItem(BOARDS_PREFERENCES_KEY, 'not json');
-    expect(await loadBoardsPreferences(store)).toEqual({
-      showSupernoteRoadmap: true,
-    });
+    expect(await loadBoardsPreferences(store)).toEqual(
+      DEFAULT_BOARDS_PREFERENCES,
+    );
+  });
+
+  it('adds a public board once, never the roadmap', () => {
+    const once = addPublicBoard(DEFAULT_BOARDS_PREFERENCES, ref);
+    expect(once.publicBoards).toEqual([ref]);
+    expect(addPublicBoard(once, ref)).toBe(once);
+    expect(
+      addPublicBoard(once, {shortLink: 'l0COP24j', name: 'Roadmap'}),
+    ).toBe(once);
+  });
+
+  it('removes a public board', () => {
+    const added = addPublicBoard(DEFAULT_BOARDS_PREFERENCES, ref);
+    expect(removePublicBoard(added, ref.shortLink).publicBoards).toEqual([]);
+  });
+});
+
+describe('parseBoardShortLink', () => {
+  it.each([
+    ['https://trello.com/b/l0COP24j/supernote-roadmap', 'l0COP24j'],
+    ['https://trello.com/b/l0COP24j', 'l0COP24j'],
+    ['trello.com/b/l0COP24j/name?filter=x', 'l0COP24j'],
+    ['http://www.trello.com/b/AbCd1234/', 'AbCd1234'],
+    ['  AbCd1234 ', 'AbCd1234'],
+  ])('reads %p', (input, expected) => {
+    expect(parseBoardShortLink(input)).toBe(expected);
+  });
+
+  it.each([
+    '',
+    'AbCd123',
+    'https://trello.com/c/AbCd1234/card',
+    'https://example.com/b/AbCd1234',
+    'https://trello.com/b/AbCd12345',
+  ])('rejects %p', input => {
+    expect(parseBoardShortLink(input)).toBeNull();
+  });
+});
+
+describe('organizationLogoUrl', () => {
+  it('completes base logo URLs with the size', () => {
+    expect(
+      organizationLogoUrl({id: 'o', logoUrl: 'https://logos/o/h'}, 50),
+    ).toBe('https://logos/o/h/50.png');
+  });
+
+  it('keeps full image URLs', () => {
+    expect(
+      organizationLogoUrl({id: 'o', logoUrl: 'https://logos/o/h/170.png'}, 50),
+    ).toBe('https://logos/o/h/170.png');
+  });
+
+  it('builds the URL from the logo hash', () => {
+    expect(organizationLogoUrl({id: 'o', logoHash: 'h'}, 30)).toBe(
+      'https://trello-logos.s3.amazonaws.com/o/h/30.png',
+    );
+  });
+
+  it('returns null without a logo', () => {
+    expect(organizationLogoUrl({id: 'o'}, 50)).toBeNull();
   });
 });

@@ -10,6 +10,7 @@ export type {TrelloErrorKind} from './errors';
 export {
   CARD_DESC_MAX_LENGTH,
   CARD_NAME_MAX_LENGTH,
+  organizationLogoUrl,
   TrelloClient,
 } from './TrelloClient';
 export type {
@@ -22,4 +23,6 @@ export type {
   TrelloLabel,
   TrelloList,
   TrelloMember,
+  TrelloOrganization,
+  TrelloScaledImage,
 } from './types';

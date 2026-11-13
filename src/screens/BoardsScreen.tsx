@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   Image,
   Pressable,
@@ -21,21 +21,24 @@ import {
   RowHeights,
 } from '../boards/directory';
 import {describeLastActivity} from '../boards/activity';
+import {PublicBoardRef} from '../boards/preferences';
 import {Button} from '../components/Button';
 import {GearIcon} from '../components/GearIcon';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {Locale, useTranslation} from '../i18n';
 import {toSessionError} from '../session/trelloSession';
 import {
-  SUPERNOTE_ROADMAP_NAME,
+  organizationLogoUrl,
   SUPERNOTE_ROADMAP_SHORT_LINK,
   TrelloBoard,
   TrelloClient,
   TrelloMember,
+  TrelloOrganization,
 } from '../trello';
 import {borders, colors, spacing, typography} from '../theme';
 
-const SUPERNOTE_LOGO = require('../../assets/supernote-logo.png');
+const SUPERNOTE_ROUND_LOGO = require('../../assets/supernote-logo.png');
+const SUPERNOTE_WORDMARK = require('../../assets/supernote-wordmark.png');
 const TRELLO_ICON = require('../../assets/trello-icon.png');
 
 type BoardsState =
@@ -46,7 +49,6 @@ type BoardsState =
 /** Fixed row heights: pages are computed from them before rendering. */
 const ROW_HEIGHTS: RowHeights = {
   header: 44,
-  roadmap: 148,
   connect: 340,
   tiles: 148,
   message: 120,
@@ -55,6 +57,9 @@ const ROW_HEIGHTS: RowHeights = {
 
 /** Height of the background part of a board tile, as on Trello's tiles. */
 const TILE_BAND_HEIGHT = 88;
+/** Workspace logo in the corner of a tile, the size of a card avatar. */
+const BADGE_SIZE = 40;
+const ROUND_LOGO_WIDTH = 260;
 
 function settingsIcon(color: string, background: string): React.ReactNode {
   return <GearIcon size={24} color={color} holeColor={background} />;
@@ -65,8 +70,10 @@ export interface BoardsScreenProps {
   member: TrelloMember | null;
   /** The member's client, or an anonymous one when signed out. */
   client: TrelloClient;
-  /** Shows the roadmap tile. */
+  /** Shows the roadmap tile in the Public section. */
   showRoadmap: boolean;
+  /** Public boards added in Settings, shown after the roadmap. */
+  publicBoards: readonly PublicBoardRef[];
   /** Asks for network access; resolves `false` if refused. */
   ensureNetwork: () => Promise<boolean>;
   onOpenBoard: (board: TrelloBoard) => void;
@@ -78,16 +85,17 @@ export interface BoardsScreenProps {
 }
 
 /**
- * Boards page, laid out like Trello's: Supernote's official roadmap, the
- * starred boards, then the other boards, as tiles in a grid. Without a
- * connected account, a large card invites to connect one. The page never
- * scrolls: rows are split into pages turned with the buttons at the bottom
- * or a two-finger swipe.
+ * Boards page, laid out like Trello's: the Public section (Supernote's
+ * roadmap and the public boards added in Settings), the starred boards,
+ * then the other boards, as tiles in a grid. Without a connected account, a
+ * large card invites to connect one. The page never scrolls: rows are split
+ * into pages turned with the buttons at the bottom or a two-finger swipe.
  */
 export function BoardsScreen({
   member,
   client,
   showRoadmap,
+  publicBoards,
   ensureNetwork,
   onOpenBoard,
   onOpenSettings,
@@ -98,7 +106,6 @@ export function BoardsScreen({
   const {width, height} = useWindowDimensions();
   const signedIn = member !== null;
   const [state, setState] = useState<BoardsState>({status: 'loading'});
-  const [roadmap, setRoadmap] = useState<'idle' | 'opening' | 'failed'>('idle');
   const [bodyHeight, setBodyHeight] = useState<number | null>(null);
   const [page, setPage] = useState(0);
 
@@ -122,76 +129,119 @@ export function BoardsScreen({
     }
   }, [load, signedIn]);
 
-  // Supernote's roadmap is a public board: the user usually is not a member
-  // of it, so it is fetched by its short link rather than found in the list.
-  // Its official name changes every year, so the tile shows the name read
-  // from Trello once known. Signed out, network access may not have been
-  // granted yet: the board is only read when the tile is pressed.
-  const [roadmapBoard, setRoadmapBoard] = useState<TrelloBoard | null>(null);
+  // Public boards (Supernote's roadmap and the ones added in Settings) are
+  // not in the user's list: they are read by their short link. Signed in,
+  // they are read upfront to show their background and last change; signed
+  // out, network access may not have been granted, so a board is only read
+  // when its tile is pressed. Read boards are kept for later openings.
+  const [publicDetails, setPublicDetails] = useState<
+    ReadonlyMap<string, TrelloBoard>
+  >(new Map());
+  const [opening, setOpening] = useState<
+    ReadonlyMap<string, 'opening' | 'failed'>
+  >(new Map());
+  const keepPublicBoard = useCallback((shortLink: string, board: TrelloBoard) => {
+    setPublicDetails(previous => new Map(previous).set(shortLink, board));
+  }, []);
+
   useEffect(() => {
-    if (!signedIn || !showRoadmap) {
+    if (!signedIn) {
       return;
     }
     let cancelled = false;
-    client
-      .getBoard(SUPERNOTE_ROADMAP_SHORT_LINK)
-      .then(board => {
-        if (!cancelled) {
-          setRoadmapBoard(board);
-        }
-      })
-      .catch(error =>
-        console.warn('[sINK] Failed to read the Supernote roadmap', error),
-      );
+    for (const {shortLink} of publicBoards) {
+      client
+        .getBoard(shortLink)
+        .then(board => !cancelled && keepPublicBoard(shortLink, board))
+        .catch(error =>
+          console.warn(`[sINK] Failed to read public board ${shortLink}`, error),
+        );
+    }
     return () => {
       cancelled = true;
     };
-  }, [client, signedIn, showRoadmap]);
+  }, [client, keepPublicBoard, publicBoards, signedIn]);
 
-  const openRoadmap = useCallback(async () => {
-    if (roadmapBoard) {
-      onOpenBoard(roadmapBoard);
-      return;
-    }
-    setRoadmap('opening');
-    try {
-      if (!(await ensureNetwork())) {
-        setRoadmap('failed');
+  const openPublicBoard = useCallback(
+    async (shortLink: string) => {
+      const known = publicDetails.get(shortLink);
+      if (known) {
+        onOpenBoard(known);
         return;
       }
-      const board = await client.getBoard(SUPERNOTE_ROADMAP_SHORT_LINK);
-      setRoadmapBoard(board);
-      setRoadmap('idle');
-      onOpenBoard(board);
-    } catch (error) {
-      console.warn('[sINK] Failed to open the Supernote roadmap', error);
-      if (signedIn && toSessionError(error) === 'invalidToken') {
-        onTokenRejected();
-        return;
+      const setStatus = (status: 'opening' | 'failed' | null) =>
+        setOpening(previous => {
+          const next = new Map(previous);
+          if (status) {
+            next.set(shortLink, status);
+          } else {
+            next.delete(shortLink);
+          }
+          return next;
+        });
+      setStatus('opening');
+      try {
+        if (!(await ensureNetwork())) {
+          setStatus('failed');
+          return;
+        }
+        const board = await client.getBoard(shortLink);
+        keepPublicBoard(shortLink, board);
+        setStatus(null);
+        onOpenBoard(board);
+      } catch (error) {
+        console.warn(`[sINK] Failed to open public board ${shortLink}`, error);
+        if (signedIn && toSessionError(error) === 'invalidToken') {
+          onTokenRejected();
+          return;
+        }
+        setStatus('failed');
       }
-      setRoadmap('failed');
-    }
-  }, [
-    client,
-    ensureNetwork,
-    onOpenBoard,
-    onTokenRejected,
-    roadmapBoard,
-    signedIn,
-  ]);
+    },
+    [
+      client,
+      ensureNetwork,
+      keepPublicBoard,
+      onOpenBoard,
+      onTokenRejected,
+      publicDetails,
+      signedIn,
+    ],
+  );
 
   const columns = directoryColumns(width, height);
   const boards = state.status === 'loaded' ? state.boards : null;
+  const publicTiles = useMemo(
+    () =>
+      publicBoards.map(
+        ref => publicDetails.get(ref.shortLink) ?? placeholderBoard(ref),
+      ),
+    [publicBoards, publicDetails],
+  );
+  const organizations = useOrganizations(
+    client,
+    signedIn,
+    useMemo(
+      () => [...(boards ?? []), ...publicTiles],
+      [boards, publicTiles],
+    ),
+  );
   const pages = useMemo(
     () =>
       bodyHeight === null
         ? null
         : paginateRows(
-            buildDirectoryRows(boards, columns, showRoadmap, signedIn),
+            buildDirectoryRows({
+              boards,
+              publicBoards: publicTiles,
+              showRoadmap,
+              signedIn,
+              columns,
+            }),
             bodyHeight,
             ROW_HEIGHTS,
           ),
-    [boards, columns, showRoadmap, signedIn, bodyHeight],
+    [boards, publicTiles, columns, showRoadmap, signedIn, bodyHeight],
   );
   const totalPages = pages?.length ?? 1;
   const pageIndex = Math.min(page, totalPages - 1);
@@ -210,30 +260,43 @@ export function BoardsScreen({
     switch (row.kind) {
       case 'header':
         return <SectionHeader key={row.key} section={row.section} />;
-      case 'roadmap':
-        return (
-          <View key={row.key} style={styles.tileRow}>
-            <RoadmapTile
-              name={roadmapBoard?.name || SUPERNOTE_ROADMAP_NAME}
-              status={roadmap}
-              onPress={openRoadmap}
-            />
-          </View>
-        );
       case 'connect':
         return <ConnectCard key={row.key} onPress={onConnect} />;
       case 'tiles':
         return (
           <View key={row.key} style={styles.tileRow}>
-            {row.boards.map(board => (
-              <BoardTile
-                key={board.id}
-                board={board}
-                imageWidth={Math.round(width / columns)}
-                onPress={() => onOpenBoard(board)}
-              />
-            ))}
-            {Array.from({length: columns - row.boards.length}, (_, i) => (
+            {row.tiles.map(tile => {
+              if (tile.kind === 'roadmap') {
+                return (
+                  <RoadmapTile
+                    key="roadmap"
+                    status={opening.get(SUPERNOTE_ROADMAP_SHORT_LINK)}
+                    onPress={() => openPublicBoard(SUPERNOTE_ROADMAP_SHORT_LINK)}
+                  />
+                );
+              }
+              const {board} = tile;
+              const isPublic = row.key.startsWith('public:');
+              return (
+                <BoardTile
+                  key={board.id}
+                  board={board}
+                  organization={
+                    board.idOrganization
+                      ? organizations.get(board.idOrganization)
+                      : undefined
+                  }
+                  status={isPublic ? opening.get(board.shortLink) : undefined}
+                  imageWidth={Math.round(width / columns)}
+                  onPress={() =>
+                    isPublic
+                      ? openPublicBoard(board.shortLink)
+                      : onOpenBoard(board)
+                  }
+                />
+              );
+            })}
+            {Array.from({length: columns - row.tiles.length}, (_, i) => (
               <View key={`spacer:${i}`} style={styles.tileSpacer} />
             ))}
           </View>
@@ -301,6 +364,7 @@ function SectionHeader({
 }): React.JSX.Element {
   const {t} = useTranslation();
   const label = {
+    public: t('boards.sectionPublic'),
     starred: `★ ${t('boards.sectionStarred')}`,
     all: t('boards.sectionAll'),
   }[section];
@@ -344,40 +408,61 @@ function ConnectCard({onPress}: {onPress: () => void}): React.JSX.Element {
   );
 }
 
+type OpenStatus = 'opening' | 'failed' | undefined;
+
+/** Status line of a public board tile while it is being opened. */
+function openStatusLabel(
+  status: OpenStatus,
+  t: ReturnType<typeof useTranslation>['t'],
+): string | null {
+  return status === 'opening'
+    ? t('boards.roadmapOpening')
+    : status === 'failed'
+    ? t('boards.roadmapFailedShort')
+    : null;
+}
+
 /**
- * Supernote's roadmap, shown as a full-width board tile with the Supernote
- * logo as its background image and the board's official name.
+ * Supernote's roadmap tile. Its background is drawn from the Supernote
+ * logos: the round logo, much larger than the band and cut by it, on both
+ * sides of the SUPERNOTE wordmark.
  */
 function RoadmapTile({
-  name,
   status,
   onPress,
 }: {
-  name: string;
-  status: 'idle' | 'opening' | 'failed';
+  status: OpenStatus;
   onPress: () => void;
 }): React.JSX.Element {
   const {t} = useTranslation();
   return (
     <Tile
-      name={name}
-      detail={
-        status === 'opening'
-          ? t('boards.roadmapOpening')
-          : status === 'failed'
-          ? t('boards.roadmapFailedShort')
-          : t('boards.roadmapSubtitle')
-      }
+      name={t('boards.roadmapTile')}
+      detail={openStatusLabel(status, t)}
       disabled={status === 'opening'}
       onPress={onPress}
       background={
         <View style={[styles.band, styles.logoBand]}>
           <Image
-            source={SUPERNOTE_LOGO}
-            style={styles.logoImage}
+            source={SUPERNOTE_ROUND_LOGO}
+            style={[styles.roundLogo, styles.roundLogoLeft]}
             resizeMode="contain"
             accessibilityIgnoresInvertColors
           />
+          <Image
+            source={SUPERNOTE_ROUND_LOGO}
+            style={[styles.roundLogo, styles.roundLogoCorner]}
+            resizeMode="contain"
+            accessibilityIgnoresInvertColors
+          />
+          <View style={styles.wordmarkBox}>
+            <Image
+              source={SUPERNOTE_WORDMARK}
+              style={styles.wordmark}
+              resizeMode="contain"
+              accessibilityIgnoresInvertColors
+            />
+          </View>
         </View>
       }
     />
@@ -386,10 +471,16 @@ function RoadmapTile({
 
 function BoardTile({
   board,
+  organization,
+  status,
   imageWidth,
   onPress,
 }: {
   board: TrelloBoard;
+  /** Workspace owning the board, once read; `null` if it cannot be. */
+  organization?: TrelloOrganization | null;
+  /** Opening status of a public board. */
+  status?: OpenStatus;
   /** Width of the tile, to pick the size of the background photo. */
   imageWidth: number;
   onPress: () => void;
@@ -400,8 +491,15 @@ function BoardTile({
   return (
     <Tile
       name={board.name}
-      detail={lastActivityLabel(board.dateLastActivity, t, locale)}
+      detail={
+        openStatusLabel(status, t) ??
+        lastActivityLabel(board.dateLastActivity, t, locale)
+      }
       starred={board.starred}
+      disabled={status === 'opening'}
+      badge={
+        organization ? <WorkspaceBadge organization={organization} /> : null
+      }
       onPress={onPress}
       background={
         <View style={[styles.band, {backgroundColor: boardShade(board)}]}>
@@ -430,6 +528,7 @@ function Tile({
   starred = false,
   disabled = false,
   background,
+  badge,
   onPress,
 }: {
   name: string;
@@ -437,6 +536,8 @@ function Tile({
   starred?: boolean;
   disabled?: boolean;
   background: React.ReactNode;
+  /** Drawn in the bottom right corner, like the avatars on Trello cards. */
+  badge?: React.ReactNode;
   onPress: () => void;
 }): React.JSX.Element {
   const {t} = useTranslation();
@@ -452,7 +553,7 @@ function Tile({
       {({pressed}) => (
         <>
           {background}
-          <View style={styles.tileFooter}>
+          <View style={[styles.tileFooter, badge ? styles.withBadge : null]}>
             <Text
               style={[styles.tileName, pressed && styles.pressedText]}
               numberOfLines={1}>
@@ -466,10 +567,98 @@ function Tile({
               </Text>
             )}
           </View>
+          {badge && <View style={styles.badge}>{badge}</View>}
         </>
       )}
     </Pressable>
   );
+}
+
+/**
+ * Logo of a Trello workspace, a rounded square like on Trello. The initial
+ * of its name stays underneath, for workspaces without a logo and while the
+ * image loads.
+ */
+function WorkspaceBadge({
+  organization,
+}: {
+  organization: TrelloOrganization;
+}): React.JSX.Element {
+  const [imageFailed, setImageFailed] = useState(false);
+  const logo = imageFailed ? null : organizationLogoUrl(organization, 50);
+  return (
+    <View
+      style={styles.workspace}
+      accessible
+      accessibilityLabel={organization.displayName}>
+      <Text style={styles.workspaceInitial}>
+        {organization.displayName.trim().charAt(0).toUpperCase()}
+      </Text>
+      {logo && (
+        <Image
+          source={{uri: logo}}
+          style={styles.bandImage}
+          onError={() => setImageFailed(true)}
+        />
+      )}
+    </View>
+  );
+}
+
+/** Stands for a public board until it is read from Trello. */
+function placeholderBoard(ref: PublicBoardRef): TrelloBoard {
+  return {
+    id: `public:${ref.shortLink}`,
+    name: ref.name,
+    url: `https://trello.com/b/${ref.shortLink}`,
+    shortLink: ref.shortLink,
+    closed: false,
+    starred: false,
+    idOrganization: null,
+  };
+}
+
+/**
+ * Reads the workspaces owning the given boards, each once. Signed out, they
+ * are not read (network access may not have been granted). A workspace that
+ * cannot be read (private to others, network) maps to `null`.
+ */
+function useOrganizations(
+  client: TrelloClient,
+  signedIn: boolean,
+  boards: readonly TrelloBoard[],
+): ReadonlyMap<string, TrelloOrganization | null> {
+  const [organizations, setOrganizations] = useState<
+    ReadonlyMap<string, TrelloOrganization | null>
+  >(new Map());
+  const requested = useRef(new Set<string>());
+
+  useEffect(() => {
+    if (!signedIn) {
+      return;
+    }
+    const ids = new Set(
+      boards
+        .map(board => board.idOrganization)
+        .filter((id): id is string => !!id && !requested.current.has(id)),
+    );
+    for (const id of ids) {
+      requested.current.add(id);
+      client
+        .getOrganization(id)
+        .catch(error => {
+          console.warn(`[sINK] Failed to read workspace ${id}`, error);
+          return null;
+        })
+        .then(organization =>
+          setOrganizations(previous =>
+            new Map(previous).set(id, organization),
+          ),
+        );
+    }
+  }, [boards, client, signedIn]);
+
+  return organizations;
 }
 
 /** "Modified today", "Modified 3 days ago", "Modified on 12 Oct"… */
@@ -551,15 +740,56 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   logoBand: {
-    alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: colors.background,
     borderBottomColor: colors.labelBorder,
     borderBottomWidth: borders.width / 2,
   },
-  logoImage: {
-    width: TILE_BAND_HEIGHT - spacing.sm,
-    height: TILE_BAND_HEIGHT - spacing.sm,
+  // The round logo (460 × 447) drawn at 260 px wide: on the left, only its
+  // right edge and the dot show; in the bottom right corner, its top left.
+  roundLogo: {
+    position: 'absolute',
+    width: ROUND_LOGO_WIDTH,
+    height: (ROUND_LOGO_WIDTH * 447) / 460,
+  },
+  roundLogoLeft: {
+    left: -177,
+    top: -157,
+  },
+  roundLogoCorner: {
+    right: -(ROUND_LOGO_WIDTH - 44),
+    top: TILE_BAND_HEIGHT - 36,
+  },
+  wordmarkBox: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    paddingRight: '9%',
+  },
+  wordmark: {
+    width: '62%',
+    aspectRatio: 748 / 101,
+  },
+  withBadge: {
+    paddingRight: spacing.md + BADGE_SIZE + spacing.sm,
+  },
+  badge: {
+    position: 'absolute',
+    right: spacing.sm,
+    bottom: spacing.sm,
+  },
+  workspace: {
+    width: BADGE_SIZE,
+    height: BADGE_SIZE,
+    borderRadius: borders.radius,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.avatar,
+  },
+  workspaceInitial: {
+    color: colors.foreground,
+    fontSize: typography.body,
+    fontWeight: '700',
   },
   tileRow: {
     height: ROW_HEIGHTS.tiles,
