@@ -59,7 +59,7 @@ const ROW_HEIGHTS: RowHeights = {
 const TILE_BAND_HEIGHT = 88;
 /** Workspace logo in the corner of a tile, the size of a card avatar. */
 const BADGE_SIZE = 40;
-const ROUND_LOGO_WIDTH = 260;
+const ROUND_LOGO_WIDTH = 340;
 
 function settingsIcon(color: string, background: string): React.ReactNode {
   return <GearIcon size={24} color={color} holeColor={background} />;
@@ -744,29 +744,32 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.labelBorder,
     borderBottomWidth: borders.width / 2,
   },
-  // The round logo (460 × 447) drawn at 260 px wide: on the left, only its
-  // right edge and the dot show; in the bottom right corner, its top left.
+  // The round logo (460 × 447) drawn at 340 px wide. On the left, only its
+  // lower right edge and the dot show, its letters stay above the band; in
+  // the bottom right corner, a sliver of its left edge. Both stay outside
+  // the wordmark's clear space (one "S" wide, about 21 px on a ~440 px
+  // tile), as Supernote's logo guideline asks.
   roundLogo: {
     position: 'absolute',
     width: ROUND_LOGO_WIDTH,
     height: (ROUND_LOGO_WIDTH * 447) / 460,
   },
   roundLogoLeft: {
-    left: -177,
-    top: -157,
+    left: -216,
+    top: -250,
   },
   roundLogoCorner: {
-    right: -(ROUND_LOGO_WIDTH - 44),
-    top: TILE_BAND_HEIGHT - 36,
+    right: -(ROUND_LOGO_WIDTH - 32),
+    top: -4,
   },
   wordmarkBox: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'flex-end',
     justifyContent: 'center',
-    paddingRight: '9%',
+    paddingRight: '12%',
   },
   wordmark: {
-    width: '62%',
+    width: '56%',
     aspectRatio: 748 / 101,
   },
   withBadge: {

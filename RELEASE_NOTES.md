@@ -3,6 +3,17 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.13.1 — Roadmap tile within Supernote's logo clear space
+
+- The roadmap tile keeps its composition (round logo cut on the left, a
+  sliver of it in the bottom right corner, SUPERNOTE wordmark) but now
+  leaves the clear space Supernote's visual identity guideline asks
+  around the wordmark: one "S" wide, about 21 px on a tile. The wordmark
+  is a little smaller (56 % of the tile), the corner sliver no longer
+  touches it, and the round logo on the left shows only its edge and dot,
+  without parts of its letters.
+- Bumped the plugin to version 0.13.1 (`versionCode` 37).
+
 ## 0.13.0 — Public boards and workspace logos
 
 - New "Public" section at the top of the boards page, hidden when empty.
