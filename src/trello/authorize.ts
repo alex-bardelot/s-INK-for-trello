@@ -38,9 +38,10 @@ export function buildAuthorizeUrl({
 
 /**
  * Trello tokens are alphanumeric: 64 hex characters for legacy tokens,
- * `ATTA` followed by hex characters for current ones.
+ * `ATTA` followed by hex characters for current ones (76 in all). Shorter
+ * input is rejected so that a half-typed token never counts as one.
  */
-const TOKEN_PATTERN = /^[A-Za-z0-9]{32,128}$/;
+const TOKEN_PATTERN = /^[A-Za-z0-9]{64,128}$/;
 
 /**
  * Cleans up a token typed or pasted by the user (surrounding text, spaces,

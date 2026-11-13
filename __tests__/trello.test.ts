@@ -38,9 +38,16 @@ describe('normalizeToken', () => {
     );
   });
 
-  it.each(['', 'abc', 'not a token!', 'x'.repeat(200)])('rejects %p', raw => {
-    expect(normalizeToken(raw)).toBeNull();
+  it('accepts a 64-character legacy token', () => {
+    expect(normalizeToken('a'.repeat(64))).toBe('a'.repeat(64));
   });
+
+  it.each(['', 'abc', 'not a token!', 'x'.repeat(63), 'x'.repeat(200)])(
+    'rejects %p',
+    raw => {
+      expect(normalizeToken(raw)).toBeNull();
+    },
+  );
 });
 
 describe('TrelloClient', () => {

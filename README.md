@@ -99,10 +99,11 @@ that opens the connection screen.
 
 1. Press the sINK button, then **Connect your Trello account**, and allow
    Internet access when asked.
-2. Open the displayed address in a browser (the tablet's, or any other
-   device's), sign in to Trello and press **Allow**.
-3. Trello displays a token: copy it and press **Paste token** in the plugin
-   (or type it and press **Connect**).
+2. In step 1, press **Open in browser** (or scan the QR code with a phone),
+   sign in to Trello and press **Allow**.
+3. In step 2, copy the token Trello displays and press **Paste token** (or
+   type it: the plugin says when it looks like a complete token, and only
+   then enables **Connect**).
 
 How the connection works and why:
 

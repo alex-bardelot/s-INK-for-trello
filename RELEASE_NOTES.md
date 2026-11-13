@@ -3,6 +3,21 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.16.0 — Clearer Trello connection page
+
+- The connection page is laid out as two framed, numbered steps:
+  "Allow sINK on Trello" and "Paste the token", with shorter texts.
+- Step 1 shows a QR code of the Trello authorization page, to open it on
+  a phone. It is drawn with plain views by a small built-in encoder
+  (byte mode, level M, versions 1–10), so no dependency is added.
+- The long authorization address is hidden behind "Show the address".
+- The token field spans several lines and says, as you type, whether the
+  text is a complete token ("Token recognized (76 characters)") or not
+  yet. **Connect** is only enabled for a complete token.
+- Tokens shorter than 64 characters are now rejected (Trello tokens have
+  64 or 76), so a half-typed token never counts as one.
+- Bumped the plugin to version 0.16.0 (`versionCode` 43).
+
 ## 0.15.0 — Mode selector on the board page
 
 - The Focus and Review buttons of the board page header are replaced by
