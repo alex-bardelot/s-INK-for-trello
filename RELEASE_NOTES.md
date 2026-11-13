@@ -3,6 +3,23 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.12.0 — Board view settings, one account card, modern toggles
+
+- New "Board view" section in Settings: the number of lists side by side
+  in portrait and in landscape (1, 2 or 3), and the board mode boards open
+  in (All cards, Focus, Review). These are the same settings the board
+  toolbar changes, read and saved in the same place.
+- The Trello account and its token storage now share one framed card: the
+  avatar, the name and @username, where the token is kept, then the
+  "Forget on this tablet" (or "Save on this tablet") and "Disconnect"
+  buttons side by side. Each asks for a confirmation in place, as before.
+- Settings use new controls: a pill-shaped on/off switch at the end of the
+  row instead of a checkbox, and joined segments with the choice filled
+  black for multiple-choice settings. Nothing is animated, for E Ink.
+- Removed the now unused `TokenStorageNotice` component and the
+  "Token storage" heading.
+- Bumped the plugin to version 0.12.0 (`versionCode` 35).
+
 ## 0.11.5 — Non-affiliation notice in Settings
 
 - The bottom of the Settings page shows the non-affiliation and trademark

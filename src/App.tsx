@@ -137,6 +137,7 @@ export default function App(): React.JSX.Element {
   if (settingsOpen) {
     return (
       <SettingsScreen
+        store={session.settingsStore}
         member={account?.member ?? null}
         tokenStorage={account?.tokenStorage}
         saveFailed={account?.saveFailed}
