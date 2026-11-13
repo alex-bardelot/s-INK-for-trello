@@ -3,6 +3,14 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.11.3 — Account shown in Settings only
+
+- The boards page title bar no longer shows the avatar and "Logged in as";
+  only the Settings button remains next to the title.
+- The Account section of Settings shows the Trello avatar next to
+  "Signed in as {name} (@{username})".
+- Bumped the plugin to version 0.11.3 (`versionCode` 32).
+
 ## 0.11.2 — Package renamed to sINKforTrello.snplg
 
 - The build now writes `build/outputs/sINKforTrello.snplg` instead of

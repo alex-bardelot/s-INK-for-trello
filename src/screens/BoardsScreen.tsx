@@ -23,7 +23,6 @@ import {
 import {describeLastActivity} from '../boards/activity';
 import {Button} from '../components/Button';
 import {GearIcon} from '../components/GearIcon';
-import {MemberAvatar} from '../components/MemberAvatar';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {Locale, useTranslation} from '../i18n';
 import {toSessionError} from '../session/trelloSession';
@@ -56,7 +55,6 @@ const ROW_HEIGHTS: RowHeights = {
 
 /** Height of the background part of a board tile, as on Trello's tiles. */
 const TILE_BAND_HEIGHT = 88;
-const AVATAR_SIZE = 44;
 
 function settingsIcon(color: string, background: string): React.ReactNode {
   return <GearIcon size={24} color={color} holeColor={background} />;
@@ -227,25 +225,11 @@ export function BoardsScreen({
       title={t('boards.title')}
       subtitle={t('app.version', {version: APP_VERSION})}
       actions={
-        <>
-          {member && (
-            <View style={styles.account}>
-              <MemberAvatar
-                initials={member.initials}
-                avatarUrl={member.avatarUrl}
-                size={AVATAR_SIZE}
-              />
-              <Text style={styles.accountText} numberOfLines={1}>
-                {t('boards.loggedInAs', {name: member.fullName})}
-              </Text>
-            </View>
-          )}
-          <Button
-            label={t('settings.open')}
-            onPress={onOpenSettings}
-            icon={settingsIcon}
-          />
-        </>
+        <Button
+          label={t('settings.open')}
+          onPress={onOpenSettings}
+          icon={settingsIcon}
+        />
       }>
       <View
         style={styles.body}
@@ -488,17 +472,6 @@ function formatDate(date: Date, locale: Locale): string {
 }
 
 const styles = StyleSheet.create({
-  account: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    flexShrink: 1,
-  },
-  accountText: {
-    color: colors.foreground,
-    fontSize: typography.body,
-    flexShrink: 1,
-  },
   body: {
     flex: 1,
     gap: ROW_HEIGHTS.gap,

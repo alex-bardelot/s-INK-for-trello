@@ -24,7 +24,6 @@
   "boards.loading": "Loading boards…",
   "boards.loadFailed": "Your boards could not be loaded.",
   "boards.empty": "You have no open boards.",
-  "boards.loggedInAs": "Logged in as {name}",
   "boards.connectTitle": "Connect your Trello account",
   "boards.connectHint": "See your boards here and turn your handwritten notes into Trello cards.",
   "boards.sectionStarred": "Starred boards",

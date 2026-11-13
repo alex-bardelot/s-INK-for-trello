@@ -3,6 +3,7 @@ import {StyleSheet, Text, View} from 'react-native';
 
 import {Button} from '../components/Button';
 import {Checkbox} from '../components/Checkbox';
+import {MemberAvatar} from '../components/MemberAvatar';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {TokenStorageNotice} from '../components/TokenStorageNotice';
 import {useTranslation} from '../i18n';
@@ -10,6 +11,8 @@ import {TokenStorage} from '../session/trelloSession';
 import {TrelloMember} from '../trello';
 import {borders, colors, spacing, typography} from '../theme';
 import {APP_VERSION} from '../version';
+
+const AVATAR_SIZE = 56;
 
 export interface SettingsScreenProps {
   /** The connected member; the account settings are hidden without one. */
@@ -85,12 +88,19 @@ function AccountSettings({
   return (
     <>
       <Section title={t('settings.account')}>
-        <Text style={styles.text}>
-          {t('settings.signedInAs', {
-            name: member.fullName,
-            username: member.username,
-          })}
-        </Text>
+        <View style={styles.member}>
+          <MemberAvatar
+            initials={member.initials}
+            avatarUrl={member.avatarUrl}
+            size={AVATAR_SIZE}
+          />
+          <Text style={[styles.text, styles.memberText]}>
+            {t('settings.signedInAs', {
+              name: member.fullName,
+              username: member.username,
+            })}
+          </Text>
+        </View>
         {confirmingDisconnect ? (
           <View style={styles.confirm}>
             <Text accessibilityRole="alert" style={styles.text}>
@@ -160,6 +170,14 @@ const styles = StyleSheet.create({
   text: {
     color: colors.foreground,
     fontSize: typography.body,
+  },
+  member: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  memberText: {
+    flex: 1,
   },
   confirm: {
     gap: spacing.md,

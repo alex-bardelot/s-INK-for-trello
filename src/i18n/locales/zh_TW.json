@@ -24,7 +24,6 @@
   "boards.loading": "正在載入看板…",
   "boards.loadFailed": "無法載入您的看板。",
   "boards.empty": "您沒有開啟中的看板。",
-  "boards.loggedInAs": "已登入：{name}",
   "boards.connectTitle": "連接您的 Trello 帳戶",
   "boards.connectHint": "在這裡查看您的看板，並將手寫筆記轉換為 Trello 卡片。",
   "boards.sectionStarred": "已加星號的看板",

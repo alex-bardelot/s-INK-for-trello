@@ -24,7 +24,6 @@
   "boards.loading": "ボードを読み込んでいます…",
   "boards.loadFailed": "ボードを読み込めませんでした。",
   "boards.empty": "開いているボードはありません。",
-  "boards.loggedInAs": "{name} としてログイン中",
   "boards.connectTitle": "Trello アカウントを接続",
   "boards.connectHint": "ここにボードを表示し、手書きのメモを Trello カードにできます。",
   "boards.sectionStarred": "スター付きボード",
