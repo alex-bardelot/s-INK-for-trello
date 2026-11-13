@@ -78,16 +78,16 @@ npm run build:plugin        # Windows
 npm run build:plugin:unix   # Linux / macOS
 ```
 
-The package is written to `build/outputs/sINK.snplg`.
+The package is written to `build/outputs/sINKforTrello.snplg`.
 
 ### Install on the tablet
 
-1. Get `sINK.snplg` into the `MyStyle` folder of the device, either:
+1. Get `sINKforTrello.snplg` into the `MyStyle` folder of the device, either:
    - with the official **Supernote Partner** desktop app: copy the package
      into its local `Supernote/MyStyle` sync folder and let it sync, or
    - by copying it over USB.
 2. On the tablet, sync if needed, then open **Settings → Apps → Plugins → Add Plugin** and pick
-   `sINK.snplg`.
+   `sINKforTrello.snplg`.
 3. Open a note or a document: the sINK button appears in the toolbar.
 
 ### Connect a Trello account

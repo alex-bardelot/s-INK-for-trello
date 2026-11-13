@@ -1357,10 +1357,12 @@ function Main {
         return
     }
     
-    # Rename to .snplg file
-    $snplgFileName = "$($packageInfo.Name).snplg"
+    # Rename to .snplg file. The file name is decoupled from the package
+    # name, which is also the pluginKey and must stay stable on the tablet.
+    $packageFileName = 'sINKforTrello'
+    $snplgFileName = "$packageFileName.snplg"
     $finalSnplgPath = Join-Path $buildOutputsDir $snplgFileName
-    $null = Rename-ToSnplgFile -ZipFilePath $tempZipPath -ProjectName $packageInfo.Name -OutputDir $buildOutputsDir
+    $null = Rename-ToSnplgFile -ZipFilePath $tempZipPath -ProjectName $packageFileName -OutputDir $buildOutputsDir
     if (Test-Path $finalSnplgPath) {
         Write-ColorOutput "Plugin package successfully generated: $finalSnplgPath" 'Green'
         

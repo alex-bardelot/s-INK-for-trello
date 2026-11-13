@@ -3,6 +3,14 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.11.2 — Package renamed to sINKforTrello.snplg
+
+- The build now writes `build/outputs/sINKforTrello.snplg` instead of
+  `sINK.snplg`. Only the file name changes: the package name and the
+  `pluginKey` stay `sINK`, so the tablet updates the installed plugin and
+  keeps its settings and stored token.
+- Bumped the plugin to version 0.11.2 (`versionCode` 31).
+
 ## 0.11.1 — No star on board tiles
 
 - Board tiles no longer show a star badge in their corner: starred boards

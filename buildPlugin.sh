@@ -733,7 +733,8 @@ main() {
     outputs_dir="$(ensure_build_outputs_directory "$project_root")"
     local zip_path="$outputs_dir/${PACKAGE_NAME}.zip"
     if new_zip_package "$gen_dir" "$zip_path"; then
-        rename_to_snplg_file "$zip_path" "$PACKAGE_NAME" >/dev/null
+        # The file name is decoupled from the package name (the pluginKey).
+        rename_to_snplg_file "$zip_path" "sINKforTrello" >/dev/null
     fi
 
     write_color_output "Build process completed" "Blue"

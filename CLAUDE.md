@@ -10,7 +10,7 @@
   ```
 
   It runs `buildPlugin.ps1`, checks the package was rebuilt, and copies
-  `build\outputs\sINK.snplg` to the Supernote Partner app's MyStyle folder.
+  `build\outputs\sINKforTrello.snplg` to the Supernote Partner app's MyStyle folder.
   Use `-SkipBuild` to copy the last package without rebuilding.
 - Run it as a single command, without chaining other commands (`;`, `|`) or
   redirecting its output, so it matches the permission allow rule and runs
