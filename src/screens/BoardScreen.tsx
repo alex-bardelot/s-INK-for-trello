@@ -12,6 +12,7 @@ import {
 import {
   ColumnSegment,
   DEFAULT_FOCUS_SETTINGS,
+  ModeChoice,
   FocusSettings,
   focusBoard,
   focusLabelChoices,
@@ -22,7 +23,6 @@ import {
   saveFocusSettings,
   stackLists,
   toggleFocusLabel,
-  toggleMode,
 } from '../board/focus';
 import {labelShade} from '../board/labels';
 import {
@@ -41,7 +41,8 @@ import {
 import {useTwoFingerSwipe} from '../board/useTwoFingerSwipe';
 import {Checkbox} from '../components/Checkbox';
 import {RefreshIcon} from '../components/RefreshIcon';
-import {ScreenFrame} from '../components/ScreenFrame';
+import {Segment, SegmentGroup} from '../components/SegmentedControl';
+import {HEADER_ICON_SIZE, ScreenFrame} from '../components/ScreenFrame';
 import {Locale, useTranslation} from '../i18n';
 import {toSessionError} from '../session/trelloSession';
 import {KeyValueStore} from '../storage/keyValueStore';
@@ -62,8 +63,6 @@ const COLUMN_GAP = spacing.lg;
 const LIST_GAP = spacing.lg;
 const AVATAR_SIZE = 36;
 const MAX_AVATARS = 3;
-/** Matches the visual weight of the ✕ close sign next to it. */
-const REFRESH_ICON_SIZE = 32;
 
 type MembersById = ReadonlyMap<string, TrelloBoardMember>;
 
@@ -164,20 +163,23 @@ export function BoardScreen({
     },
     [store],
   );
-  const toggleFocus = useCallback(() => {
-    updateFocus(toggleMode(focus, 'focus'));
-    setTagsOpen(false);
-  }, [focus, updateFocus]);
-  const toggleReview = useCallback(() => {
-    updateFocus(toggleMode(focus, 'review'));
-    setTagsOpen(false);
-  }, [focus, updateFocus]);
+  const changeMode = useCallback(
+    (choice: ModeChoice) => {
+      updateFocus({...focus, mode: choice === 'all' ? null : choice});
+      setTagsOpen(false);
+    },
+    [focus, updateFocus],
+  );
   // Focus and Review are about the user's own cards: they make no sense on
   // Supernote's roadmap, where the board is always shown in full.
   const modesAvailable = !isSupernoteRoadmap(board);
   const mode = modesAvailable ? focus.mode : null;
   const focusOn = mode === 'focus';
-  const reviewOn = mode === 'review';
+  const modeChoices: Segment<ModeChoice>[] = [
+    {value: 'all', label: t('settings.modeAll')},
+    {value: 'focus', label: t('board.focus')},
+    {value: 'review', label: t('board.review')},
+  ];
 
   // Focus and Review modes both show a filtered board, stacked.
   const focused = useMemo(() => {
@@ -234,16 +236,6 @@ export function BoardScreen({
       onBack={onBack}
       actions={
         <>
-          {modesAvailable && (
-            <SmallButton
-              label={t('board.focus')}
-              accessibilityLabel={t(
-                focusOn ? 'board.focusOnHint' : 'board.focusOffHint',
-              )}
-              active={focusOn}
-              onPress={toggleFocus}
-            />
-          )}
           {focusOn && (
             <SmallButton
               label={t('board.focusTags')}
@@ -253,13 +245,11 @@ export function BoardScreen({
             />
           )}
           {modesAvailable && (
-            <SmallButton
-              label={t('board.review')}
-              accessibilityLabel={t(
-                reviewOn ? 'board.reviewOnHint' : 'board.reviewOffHint',
-              )}
-              active={reviewOn}
-              onPress={toggleReview}
+            <SegmentGroup
+              label={t('settings.boardMode')}
+              segments={modeChoices}
+              value={mode ?? 'all'}
+              onChange={changeMode}
             />
           )}
           <Pressable
@@ -268,7 +258,7 @@ export function BoardScreen({
             hitSlop={spacing.md}
             onPress={load}
             style={styles.iconButton}>
-            <RefreshIcon size={REFRESH_ICON_SIZE} color={colors.foreground} />
+            <RefreshIcon size={HEADER_ICON_SIZE} color={colors.foreground} />
           </Pressable>
         </>
       }>
@@ -309,7 +299,9 @@ export function BoardScreen({
           cardsByList={focused.cardsByList}
           members={state.members}
           columns={columns}
-          emptyMessage={t(reviewOn ? 'board.reviewEmpty' : 'board.focusEmpty')}
+          emptyMessage={t(
+            mode === 'review' ? 'board.reviewEmpty' : 'board.focusEmpty',
+          )}
         />
       )}
 

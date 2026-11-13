@@ -28,13 +28,8 @@ export const DEFAULT_FOCUS_SETTINGS: FocusSettings = {
   labels: [],
 };
 
-/** Turns a mode on, or off when it is already on (the modes are exclusive). */
-export function toggleMode(
-  settings: FocusSettings,
-  mode: BoardMode,
-): FocusSettings {
-  return {...settings, mode: settings.mode === mode ? null : mode};
-}
+/** Board mode as offered in the mode selectors; `all` stands for no mode. */
+export type ModeChoice = BoardMode | 'all';
 
 /** Normalized form of a label name, used to compare label names. */
 export function labelKey(name: string): string {

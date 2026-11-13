@@ -3,6 +3,19 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.15.0 — Mode selector on the board page
+
+- The Focus and Review buttons of the board page header are replaced by
+  a mode selector "All cards | Focus | Review", drawn like the choices of
+  the Settings page. The Tags button still appears, before it, in Focus
+  mode.
+- The refresh arrow is redrawn with a 135° gap, so its head stays well
+  apart from its tail instead of seeming to bite it.
+- The close sign of every page is now drawn like the refresh arrow (same
+  size and line width) instead of the ✕ character, so the two line up
+  exactly in the title bar.
+- Bumped the plugin to version 0.15.0 (`versionCode` 42).
+
 ## 0.14.3 — Lighter board page header
 
 - The column count button ("2 ▥") is gone from the board page header:

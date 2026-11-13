@@ -4,6 +4,13 @@ import {PluginManager} from 'sn-plugin-lib';
 
 import {useTranslation} from '../i18n';
 import {borders, colors, spacing, typography} from '../theme';
+import {CloseIcon} from './CloseIcon';
+
+/**
+ * Size of the icons of the title bar (close, refresh). Icon buttons put
+ * `spacing.sm` around it, like the close button, so they line up.
+ */
+export const HEADER_ICON_SIZE = 32;
 
 export interface ScreenFrameProps {
   title: string;
@@ -52,7 +59,7 @@ export function ScreenFrame({
           hitSlop={spacing.md}
           onPress={handleClose}
           style={styles.closeButton}>
-          <Text style={styles.closeIcon}>✕</Text>
+          <CloseIcon size={HEADER_ICON_SIZE} color={colors.foreground} />
         </Pressable>
       </View>
       <View style={styles.content}>{children}</View>

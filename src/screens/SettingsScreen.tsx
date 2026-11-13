@@ -2,10 +2,10 @@ import React, {useCallback, useEffect, useState} from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 
 import {
-  BoardMode,
   DEFAULT_FOCUS_SETTINGS,
   FocusSettings,
   loadFocusSettings,
+  ModeChoice,
   saveFocusSettings,
 } from '../board/focus';
 import {COLUMN_COUNTS, ColumnCount, DEFAULT_COLUMNS} from '../board/layout';
@@ -27,9 +27,6 @@ import {PublicBoardsSettings} from './PublicBoardsSettings';
 import {borders, colors, spacing, typography} from '../theme';
 
 const AVATAR_SIZE = 64;
-
-/** Board mode choice of the Settings page; `all` stands for no mode. */
-type ModeChoice = BoardMode | 'all';
 
 export interface SettingsScreenProps {
   /** Where the board view settings are kept. */

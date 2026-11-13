@@ -8,7 +8,6 @@ import {
   saveFocusSettings,
   stackLists,
   toggleFocusLabel,
-  toggleMode,
 } from '../src/board/focus';
 import {createMemoryStore} from '../src/storage/keyValueStore';
 import {TrelloBoardCard, TrelloList} from '../src/trello';
@@ -97,15 +96,6 @@ describe('reviewBoard', () => {
     expect(result.lists.map(l => l.id)).toEqual(['sprint', 'done']);
     expect(result.cardsByList.get('sprint')?.map(c => c.id)).toEqual(['s1']);
     expect(result.cardsByList.get('done')?.map(c => c.id)).toEqual(['d1']);
-  });
-});
-
-describe('toggleMode', () => {
-  it('keeps at most one mode on', () => {
-    const off = {mode: null, labels: ['TODO']};
-    expect(toggleMode(off, 'focus')).toEqual({mode: 'focus', labels: ['TODO']});
-    expect(toggleMode({...off, mode: 'focus'}, 'review').mode).toBe('review');
-    expect(toggleMode({...off, mode: 'review'}, 'review').mode).toBeNull();
   });
 });
 

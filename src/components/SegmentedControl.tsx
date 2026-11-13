@@ -34,28 +34,53 @@ export function SegmentedControl<T extends string | number>({
         <Text style={styles.label}>{label}</Text>
         {help && <Text style={styles.help}>{help}</Text>}
       </View>
-      <View accessibilityRole="radiogroup" style={styles.group}>
-        {segments.map((segment, index) => {
-          const selected = segment.value === value;
-          return (
-            <Pressable
-              key={String(segment.value)}
-              accessibilityRole="radio"
-              accessibilityState={{selected}}
-              accessibilityLabel={`${label}: ${segment.label}`}
-              onPress={() => onChange(segment.value)}
-              style={[
-                styles.segment,
-                index > 0 && styles.divided,
-                selected && styles.selected,
-              ]}>
-              <Text style={[styles.text, selected && styles.selectedText]}>
-                {segment.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <SegmentGroup
+        label={label}
+        segments={segments}
+        value={value}
+        onChange={onChange}
+      />
+    </View>
+  );
+}
+
+export interface SegmentGroupProps<T extends string | number> {
+  /** Read out before each option; not shown. */
+  label: string;
+  segments: readonly Segment<T>[];
+  value: T;
+  onChange: (value: T) => void;
+}
+
+/** The joined segments alone, for a toolbar or the end of a settings row. */
+export function SegmentGroup<T extends string | number>({
+  label,
+  segments,
+  value,
+  onChange,
+}: SegmentGroupProps<T>): React.JSX.Element {
+  return (
+    <View accessibilityRole="radiogroup" style={styles.group}>
+      {segments.map((segment, index) => {
+        const selected = segment.value === value;
+        return (
+          <Pressable
+            key={String(segment.value)}
+            accessibilityRole="radio"
+            accessibilityState={{selected}}
+            accessibilityLabel={`${label}: ${segment.label}`}
+            onPress={() => onChange(segment.value)}
+            style={[
+              styles.segment,
+              index > 0 && styles.divided,
+              selected && styles.selected,
+            ]}>
+            <Text style={[styles.text, selected && styles.selectedText]}>
+              {segment.label}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
