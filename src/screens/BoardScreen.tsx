@@ -42,6 +42,7 @@ import {
 } from '../board/preferences';
 import {useTwoFingerSwipe} from '../board/useTwoFingerSwipe';
 import {Checkbox} from '../components/Checkbox';
+import {RefreshIcon} from '../components/RefreshIcon';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {Locale, useTranslation} from '../i18n';
 import {toSessionError} from '../session/trelloSession';
@@ -274,6 +275,7 @@ export function BoardScreen({
           <SmallButton
             label={t('board.refresh')}
             accessibilityLabel={t('board.refresh')}
+            icon={refreshIcon}
             onPress={load}
           />
         </>
@@ -858,6 +860,15 @@ interface SmallButtonProps {
   disabled?: boolean;
   /** Shown inverted, for a switch that is on. */
   active?: boolean;
+  /**
+   * Icon shown instead of the label (which is then only read out), given
+   * the current foreground color, which swaps while pressed.
+   */
+  icon?: (color: string) => React.ReactNode;
+}
+
+function refreshIcon(color: string): React.ReactNode {
+  return <RefreshIcon size={typography.icon} color={color} />;
 }
 
 function SmallButton({
@@ -866,6 +877,7 @@ function SmallButton({
   onPress,
   disabled = false,
   active = false,
+  icon,
 }: SmallButtonProps): React.JSX.Element {
   return (
     <Pressable
@@ -880,15 +892,19 @@ function SmallButton({
         disabled && styles.disabled,
         (pressed || active) && styles.pressed,
       ]}>
-      {({pressed}) => (
-        <Text
-          style={[
-            styles.smallButtonLabel,
-            (pressed || active) && styles.pressedLabel,
-          ]}>
-          {label}
-        </Text>
-      )}
+      {({pressed}) =>
+        icon ? (
+          icon(pressed || active ? colors.background : colors.foreground)
+        ) : (
+          <Text
+            style={[
+              styles.smallButtonLabel,
+              (pressed || active) && styles.pressedLabel,
+            ]}>
+            {label}
+          </Text>
+        )
+      }
     </Pressable>
   );
 }

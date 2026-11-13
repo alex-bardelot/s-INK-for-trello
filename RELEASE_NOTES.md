@@ -3,6 +3,13 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.14.2 — Refresh icon on the board page
+
+- The "Refresh" text button in the board page header is now a clockwise
+  arrow icon, drawn with plain views like the settings gear. Screen
+  readers still announce it as "Refresh".
+- Bumped the plugin to version 0.14.2 (`versionCode` 40).
+
 ## 0.14.1 — Public boards readable when signed out
 
 - Signed out, opening a public board (the Supernote roadmap or one added
