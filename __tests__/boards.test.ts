@@ -1,6 +1,7 @@
 import {describeLastActivity} from '../src/boards/activity';
 import {
   BOARD_SHADES,
+  boardImageUrl,
   boardShade,
   buildDirectoryRows,
   DEFAULT_BOARD_SHADE,
@@ -63,6 +64,39 @@ describe('boardShade', () => {
   it('falls back to a default grey', () => {
     expect(boardShade({})).toBe(DEFAULT_BOARD_SHADE);
     expect(boardShade({prefs: null})).toBe(DEFAULT_BOARD_SHADE);
+  });
+});
+
+describe('boardImageUrl', () => {
+  const scaled = [
+    {width: 1280, height: 960, url: 'large'},
+    {width: 140, height: 100, url: 'small'},
+    {width: 480, height: 360, url: 'medium'},
+  ];
+
+  it('picks the smallest image at least as wide as the tile', () => {
+    expect(boardImageUrl({prefs: {backgroundImageScaled: scaled}}, 400)).toBe(
+      'medium',
+    );
+  });
+
+  it('falls back to the largest image for wide tiles', () => {
+    expect(boardImageUrl({prefs: {backgroundImageScaled: scaled}}, 2000)).toBe(
+      'large',
+    );
+  });
+
+  it('uses the full size image without scaled versions', () => {
+    expect(boardImageUrl({prefs: {backgroundImage: 'full'}}, 400)).toBe(
+      'full',
+    );
+  });
+
+  it('returns null for plain color backgrounds', () => {
+    expect(boardImageUrl({prefs: {backgroundColor: '#0079BF'}}, 400)).toBe(
+      null,
+    );
+    expect(boardImageUrl({}, 400)).toBeNull();
   });
 });
 

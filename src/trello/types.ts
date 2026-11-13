@@ -41,6 +41,16 @@ export interface TrelloBoardPrefs {
   backgroundColor?: string | null;
   backgroundTopColor?: string | null;
   backgroundBottomColor?: string | null;
+  /** Full size photo background, `null` for plain colors. */
+  backgroundImage?: string | null;
+  /** The photo background in several sizes, smallest first. */
+  backgroundImageScaled?: TrelloScaledImage[] | null;
+}
+
+export interface TrelloScaledImage {
+  width: number;
+  height: number;
+  url: string;
 }
 
 /** A list (column) of a board (`GET /1/boards/{id}/lists`). */

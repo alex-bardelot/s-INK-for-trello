@@ -69,6 +69,27 @@ export function boardShade(board: Pick<TrelloBoard, 'prefs'>): string {
   return BOARD_SHADES[3];
 }
 
+/**
+ * URL of the board background photo to show on a tile `minWidth` pixels
+ * wide: the smallest scaled version at least that wide (to save bandwidth),
+ * else the largest one, else the full size image. `null` for plain colors.
+ */
+export function boardImageUrl(
+  board: Pick<TrelloBoard, 'prefs'>,
+  minWidth: number,
+): string | null {
+  const scaled = [...(board.prefs?.backgroundImageScaled ?? [])]
+    .filter(image => image?.url && image.width > 0)
+    .sort((a, b) => a.width - b.width);
+  if (scaled.length > 0) {
+    return (
+      scaled.find(image => image.width >= minWidth) ??
+      scaled[scaled.length - 1]
+    ).url;
+  }
+  return board.prefs?.backgroundImage || null;
+}
+
 /** One row of the boards page. */
 export type DirectoryRow =
   | {kind: 'header'; key: string; section: DirectorySection}

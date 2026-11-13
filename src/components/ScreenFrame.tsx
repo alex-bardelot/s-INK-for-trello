@@ -7,6 +7,8 @@ import {borders, colors, spacing, typography} from '../theme';
 
 export interface ScreenFrameProps {
   title: string;
+  /** Small line shown under the title. */
+  subtitle?: string;
   children: React.ReactNode;
   /** When set, a back button is shown before the title. */
   onBack?: () => void;
@@ -17,6 +19,7 @@ export interface ScreenFrameProps {
 /** Common layout of the plugin screens: title bar with a close button. */
 export function ScreenFrame({
   title,
+  subtitle,
   children,
   onBack,
   actions,
@@ -42,9 +45,19 @@ export function ScreenFrame({
             <Text style={styles.closeIcon}>‹</Text>
           </Pressable>
         )}
-        <Text accessibilityRole="header" style={styles.title} numberOfLines={1}>
-          {title}
-        </Text>
+        <View style={styles.titleBlock}>
+          <Text
+            accessibilityRole="header"
+            style={styles.title}
+            numberOfLines={1}>
+            {title}
+          </Text>
+          {subtitle && (
+            <Text style={styles.subtitle} numberOfLines={1}>
+              {subtitle}
+            </Text>
+          )}
+        </View>
         {actions && <View style={styles.actions}>{actions}</View>}
         <Pressable
           accessibilityRole="button"
@@ -73,11 +86,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  title: {
+  titleBlock: {
     flex: 1,
+  },
+  title: {
     color: colors.foreground,
     fontSize: typography.heading,
     fontWeight: '700',
+  },
+  subtitle: {
+    color: colors.foreground,
+    fontSize: 18,
   },
   actions: {
     flexDirection: 'row',

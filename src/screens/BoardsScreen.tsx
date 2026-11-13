@@ -11,6 +11,7 @@ import {
 import {SwipeDirection} from '../board/layout';
 import {useTwoFingerSwipe} from '../board/useTwoFingerSwipe';
 import {
+  boardImageUrl,
   boardShade,
   buildDirectoryRows,
   DirectoryRow,
@@ -33,6 +34,7 @@ import {
   TrelloMember,
 } from '../trello';
 import {borders, colors, spacing, typography} from '../theme';
+import {APP_VERSION} from '../version';
 
 const SUPERNOTE_LOGO = require('../../assets/supernote-logo.png');
 
@@ -44,14 +46,14 @@ type BoardsState =
 /** Fixed row heights: pages are computed from them before rendering. */
 const ROW_HEIGHTS: RowHeights = {
   header: 44,
-  roadmap: 136,
-  tiles: 128,
+  roadmap: 148,
+  tiles: 148,
   message: 120,
   gap: spacing.md,
 };
 
-/** Height of the colored part of a board tile, as on Trello's tiles. */
-const TILE_BAND_HEIGHT = 56;
+/** Height of the background part of a board tile, as on Trello's tiles. */
+const TILE_BAND_HEIGHT = 88;
 const AVATAR_SIZE = 44;
 
 function settingsIcon(color: string, background: string): React.ReactNode {
@@ -158,7 +160,12 @@ export function BoardsScreen({
         return <SectionHeader key={row.key} section={row.section} />;
       case 'roadmap':
         return (
-          <RoadmapCard key={row.key} status={roadmap} onPress={openRoadmap} />
+          <View key={row.key} style={styles.tileRow}>
+            <RoadmapTile status={roadmap} onPress={openRoadmap} />
+            {Array.from({length: columns - 1}, (_, i) => (
+              <View key={`spacer:${i}`} style={styles.tileSpacer} />
+            ))}
+          </View>
         );
       case 'tiles':
         return (
@@ -167,6 +174,7 @@ export function BoardsScreen({
               <BoardTile
                 key={board.id}
                 board={board}
+                imageWidth={Math.round(width / columns)}
                 onPress={() => onOpenBoard(board)}
               />
             ))}
@@ -196,6 +204,7 @@ export function BoardsScreen({
   return (
     <ScreenFrame
       title={t('boards.title')}
+      subtitle={t('app.version', {version: APP_VERSION})}
       actions={
         <>
           <View style={styles.account}>
@@ -262,7 +271,11 @@ function SectionHeader({
   );
 }
 
-function RoadmapCard({
+/**
+ * Supernote's roadmap, shown as a board tile with the Supernote logo as its
+ * background image.
+ */
+function RoadmapTile({
   status,
   onPress,
 }: {
@@ -271,84 +284,114 @@ function RoadmapCard({
 }): React.JSX.Element {
   const {t} = useTranslation();
   return (
-    <Pressable
-      accessibilityRole="button"
+    <Tile
+      name={t('boards.roadmapTitle')}
+      detail={
+        status === 'opening'
+          ? t('boards.roadmapOpening')
+          : status === 'failed'
+          ? t('boards.roadmapFailedShort')
+          : t('boards.roadmapSubtitle')
+      }
       disabled={status === 'opening'}
       onPress={onPress}
-      style={({pressed}) => [styles.roadmap, pressed && styles.pressed]}>
-      {({pressed}) => (
-        <>
-          <View style={styles.roadmapLogo}>
-            <Image
-              source={SUPERNOTE_LOGO}
-              style={styles.logoImage}
-              resizeMode="contain"
-              accessibilityIgnoresInvertColors
-            />
-          </View>
-          <View style={styles.roadmapText}>
-            <Text
-              style={[styles.roadmapTitle, pressed && styles.pressedText]}
-              numberOfLines={1}>
-              {t('boards.roadmapTitle')}
-            </Text>
-            <Text
-              style={[styles.roadmapSubtitle, pressed && styles.pressedText]}
-              numberOfLines={2}>
-              {status === 'opening'
-                ? t('boards.roadmapOpening')
-                : status === 'failed'
-                ? t('boards.roadmapFailed')
-                : t('boards.roadmapSubtitle')}
-            </Text>
-          </View>
-        </>
-      )}
-    </Pressable>
+      background={
+        <View style={[styles.band, styles.logoBand]}>
+          <Image
+            source={SUPERNOTE_LOGO}
+            style={styles.logoImage}
+            resizeMode="contain"
+            accessibilityIgnoresInvertColors
+          />
+        </View>
+      }
+    />
   );
 }
 
 function BoardTile({
   board,
+  imageWidth,
   onPress,
 }: {
   board: TrelloBoard;
+  /** Width of the tile, to pick the size of the background photo. */
+  imageWidth: number;
   onPress: () => void;
 }): React.JSX.Element {
   const {t, locale} = useTranslation();
-  const activity = lastActivityLabel(board.dateLastActivity, t, locale);
+  const [imageFailed, setImageFailed] = useState(false);
+  const imageUrl = imageFailed ? null : boardImageUrl(board, imageWidth);
+  return (
+    <Tile
+      name={board.name}
+      detail={lastActivityLabel(board.dateLastActivity, t, locale)}
+      starred={board.starred}
+      onPress={onPress}
+      background={
+        <View style={[styles.band, {backgroundColor: boardShade(board)}]}>
+          {imageUrl && (
+            <Image
+              source={{uri: imageUrl}}
+              style={styles.bandImage}
+              resizeMode="cover"
+              onError={() => setImageFailed(true)}
+            />
+          )}
+        </View>
+      }
+    />
+  );
+}
+
+/**
+ * Board tile drawn like Trello's: the background on top, with the star in
+ * its corner, and a white footer with the name and a detail line.
+ */
+function Tile({
+  name,
+  detail,
+  starred = false,
+  disabled = false,
+  background,
+  onPress,
+}: {
+  name: string;
+  detail: string | null;
+  starred?: boolean;
+  disabled?: boolean;
+  background: React.ReactNode;
+  onPress: () => void;
+}): React.JSX.Element {
+  const {t} = useTranslation();
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={[
-        board.name,
-        board.starred ? t('boards.starred') : null,
-        activity,
-      ]
+      accessibilityLabel={[name, starred ? t('boards.starred') : null, detail]
         .filter(Boolean)
         .join(', ')}
+      disabled={disabled}
       onPress={onPress}
       style={({pressed}) => [styles.tile, pressed && styles.pressed]}>
       {({pressed}) => (
         <>
-          <View style={[styles.band, {backgroundColor: boardShade(board)}]}>
-            {board.starred && (
-              <View style={styles.star}>
-                <Text style={styles.starText}>★</Text>
-              </View>
-            )}
-          </View>
+          {background}
+          {starred && (
+            <View style={styles.star}>
+              <Text style={styles.starText}>★</Text>
+            </View>
+          )}
           <View style={styles.tileFooter}>
             <Text
               style={[styles.tileName, pressed && styles.pressedText]}
               numberOfLines={1}>
-              {board.name}
+              {name}
             </Text>
-            {activity && (
+            {detail && (
               <Text
                 style={[styles.tileActivity, pressed && styles.pressedText]}
                 numberOfLines={1}>
-                {activity}
+                {detail}
               </Text>
             )}
           </View>
@@ -420,41 +463,16 @@ const styles = StyleSheet.create({
     fontSize: typography.label,
     fontWeight: '700',
   },
-  roadmap: {
-    height: ROW_HEIGHTS.roadmap,
-    flexDirection: 'row',
-    borderColor: colors.foreground,
-    borderRadius: borders.radius,
-    borderWidth: borders.width,
-    backgroundColor: colors.background,
-    overflow: 'hidden',
-  },
-  roadmapLogo: {
-    width: ROW_HEIGHTS.roadmap,
+  logoBand: {
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.background,
-    borderRightColor: colors.foreground,
-    borderRightWidth: borders.width,
+    borderBottomColor: colors.labelBorder,
+    borderBottomWidth: borders.width / 2,
   },
   logoImage: {
-    width: ROW_HEIGHTS.roadmap - spacing.md * 2,
-    height: ROW_HEIGHTS.roadmap - spacing.md * 2,
-  },
-  roadmapText: {
-    flex: 1,
-    justifyContent: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-  },
-  roadmapTitle: {
-    color: colors.foreground,
-    fontSize: typography.label,
-    fontWeight: '700',
-  },
-  roadmapSubtitle: {
-    color: colors.foreground,
-    fontSize: typography.body,
+    width: TILE_BAND_HEIGHT - spacing.sm,
+    height: TILE_BAND_HEIGHT - spacing.sm,
   },
   tileRow: {
     height: ROW_HEIGHTS.tiles,
@@ -477,8 +495,10 @@ const styles = StyleSheet.create({
   },
   band: {
     height: TILE_BAND_HEIGHT,
-    alignItems: 'flex-end',
-    padding: spacing.sm,
+    overflow: 'hidden',
+  },
+  bandImage: {
+    ...StyleSheet.absoluteFillObject,
   },
   tileFooter: {
     flex: 1,
@@ -491,6 +511,9 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   star: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
     width: 30,
     height: 30,
     alignItems: 'center',

@@ -9,6 +9,7 @@ import {useTranslation} from '../i18n';
 import {TokenStorage} from '../session/trelloSession';
 import {TrelloMember} from '../trello';
 import {borders, colors, spacing, typography} from '../theme';
+import {APP_VERSION} from '../version';
 
 export interface SettingsScreenProps {
   member: TrelloMember;
@@ -40,7 +41,10 @@ export function SettingsScreen({
   const [confirmingDisconnect, setConfirmingDisconnect] = useState(false);
 
   return (
-    <ScreenFrame title={t('settings.title')} onBack={onBack}>
+    <ScreenFrame
+      title={t('settings.title')}
+      subtitle={t('app.version', {version: APP_VERSION})}
+      onBack={onBack}>
       <Section title={t('settings.display')}>
         <Checkbox
           label={t('settings.showRoadmap')}

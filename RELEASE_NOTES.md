@@ -3,6 +3,20 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.10.2 — Board background images and version number
+
+- Board tiles show the board's background photo when it has one (the
+  smallest scaled version wide enough for the tile, with the grey shade
+  underneath while it loads or if it fails), and a taller background part,
+  closer to Trello's tiles.
+- The Supernote roadmap is now a board tile like the others, with the
+  Supernote logo as its background image.
+- "Your boards" is renamed "Other boards", as starred boards are listed
+  above it.
+- The title bar reads "sINK for Trello®" and shows the plugin version
+  under the title, on the boards and settings pages.
+- Bumped the plugin to version 0.10.2 (`versionCode` 28).
+
 ## 0.10.1 — Board tiles and account header
 
 - Starred boards are no longer repeated under "Your boards", which now
