@@ -3,6 +3,24 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.10.0 — Boards page redesign and Settings
+
+- The boards page is laid out like Trello's: boards are tiles in a grid
+  (three columns in portrait, four in landscape) with a grey band standing
+  for the board background color, and a ★ on starred ones. Sections:
+  "Supernote", "Starred boards", then "Your boards".
+- The Supernote section holds a card with the Supernote logo that opens
+  Supernote's official Trello roadmap, replacing the roadmap banner.
+- The page no longer scrolls: it is split into pages turned with the ‹ ›
+  buttons or a two-finger swipe, and a section title never ends a page.
+- New Settings page, opened from the boards page: show or hide the
+  Supernote roadmap, the connected account, Disconnect (now asks for a
+  confirmation) and the token storage choice. These no longer take space
+  on the boards page.
+- The title bar reads "sINK for Trello: Boards" (all locales).
+- Boards are fetched with their `prefs` for the background colors.
+- Bumped the plugin to version 0.10.0 (`versionCode` 26).
+
 ## 0.9.3 — "New Trello Card" label
 
 - The lasso button and the card screen title now read "New Trello Card"

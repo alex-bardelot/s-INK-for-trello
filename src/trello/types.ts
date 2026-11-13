@@ -24,6 +24,19 @@ export interface TrelloBoard {
   closed: boolean;
   starred: boolean;
   idOrganization: string | null;
+  /** Display preferences; only the background colors are used. */
+  prefs?: TrelloBoardPrefs | null;
+}
+
+/**
+ * Background of a board. Plain color backgrounds set `backgroundColor`;
+ * photo backgrounds leave it `null` and describe their dominant colors with
+ * `backgroundTopColor` / `backgroundBottomColor`.
+ */
+export interface TrelloBoardPrefs {
+  backgroundColor?: string | null;
+  backgroundTopColor?: string | null;
+  backgroundBottomColor?: string | null;
 }
 
 /** A list (column) of a board (`GET /1/boards/{id}/lists`). */

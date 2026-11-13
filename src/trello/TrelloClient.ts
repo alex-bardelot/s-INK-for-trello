@@ -29,7 +29,8 @@ interface RequestOptions {
 }
 
 const MEMBER_FIELDS = 'username,fullName,initials,url';
-const BOARD_FIELDS = 'name,url,shortLink,closed,starred,idOrganization';
+const BOARD_FIELDS =
+  'name,url,shortLink,closed,starred,idOrganization,prefs';
 const LIST_FIELDS = 'name,closed,pos,idBoard';
 const BOARD_CARD_FIELDS =
   'name,idList,pos,due,dueComplete,badges,labels,idMembers';

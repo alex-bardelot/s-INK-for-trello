@@ -106,7 +106,7 @@ How the connection works and why:
 - By default the token is only kept in memory: it survives closing the plugin
   view, but must be pasted again after the tablet restarts.
 - Saving it on the tablet is opt-in: tick **Save the token on this tablet**
-  when connecting, or press **Save on this tablet** on the boards screen. The
+  when connecting, or press **Save on this tablet** in **Settings**. The
   plugin warns first that the token is then stored unencrypted, readable by
   anyone (or any plugin) with access to the tablet's files. **Forget on this
   tablet** removes it again while staying connected.
@@ -116,8 +116,9 @@ How the connection works and why:
   the names of empty directories under `<plugin directory>/state/`, the only
   persistent write the SDK allows (`FileUtils.makeDir` / `listFiles`). Board
   and list choices of the card flow are stored the same way.
-- **Disconnect** forgets the token and revokes it on Trello. A token revoked
-  from Trello's side is detected on the next opening.
+- **Disconnect** (in **Settings**, after a confirmation) forgets the token
+  and revokes it on Trello. A token revoked from Trello's side is detected on
+  the next opening.
 
 To update, bump `versionCode` / `versionName` in `PluginConfig.json`, rebuild
 and install the new package the same way.
@@ -131,6 +132,8 @@ and install the new package the same way.
 ├── assets/                  # Icons and static assets
 ├── src/
 │   ├── App.tsx              # Root component, routes on session state and pressed button
+│   ├── board/               # Board view logic (columns, pages, labels, Focus mode)
+│   ├── boards/              # Boards page logic (sections, tile shades, pages)
 │   ├── cards/               # Card creation logic (ordering, remembered choices)
 │   ├── components/          # Shared UI components
 │   ├── i18n/                # Localization (catalogs, locale resolution, hook)

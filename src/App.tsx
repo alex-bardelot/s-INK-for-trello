@@ -1,5 +1,11 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 
+import {
+  BoardsPreferences,
+  DEFAULT_BOARDS_PREFERENCES,
+  loadBoardsPreferences,
+  saveBoardsPreferences,
+} from './boards/preferences';
 import {useTranslation} from './i18n';
 import {useLaunchIntent} from './plugin/launchIntent';
 import {ensureFileReadPermission} from './plugin/permissions';
@@ -7,6 +13,7 @@ import {BoardScreen} from './screens/BoardScreen';
 import {BoardsScreen} from './screens/BoardsScreen';
 import {ConnectScreen} from './screens/ConnectScreen';
 import {CreateCardScreen} from './screens/CreateCardScreen';
+import {SettingsScreen} from './screens/SettingsScreen';
 import {StatusScreen} from './screens/StatusScreen';
 import {useTrelloSession} from './session/useTrelloSession';
 import {TrelloBoard} from './trello';
@@ -26,6 +33,31 @@ export default function App(): React.JSX.Element {
   const intent = useLaunchIntent();
   const {state} = session;
   const [openBoard, setOpenBoard] = useState<TrelloBoard | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [boardsPreferences, setBoardsPreferences] = useState(
+    DEFAULT_BOARDS_PREFERENCES,
+  );
+  const {settingsStore} = session;
+
+  useEffect(() => {
+    let cancelled = false;
+    loadBoardsPreferences(settingsStore).then(preferences => {
+      if (!cancelled) {
+        setBoardsPreferences(preferences);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [settingsStore]);
+
+  const updateBoardsPreferences = useCallback(
+    (preferences: BoardsPreferences) => {
+      setBoardsPreferences(preferences);
+      saveBoardsPreferences(settingsStore, preferences);
+    },
+    [settingsStore],
+  );
 
   // Ask for note read access while the view is shown, so that the lasso
   // button, which reads the selection before opening the view, already
@@ -68,15 +100,34 @@ export default function App(): React.JSX.Element {
           />
         );
       }
+      if (settingsOpen) {
+        return (
+          <SettingsScreen
+            member={state.member}
+            tokenStorage={state.tokenStorage}
+            saveFailed={state.saveFailed}
+            showRoadmap={boardsPreferences.showSupernoteRoadmap}
+            onShowRoadmapChange={show =>
+              updateBoardsPreferences({
+                ...boardsPreferences,
+                showSupernoteRoadmap: show,
+              })
+            }
+            onRememberChange={session.setRemembered}
+            onDisconnect={() => {
+              setSettingsOpen(false);
+              session.disconnect();
+            }}
+            onBack={() => setSettingsOpen(false)}
+          />
+        );
+      }
       return (
         <BoardsScreen
-          member={state.member}
           client={state.client}
-          tokenStorage={state.tokenStorage}
-          saveFailed={state.saveFailed}
-          onRememberChange={session.setRemembered}
-          onDisconnect={session.disconnect}
+          showRoadmap={boardsPreferences.showSupernoteRoadmap}
           onOpenBoard={setOpenBoard}
+          onOpenSettings={() => setSettingsOpen(true)}
           onTokenRejected={session.retry}
         />
       );
