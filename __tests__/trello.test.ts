@@ -62,7 +62,7 @@ describe('TrelloClient', () => {
     );
   });
 
-  it('reads public boards anonymously with the key in the query', async () => {
+  it('reads public boards anonymously without any credentials', async () => {
     const fetchImpl = jest
       .fn()
       .mockResolvedValue(jsonResponse({id: 'b', name: 'Roadmap'}));
@@ -71,7 +71,7 @@ describe('TrelloClient', () => {
 
     const [url, init] = fetchImpl.mock.calls[0];
     expect(url).toContain('/boards/l0COP24j?');
-    expect(url).toContain(`key=${API_KEY}`);
+    expect(url).not.toContain('key=');
     expect(init.headers.Authorization).toBeUndefined();
   });
 

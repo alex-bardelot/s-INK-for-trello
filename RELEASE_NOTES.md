@@ -3,6 +3,15 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.14.1 — Public boards readable when signed out
+
+- Signed out, opening a public board (the Supernote roadmap or one added
+  by link) failed: requests sent the application key without a token,
+  which Trello now rejects with HTTP 401 "missing scopes". Anonymous
+  requests now carry no credentials at all, which Trello accepts for
+  public boards.
+- Bumped the plugin to version 0.14.1 (`versionCode` 39).
+
 ## 0.14.0 — "+" card for public boards, "My boards" when signed out
 
 - The Public section ends with a small dashed card holding a "+". It

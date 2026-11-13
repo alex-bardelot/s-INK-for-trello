@@ -200,13 +200,10 @@ export class TrelloClient {
     path: string,
     {method = 'GET', query = {}, body}: RequestOptions = {},
   ): Promise<T> {
-    // Anonymous requests identify the application with the key in the query
-    // string, the form Trello documents for public resources; the key is
-    // not a secret, unlike the token.
-    const url =
-      this.baseUrl +
-      path +
-      buildQueryString(this.token ? query : {...query, key: this.apiKey});
+    // Anonymous requests carry no credentials at all: Trello rejects a key
+    // without a token with HTTP 401 "missing scopes", while public boards
+    // are readable with no key.
+    const url = this.baseUrl + path + buildQueryString(query);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
 
