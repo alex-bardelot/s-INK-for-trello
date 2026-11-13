@@ -399,8 +399,9 @@ function BoardTile({
 }
 
 /**
- * Board tile drawn like Trello's: the background on top, with the star in
- * its corner, and a white footer with the name and a detail line.
+ * Board tile drawn like Trello's: the background on top, and a white footer
+ * with the name and a detail line. Starred boards have no mark on the tile
+ * (their section says it); `starred` is only read out to screen readers.
  */
 function Tile({
   name,
@@ -430,11 +431,6 @@ function Tile({
       {({pressed}) => (
         <>
           {background}
-          {starred && (
-            <View style={styles.star}>
-              <Text style={styles.starText}>★</Text>
-            </View>
-          )}
           <View style={styles.tileFooter}>
             <Text
               style={[styles.tileName, pressed && styles.pressedText]}
@@ -563,8 +559,7 @@ const styles = StyleSheet.create({
   tileSpacer: {
     flex: 1,
   },
-  // Trello's board tile: a colored top with the star in its corner, and a
-  // white footer with the name. A thin grey outline replaces Trello's
+  // Trello's board tile: a colored top and a white footer with the name. A thin grey outline replaces Trello's
   // shadow, which E Ink cannot render.
   tile: {
     flex: 1,
@@ -590,23 +585,6 @@ const styles = StyleSheet.create({
   tileActivity: {
     color: colors.foreground,
     fontSize: 18,
-  },
-  star: {
-    position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
-    width: 30,
-    height: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-    borderColor: colors.foreground,
-    borderRadius: borders.radius / 2,
-    borderWidth: borders.width / 2,
-  },
-  starText: {
-    color: colors.foreground,
-    fontSize: typography.body,
   },
   tileName: {
     color: colors.foreground,

@@ -3,6 +3,12 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.11.1 — No star on board tiles
+
+- Board tiles no longer show a star badge in their corner: starred boards
+  are already grouped under "★ Starred boards".
+- Bumped the plugin to version 0.11.1 (`versionCode` 30).
+
 ## 0.11.0 — Boards page without an account
 
 - Without a connected account, the boards page opens instead of the
