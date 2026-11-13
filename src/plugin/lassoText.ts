@@ -226,7 +226,7 @@ export async function readLassoText(): Promise<LassoTextResult> {
     return {ok: true, text};
   }
   const diagnostics = log.join('\n');
-  console.warn('[SuperTrello] No text in the lasso selection\n' + diagnostics);
+  console.warn('[sINK] No text in the lasso selection\n' + diagnostics);
   return {
     ok: false,
     error:

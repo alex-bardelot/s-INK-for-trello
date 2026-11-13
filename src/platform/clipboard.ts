@@ -51,7 +51,7 @@ export async function readClipboardText(): Promise<string | null> {
     const text = await module.getString();
     return text ? text : null;
   } catch (error) {
-    console.warn('[SuperTrello] Failed to read the clipboard', error);
+    console.warn('[sINK] Failed to read the clipboard', error);
     return null;
   }
 }

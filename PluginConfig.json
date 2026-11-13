@@ -1,12 +1,12 @@
 {
   "pluginID": "373ilax0ouxp1fnm",
-  "pluginKey": "SuperTrello",
-  "name": "SuperTrello",
+  "pluginKey": "sINK",
+  "name": "sINK for Trello®",
   "desc": "Trello boards on your Supernote.",
-  "author": "SuperTrello contributors",
+  "author": "sINK contributors",
   "iconPath": "assets/icon.png",
-  "versionCode": "20",
-  "versionName": "0.8.2",
+  "versionCode": "21",
+  "versionName": "0.8.3",
   "jsMainPath": "index",
   "uses-permissions": [
     "plugin.permission.INTERNET",

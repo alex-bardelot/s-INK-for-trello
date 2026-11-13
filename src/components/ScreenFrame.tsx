@@ -25,7 +25,7 @@ export function ScreenFrame({
 
   const handleClose = useCallback(() => {
     PluginManager.closePluginView().catch(error =>
-      console.warn('[SuperTrello] Failed to close plugin view', error),
+      console.warn('[sINK] Failed to close plugin view', error),
     );
   }, []);
 

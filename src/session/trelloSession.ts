@@ -75,7 +75,7 @@ async function readToken(store: KeyValueStore): Promise<string | null> {
     return await store.getItem(TOKEN_STORAGE_KEY);
   } catch (error) {
     console.warn(
-      `[SuperTrello] Failed to read the token from ${store.backend}`,
+      `[sINK] Failed to read the token from ${store.backend}`,
       error,
     );
     return null;
@@ -88,7 +88,7 @@ async function removeToken(store: KeyValueStore): Promise<boolean> {
     return true;
   } catch (error) {
     console.warn(
-      `[SuperTrello] Failed to remove the token from ${store.backend}`,
+      `[sINK] Failed to remove the token from ${store.backend}`,
       error,
     );
     return false;
@@ -112,7 +112,7 @@ async function applyTokenStorage(
     await deps.deviceStore.setItem(TOKEN_STORAGE_KEY, token);
     return {tokenStorage: 'device'};
   } catch (error) {
-    console.warn('[SuperTrello] Failed to save the token on the tablet', error);
+    console.warn('[sINK] Failed to save the token on the tablet', error);
     return {tokenStorage: 'session', saveFailed: true};
   }
 }
@@ -233,7 +233,7 @@ export async function disconnect(
   await client
     ?.revokeToken()
     .catch(error =>
-      console.warn('[SuperTrello] Failed to revoke the Trello token', error),
+      console.warn('[sINK] Failed to revoke the Trello token', error),
     );
   return {status: 'signedOut'};
 }

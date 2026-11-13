@@ -46,7 +46,7 @@ export function BoardsScreen({
     try {
       setState({status: 'loaded', boards: await client.getMyBoards()});
     } catch (error) {
-      console.warn('[SuperTrello] Failed to load boards', error);
+      console.warn('[sINK] Failed to load boards', error);
       if (toSessionError(error) === 'invalidToken') {
         onTokenRejected();
         return;

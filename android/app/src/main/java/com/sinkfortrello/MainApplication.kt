@@ -1,4 +1,4 @@
-package com.supertrello
+package com.sinkfortrello
 
 import android.app.Application
 import com.facebook.react.PackageList

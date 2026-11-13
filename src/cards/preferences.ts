@@ -35,7 +35,7 @@ export async function loadCardPreferences(
       lastListByBoard,
     };
   } catch (error) {
-    console.warn('[SuperTrello] Failed to read card preferences', error);
+    console.warn('[sINK] Failed to read card preferences', error);
     return EMPTY_PREFERENCES;
   }
 }
@@ -54,7 +54,7 @@ export async function rememberCardDestination(
   try {
     await store.setItem(CARD_PREFERENCES_KEY, JSON.stringify(next));
   } catch (error) {
-    console.warn('[SuperTrello] Failed to save card preferences', error);
+    console.warn('[sINK] Failed to save card preferences', error);
   }
   return next;
 }

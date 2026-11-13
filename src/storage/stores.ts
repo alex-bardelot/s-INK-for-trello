@@ -81,7 +81,7 @@ export function getDeviceStore(): KeyValueStore {
           findSeedFile,
         },
       );
-    console.info(`[SuperTrello] Device storage: ${deviceStore.backend}`);
+    console.info(`[sINK] Device storage: ${deviceStore.backend}`);
   }
   return deviceStore;
 }

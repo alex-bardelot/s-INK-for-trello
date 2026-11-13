@@ -1,7 +1,7 @@
-# SuperTrello
+# sINK for Trello®
 
 A [Supernote](https://supernote.com) plugin that brings Trello boards to your
-e-ink tablet.
+e-ink tablet. The name mixes *sync* and *ink*.
 
 > **Status:** early development. The current build connects a Trello account,
 > lists its open boards and turns lasso selections into Trello cards. See [RELEASE_NOTES.md](RELEASE_NOTES.md).
@@ -59,7 +59,7 @@ npm test
 
 ### Configure the Trello API key
 
-SuperTrello talks to the [Trello REST API](https://developer.atlassian.com/cloud/trello/rest/)
+sINK talks to the [Trello REST API](https://developer.atlassian.com/cloud/trello/rest/)
 directly with `fetch`; there is no official Trello SDK for JavaScript.
 Each build needs a Trello API key:
 
@@ -78,21 +78,21 @@ npm run build:plugin        # Windows
 npm run build:plugin:unix   # Linux / macOS
 ```
 
-The package is written to `build/outputs/SuperTrello.snplg`.
+The package is written to `build/outputs/sINK.snplg`.
 
 ### Install on the tablet
 
-1. Get `SuperTrello.snplg` into the `MyStyle` folder of the device, either:
+1. Get `sINK.snplg` into the `MyStyle` folder of the device, either:
    - with the official **Supernote Partner** desktop app: copy the package
      into its local `Supernote/MyStyle` sync folder and let it sync, or
    - by copying it over USB.
 2. On the tablet, sync if needed, then open **Settings → Apps → Plugins → Add Plugin** and pick
-   `SuperTrello.snplg`.
-3. Open a note or a document: the SuperTrello button appears in the toolbar.
+   `sINK.snplg`.
+3. Open a note or a document: the sINK button appears in the toolbar.
 
 ### Connect a Trello account
 
-1. Press the SuperTrello button and allow Internet access when asked.
+1. Press the sINK button and allow Internet access when asked.
 2. Open the displayed address in a browser (the tablet's, or any other
    device's), sign in to Trello and press **Allow**.
 3. Trello displays a token: copy it and press **Paste token** in the plugin
@@ -180,6 +180,8 @@ Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Disclaimer
 
-SuperTrello is an independent community project. It is not affiliated with,
-endorsed by or sponsored by Ratta (Supernote) or Atlassian (Trello).
-Supernote and Trello are trademarks of their respective owners.
+sINK for Trello® is an independent community project. It is not affiliated,
+associated, authorized, endorsed by, or in any way officially connected with
+Trello, Inc., Atlassian or Ratta (Supernote). Trello® is a registered
+trademark of Atlassian; Supernote is a trademark of Ratta. Both are used here
+only to describe what the plugin works with.

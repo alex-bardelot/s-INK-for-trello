@@ -1,7 +1,7 @@
 import {PluginManager} from 'sn-plugin-lib';
 
 /**
- * Plugin permissions used by SuperTrello. Each one must also be declared in
+ * Plugin permissions used by sINK. Each one must also be declared in
  * the `uses-permissions` array of PluginConfig.json, otherwise the request
  * fails (error 1500).
  *
@@ -45,7 +45,7 @@ export async function ensurePermission(
     const answer = await PluginManager.requestPermission(permission, rationale);
     return GRANTED_STATES.has(answer);
   } catch (error) {
-    console.warn('[SuperTrello] Permission API unavailable', error);
+    console.warn('[sINK] Permission API unavailable', error);
     return true;
   }
 }

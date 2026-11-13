@@ -170,7 +170,7 @@ export async function loadFocusSettings(
         : [],
     };
   } catch (error) {
-    console.warn('[SuperTrello] Failed to read the Focus settings', error);
+    console.warn('[sINK] Failed to read the Focus settings', error);
     return DEFAULT_FOCUS_SETTINGS;
   }
 }
@@ -182,7 +182,7 @@ export async function saveFocusSettings(
   try {
     await store.setItem(FOCUS_SETTINGS_KEY, JSON.stringify(settings));
   } catch (error) {
-    console.warn('[SuperTrello] Failed to save the Focus settings', error);
+    console.warn('[sINK] Failed to save the Focus settings', error);
   }
 }
 

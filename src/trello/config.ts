@@ -1,7 +1,7 @@
 /**
  * Trello application settings.
  *
- * The API key identifies SuperTrello to Trello. Per the Trello documentation
+ * The API key identifies sINK to Trello. Per the Trello documentation
  * it is meant to be public: on its own it grants no access to any user data
  * (only a user-issued token does), so it is safe to ship in the bundle.
  *
@@ -13,7 +13,7 @@
 export const TRELLO_API_KEY = '1dd2751a51e6e9b628f86a3063078cb5';
 
 /** Application name shown to the user on the Trello authorization page. */
-export const TRELLO_APP_NAME = 'SuperTrello';
+export const TRELLO_APP_NAME = 'sINK for Trello';
 
 /**
  * Permissions requested from the user. `write` is requested up front so that

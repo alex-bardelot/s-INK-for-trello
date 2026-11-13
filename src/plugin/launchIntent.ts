@@ -36,7 +36,7 @@ async function readSafely(read: SelectionReader): Promise<LassoTextResult> {
 }
 
 /**
- * Records which SuperTrello button was pressed. For the lasso button, the
+ * Records which sINK button was pressed. For the lasso button, the
  * selection is read right away, while the lasso is still active.
  *
  * @param buttonId - Id of the pressed button.

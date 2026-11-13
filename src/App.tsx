@@ -13,7 +13,7 @@ import {TrelloBoard} from './trello';
 
 /**
  * Root component rendered by the Supernote plugin host when the
- * SuperTrello toolbar button is pressed.
+ * sINK toolbar button is pressed.
  *
  * On every opening it looks for a linked Trello account: if one is found and
  * still valid, the requested feature is shown (boards from the toolbar

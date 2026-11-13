@@ -33,7 +33,7 @@ export async function loadBoardPreferences(
         : DEFAULT_COLUMNS.landscape,
     };
   } catch (error) {
-    console.warn('[SuperTrello] Failed to read board preferences', error);
+    console.warn('[sINK] Failed to read board preferences', error);
     return DEFAULT_COLUMNS;
   }
 }
@@ -45,6 +45,6 @@ export async function saveBoardPreferences(
   try {
     await store.setItem(BOARD_PREFERENCES_KEY, JSON.stringify(preferences));
   } catch (error) {
-    console.warn('[SuperTrello] Failed to save board preferences', error);
+    console.warn('[sINK] Failed to save board preferences', error);
   }
 }

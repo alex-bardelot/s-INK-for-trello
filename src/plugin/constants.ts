@@ -29,7 +29,7 @@ export const AppType = {
 } as const;
 
 /**
- * Stable identifiers of the buttons registered by SuperTrello.
+ * Stable identifiers of the buttons registered by sINK.
  * Never reuse or renumber an id once released.
  */
 export const ButtonId = {

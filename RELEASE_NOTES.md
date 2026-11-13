@@ -3,6 +3,23 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.8.3 — Renamed to sINK for Trello®
+
+- Renamed the project from SuperTrello to **sINK for Trello®** (*sync* +
+  *ink*), following Trello's trademark guidelines, which do not allow names
+  derived from "Trello" but accept the "… for Trello" pattern.
+- The plugin is listed as "sINK for Trello®" and its toolbar button reads
+  "sINK"; every UI string, log tag and the name on the Trello authorization
+  page follow (all locales).
+- Technical identifiers changed too: `pluginKey`, the registered component
+  and the package are now `sINK`, so the build outputs `sINK.snplg`; the
+  Android namespace is `com.sinkfortrello`. The `pluginID` is unchanged.
+- Settings keys stored on the tablet keep their `supertrello.*` names so that
+  saved tokens and preferences survive the rename.
+- The README disclaimer now carries the non-affiliation statement Trello asks
+  for.
+- Bumped the plugin to version 0.8.3 (`versionCode` 21).
+
 ## 0.8.2 — Plugin icon redrawn
 
 - Redrew the plugin icon in the clean style of the 0.6.5 kanban-board icon

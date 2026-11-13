@@ -1,6 +1,6 @@
-# Contributing to SuperTrello
+# Contributing to sINK
 
-Thanks for your interest in improving SuperTrello!
+Thanks for your interest in improving sINK!
 
 ## Workflow
 

@@ -186,9 +186,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.supertrello"
+    namespace "com.sinkfortrello"
     defaultConfig {
-        applicationId "com.supertrello"
+        applicationId "com.sinkfortrello"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

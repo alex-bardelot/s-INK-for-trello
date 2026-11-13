@@ -4,7 +4,7 @@ import {getSystemLocale, i18n} from '../i18n';
 import {refreshButtons, registerButtons} from './buttons';
 import {handleButtonPress} from './launchIntent';
 
-const LOG_TAG = '[SuperTrello]';
+const LOG_TAG = '[sINK]';
 
 /**
  * Initializes the plugin runtime.

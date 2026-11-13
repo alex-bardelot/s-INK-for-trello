@@ -273,7 +273,7 @@ export function createDirectoryStore(
         try {
           return decodeEntries(entries);
         } catch (error) {
-          console.warn(`[SuperTrello] Corrupted stored value: ${key}`, error);
+          console.warn(`[sINK] Corrupted stored value: ${key}`, error);
           return null;
         }
       }),

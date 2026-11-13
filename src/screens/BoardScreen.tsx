@@ -129,7 +129,7 @@ export function BoardScreen({
         client.getBoardCards(board.id),
         // Avatars are a nicety: the board still shows without them.
         client.getBoardMembers(board.id).catch(error => {
-          console.warn('[SuperTrello] Failed to load board members', error);
+          console.warn('[sINK] Failed to load board members', error);
           return [];
         }),
       ]);
@@ -140,7 +140,7 @@ export function BoardScreen({
         members: new Map(members.map(member => [member.id, member])),
       });
     } catch (error) {
-      console.warn('[SuperTrello] Failed to load board', error);
+      console.warn('[sINK] Failed to load board', error);
       if (toSessionError(error) === 'invalidToken') {
         onTokenRejected();
         return;

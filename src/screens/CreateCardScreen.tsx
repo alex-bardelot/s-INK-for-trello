@@ -80,7 +80,7 @@ export function CreateCardScreen({
 
   const fail = useCallback(
     (error: unknown, retry: () => void) => {
-      console.warn('[SuperTrello] Card creation step failed', error);
+      console.warn('[sINK] Card creation step failed', error);
       const code = toSessionError(error);
       if (code === 'invalidToken') {
         onTokenRejected();
@@ -190,7 +190,7 @@ export function CreateCardScreen({
 
   const close = useCallback(() => {
     PluginManager.closePluginView().catch(error =>
-      console.warn('[SuperTrello] Failed to close plugin view', error),
+      console.warn('[sINK] Failed to close plugin view', error),
     );
   }, []);
 

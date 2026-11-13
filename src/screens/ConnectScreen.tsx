@@ -69,7 +69,7 @@ export function ConnectScreen({
   const openBrowser = useCallback(() => {
     setBrowserError(false);
     Linking.openURL(authorizeUrl).catch(openError => {
-      console.warn('[SuperTrello] Failed to open the browser', openError);
+      console.warn('[sINK] Failed to open the browser', openError);
       setBrowserError(true);
     });
   }, [authorizeUrl]);

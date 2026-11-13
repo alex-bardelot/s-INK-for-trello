@@ -1,5 +1,5 @@
 /**
- * Subset of the Trello REST API objects used by SuperTrello.
+ * Subset of the Trello REST API objects used by sINK.
  * Only the fields explicitly requested through `fields=` are declared.
  *
  * @see https://developer.atlassian.com/cloud/trello/rest/
