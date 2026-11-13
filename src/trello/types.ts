@@ -19,6 +19,8 @@ export interface TrelloBoard {
   id: string;
   name: string;
   url: string;
+  /** Short id used in board URLs (`trello.com/b/{shortLink}/...`). */
+  shortLink: string;
   closed: boolean;
   starred: boolean;
   idOrganization: string | null;

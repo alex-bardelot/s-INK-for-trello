@@ -29,7 +29,7 @@ interface RequestOptions {
 }
 
 const MEMBER_FIELDS = 'username,fullName,initials,url';
-const BOARD_FIELDS = 'name,url,closed,starred,idOrganization';
+const BOARD_FIELDS = 'name,url,shortLink,closed,starred,idOrganization';
 const LIST_FIELDS = 'name,closed,pos,idBoard';
 const BOARD_CARD_FIELDS =
   'name,idList,pos,due,dueComplete,badges,labels,idMembers';
@@ -87,6 +87,17 @@ export class TrelloClient {
       (a, b) =>
         Number(b.starred) - Number(a.starred) ||
         a.name.localeCompare(b.name, undefined, {sensitivity: 'base'}),
+    );
+  }
+
+  /**
+   * Returns a board by id or short link. Public boards can be read by any
+   * member, even one who does not belong to them.
+   */
+  getBoard(idOrShortLink: string): Promise<TrelloBoard> {
+    return this.request<TrelloBoard>(
+      `/boards/${encodeURIComponent(idOrShortLink)}`,
+      {query: {fields: BOARD_FIELDS}},
     );
   }
 

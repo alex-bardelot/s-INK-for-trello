@@ -21,7 +21,13 @@ import {TranslationKey, useTranslation} from '../i18n';
 import {LassoTextError, LassoTextResult} from '../plugin/lassoText';
 import {SessionErrorCode, toSessionError} from '../session/trelloSession';
 import {KeyValueStore} from '../storage/keyValueStore';
-import {TrelloBoard, TrelloCard, TrelloClient, TrelloList} from '../trello';
+import {
+  isSupernoteRoadmap,
+  TrelloBoard,
+  TrelloCard,
+  TrelloClient,
+  TrelloList,
+} from '../trello';
 import {borders, colors, spacing, typography} from '../theme';
 
 type Step =
@@ -94,7 +100,10 @@ export function CreateCardScreen({
   const loadBoards = useCallback(
     async (prefs: CardPreferences): Promise<void> => {
       try {
-        const allBoards = await client.getMyBoards();
+        // Supernote's roadmap is read only, even for its members.
+        const allBoards = (await client.getMyBoards()).filter(
+          board => !isSupernoteRoadmap(board),
+        );
         setBoards(allBoards);
         // Without any favorite, the default selection would be empty.
         setShowAllBoards(

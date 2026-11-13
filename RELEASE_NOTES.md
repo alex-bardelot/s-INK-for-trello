@@ -3,6 +3,19 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.9.0 — Supernote roadmap
+
+- New **Supernote roadmap** button on the boards list. It opens Supernote's
+  official public software roadmap board on Trello, to follow the features in
+  development for the tablets. The board is fetched by its short link, so it
+  opens even when you are not a member of it.
+- Focus and Review modes are not available on that board (their buttons are
+  hidden), since they are about your own cards; it is always shown in full.
+- Card creation from the lasso never offers the Supernote roadmap as a
+  destination, even to members of that board.
+- Boards now carry their `shortLink`; new `TrelloClient.getBoard()`.
+- Bumped the plugin to version 0.9.0 (`versionCode` 22).
+
 ## 0.8.3 — Renamed to sINK for Trello®
 
 - Renamed the project from SuperTrello to **sINK for Trello®** (*sync* +

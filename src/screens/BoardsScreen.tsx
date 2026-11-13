@@ -6,7 +6,12 @@ import {ScreenFrame} from '../components/ScreenFrame';
 import {TokenStorageNotice} from '../components/TokenStorageNotice';
 import {useTranslation} from '../i18n';
 import {TokenStorage, toSessionError} from '../session/trelloSession';
-import {TrelloBoard, TrelloClient, TrelloMember} from '../trello';
+import {
+  SUPERNOTE_ROADMAP_SHORT_LINK,
+  TrelloBoard,
+  TrelloClient,
+  TrelloMember,
+} from '../trello';
 import {borders, colors, spacing, typography} from '../theme';
 
 type BoardsState =
@@ -40,6 +45,7 @@ export function BoardsScreen({
 }: BoardsScreenProps): React.JSX.Element {
   const {t} = useTranslation();
   const [state, setState] = useState<BoardsState>({status: 'loading'});
+  const [roadmap, setRoadmap] = useState<'idle' | 'opening' | 'failed'>('idle');
 
   const load = useCallback(async () => {
     setState({status: 'loading'});
@@ -59,6 +65,24 @@ export function BoardsScreen({
     load();
   }, [load]);
 
+  // Supernote's roadmap is a public board: the user usually is not a member
+  // of it, so it is fetched by its short link rather than found in the list.
+  const openRoadmap = useCallback(async () => {
+    setRoadmap('opening');
+    try {
+      const board = await client.getBoard(SUPERNOTE_ROADMAP_SHORT_LINK);
+      setRoadmap('idle');
+      onOpenBoard(board);
+    } catch (error) {
+      console.warn('[sINK] Failed to open the Supernote roadmap', error);
+      if (toSessionError(error) === 'invalidToken') {
+        onTokenRejected();
+        return;
+      }
+      setRoadmap('failed');
+    }
+  }, [client, onOpenBoard, onTokenRejected]);
+
   return (
     <ScreenFrame title={t('boards.title')}>
       <View style={styles.account}>
@@ -75,6 +99,22 @@ export function BoardsScreen({
         saveFailed={saveFailed}
         onChange={onRememberChange}
       />
+      <View style={styles.roadmap}>
+        <Text style={styles.roadmapText}>
+          {roadmap === 'failed'
+            ? t('boards.roadmapFailed')
+            : t('boards.roadmapHint')}
+        </Text>
+        <Button
+          label={
+            roadmap === 'opening'
+              ? t('boards.roadmapOpening')
+              : t('boards.roadmap')
+          }
+          disabled={roadmap === 'opening'}
+          onPress={openRoadmap}
+        />
+      </View>
 
       {state.status === 'loading' && (
         <Text style={styles.message}>{t('boards.loading')}</Text>
@@ -127,6 +167,17 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   accountText: {
+    flex: 1,
+    color: colors.foreground,
+    fontSize: typography.body,
+  },
+  roadmap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  roadmapText: {
     flex: 1,
     color: colors.foreground,
     fontSize: typography.body,

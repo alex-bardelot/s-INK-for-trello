@@ -18,7 +18,15 @@ import {createMemoryStore} from '../src/storage/keyValueStore';
 import {TrelloBoard, TrelloList} from '../src/trello';
 
 function board(id: string, starred: boolean): TrelloBoard {
-  return {id, name: id, url: '', closed: false, starred, idOrganization: null};
+  return {
+    id,
+    name: id,
+    url: '',
+    shortLink: id,
+    closed: false,
+    starred,
+    idOrganization: null,
+  };
 }
 
 function list(id: string, pos: number): TrelloList {

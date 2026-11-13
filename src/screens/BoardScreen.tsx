@@ -47,6 +47,7 @@ import {Locale, useTranslation} from '../i18n';
 import {toSessionError} from '../session/trelloSession';
 import {KeyValueStore} from '../storage/keyValueStore';
 import {
+  isSupernoteRoadmap,
   TrelloBoard,
   TrelloBoardCard,
   TrelloBoardMember,
@@ -175,15 +176,19 @@ export function BoardScreen({
     updateFocus(toggleMode(focus, 'review'));
     setTagsOpen(false);
   }, [focus, updateFocus]);
-  const focusOn = focus.mode === 'focus';
-  const reviewOn = focus.mode === 'review';
+  // Focus and Review are about the user's own cards: they make no sense on
+  // Supernote's roadmap, where the board is always shown in full.
+  const modesAvailable = !isSupernoteRoadmap(board);
+  const mode = modesAvailable ? focus.mode : null;
+  const focusOn = mode === 'focus';
+  const reviewOn = mode === 'review';
 
   // Focus and Review modes both show a filtered board, stacked.
   const focused = useMemo(() => {
     if (state.status !== 'loaded') {
       return null;
     }
-    switch (focus.mode) {
+    switch (mode) {
       case 'focus':
         return focusBoard(
           state.lists,
@@ -196,7 +201,7 @@ export function BoardScreen({
       default:
         return null;
     }
-  }, [focus.labels, focus.mode, memberId, state]);
+  }, [focus.labels, mode, memberId, state]);
   const tagChoices = useMemo(
     () =>
       state.status === 'loaded'
@@ -238,14 +243,16 @@ export function BoardScreen({
             accessibilityLabel={t('board.columnsHint', {count: columns})}
             onPress={cycleColumns}
           />
-          <SmallButton
-            label={t('board.focus')}
-            accessibilityLabel={t(
-              focusOn ? 'board.focusOnHint' : 'board.focusOffHint',
-            )}
-            active={focusOn}
-            onPress={toggleFocus}
-          />
+          {modesAvailable && (
+            <SmallButton
+              label={t('board.focus')}
+              accessibilityLabel={t(
+                focusOn ? 'board.focusOnHint' : 'board.focusOffHint',
+              )}
+              active={focusOn}
+              onPress={toggleFocus}
+            />
+          )}
           {focusOn && (
             <SmallButton
               label={t('board.focusTags')}
@@ -254,14 +261,16 @@ export function BoardScreen({
               onPress={() => setTagsOpen(open => !open)}
             />
           )}
-          <SmallButton
-            label={t('board.review')}
-            accessibilityLabel={t(
-              reviewOn ? 'board.reviewOnHint' : 'board.reviewOffHint',
-            )}
-            active={reviewOn}
-            onPress={toggleReview}
-          />
+          {modesAvailable && (
+            <SmallButton
+              label={t('board.review')}
+              accessibilityLabel={t(
+                reviewOn ? 'board.reviewOnHint' : 'board.reviewOffHint',
+              )}
+              active={reviewOn}
+              onPress={toggleReview}
+            />
+          )}
           <SmallButton
             label={t('board.refresh')}
             accessibilityLabel={t('board.refresh')}
@@ -301,7 +310,7 @@ export function BoardScreen({
       {state.status === 'loaded' && !tagsOpen && focused && (
         <StackedBoard
           // Measured heights depend on the column width and on the mode.
-          key={`${focus.mode}-${columns}-${width}`}
+          key={`${mode}-${columns}-${width}`}
           lists={focused.lists}
           cardsByList={focused.cardsByList}
           members={state.members}
