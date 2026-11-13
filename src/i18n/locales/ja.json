@@ -27,6 +27,7 @@
   "boards.connectHint": "ここにボードを表示し、手書きのメモを Trello カードにできます。",
   "boards.sectionStarred": "スター付きボード",
   "boards.sectionAll": "その他のボード",
+  "boards.sectionMine": "マイボード",
   "boards.starred": "スター付き",
   "boards.modifiedToday": "今日更新",
   "boards.modifiedYesterday": "昨日更新",

@@ -27,6 +27,7 @@
   "boards.connectHint": "在這裡查看您的看板，並將手寫筆記轉換為 Trello 卡片。",
   "boards.sectionStarred": "已加星號的看板",
   "boards.sectionAll": "其他看板",
+  "boards.sectionMine": "我的看板",
   "boards.starred": "已加星號",
   "boards.modifiedToday": "今天修改",
   "boards.modifiedYesterday": "昨天修改",

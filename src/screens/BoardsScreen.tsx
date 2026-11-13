@@ -21,7 +21,7 @@ import {
   RowHeights,
 } from '../boards/directory';
 import {describeLastActivity} from '../boards/activity';
-import {PublicBoardRef} from '../boards/preferences';
+import {BoardsPreferences, PublicBoardRef} from '../boards/preferences';
 import {Button} from '../components/Button';
 import {GearIcon} from '../components/GearIcon';
 import {ScreenFrame} from '../components/ScreenFrame';
@@ -36,6 +36,7 @@ import {
   TrelloOrganization,
 } from '../trello';
 import {borders, colors, spacing, typography} from '../theme';
+import {AddPublicBoardForm} from './AddPublicBoardForm';
 
 const SUPERNOTE_ROUND_LOGO = require('../../assets/supernote-logo.png');
 const SUPERNOTE_WORDMARK = require('../../assets/supernote-wordmark.png');
@@ -49,7 +50,6 @@ type BoardsState =
 /** Fixed row heights: pages are computed from them before rendering. */
 const ROW_HEIGHTS: RowHeights = {
   header: 44,
-  connect: 340,
   tiles: 148,
   message: 120,
   gap: spacing.md,
@@ -60,6 +60,8 @@ const TILE_BAND_HEIGHT = 88;
 /** Workspace logo in the corner of a tile, the size of a card avatar. */
 const BADGE_SIZE = 40;
 const ROUND_LOGO_WIDTH = 340;
+/** Width of the small dashed "+" card adding a public board. */
+const ADD_TILE_WIDTH = 64;
 
 function settingsIcon(color: string, background: string): React.ReactNode {
   return <GearIcon size={24} color={color} holeColor={background} />;
@@ -70,10 +72,10 @@ export interface BoardsScreenProps {
   member: TrelloMember | null;
   /** The member's client, or an anonymous one when signed out. */
   client: TrelloClient;
-  /** Shows the roadmap tile in the Public section. */
-  showRoadmap: boolean;
-  /** Public boards added in Settings, shown after the roadmap. */
-  publicBoards: readonly PublicBoardRef[];
+  /** Roadmap visibility and public boards of the Public section. */
+  preferences: BoardsPreferences;
+  /** Saves the preferences after a public board is added here. */
+  onPreferencesChange: (preferences: BoardsPreferences) => void;
   /** Asks for network access; resolves `false` if refused. */
   ensureNetwork: () => Promise<boolean>;
   onOpenBoard: (board: TrelloBoard) => void;
@@ -86,16 +88,17 @@ export interface BoardsScreenProps {
 
 /**
  * Boards page, laid out like Trello's: the Public section (Supernote's
- * roadmap and the public boards added in Settings), the starred boards,
- * then the other boards, as tiles in a grid. Without a connected account, a
- * large card invites to connect one. The page never scrolls: rows are split
- * into pages turned with the buttons at the bottom or a two-finger swipe.
+ * roadmap, the public boards added, and a small "+" card adding one), the
+ * starred boards, then the other boards, as tiles in a grid. Without a
+ * connected account, a "My boards" section holds a card inviting to connect
+ * one. The page never scrolls: rows are split into pages turned with the
+ * buttons at the bottom or a two-finger swipe.
  */
 export function BoardsScreen({
   member,
   client,
-  showRoadmap,
-  publicBoards,
+  preferences,
+  onPreferencesChange,
   ensureNetwork,
   onOpenBoard,
   onOpenSettings,
@@ -108,6 +111,8 @@ export function BoardsScreen({
   const [state, setState] = useState<BoardsState>({status: 'loading'});
   const [bodyHeight, setBodyHeight] = useState<number | null>(null);
   const [page, setPage] = useState(0);
+  const [addingPublic, setAddingPublic] = useState(false);
+  const {showSupernoteRoadmap: showRoadmap, publicBoards} = preferences;
 
   const load = useCallback(async () => {
     setState({status: 'loading'});
@@ -260,12 +265,21 @@ export function BoardsScreen({
     switch (row.kind) {
       case 'header':
         return <SectionHeader key={row.key} section={row.section} />;
-      case 'connect':
-        return <ConnectCard key={row.key} onPress={onConnect} />;
       case 'tiles':
         return (
           <View key={row.key} style={styles.tileRow}>
             {row.tiles.map(tile => {
+              if (tile.kind === 'connect') {
+                return <ConnectTile key="connect" onPress={onConnect} />;
+              }
+              if (tile.kind === 'addPublic') {
+                return (
+                  <AddPublicTile
+                    key="addPublic"
+                    onPress={() => setAddingPublic(true)}
+                  />
+                );
+              }
               if (tile.kind === 'roadmap') {
                 return (
                   <RoadmapTile
@@ -332,11 +346,25 @@ export function BoardsScreen({
       <View
         style={styles.body}
         onLayout={event => setBodyHeight(event.nativeEvent.layout.height)}
-        {...swipeHandlers}>
-        {(pages?.[pageIndex] ?? []).map(renderRow)}
+        {...(addingPublic ? {} : swipeHandlers)}>
+        {addingPublic ? (
+          <>
+            <SectionHeader section="public" />
+            <Text style={styles.formTitle}>{t('settings.publicBoardNew')}</Text>
+            <AddPublicBoardForm
+              client={client}
+              ensureNetwork={ensureNetwork}
+              preferences={preferences}
+              onChange={onPreferencesChange}
+              onClose={() => setAddingPublic(false)}
+            />
+          </>
+        ) : (
+          (pages?.[pageIndex] ?? []).map(renderRow)
+        )}
       </View>
 
-      {totalPages > 1 && (
+      {!addingPublic && totalPages > 1 && (
         <View style={styles.pager}>
           <Button
             label="‹"
@@ -367,6 +395,7 @@ function SectionHeader({
     public: t('boards.sectionPublic'),
     starred: `★ ${t('boards.sectionStarred')}`,
     all: t('boards.sectionAll'),
+    mine: t('boards.sectionMine'),
   }[section];
   return (
     <View style={styles.header}>
@@ -378,16 +407,23 @@ function SectionHeader({
 }
 
 /**
- * Large card with a dashed outline standing for the boards of an account
- * not connected yet; pressing it opens the connection screen.
+ * Board-sized card with a dashed outline standing for the boards of an
+ * account not connected yet; pressing it opens the connection screen.
  */
-function ConnectCard({onPress}: {onPress: () => void}): React.JSX.Element {
+function ConnectTile({onPress}: {onPress: () => void}): React.JSX.Element {
   const {t} = useTranslation();
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={t('boards.connectTitle')}
+      accessibilityHint={t('boards.connectHint')}
       onPress={onPress}
-      style={({pressed}) => [styles.connect, pressed && styles.pressed]}>
+      style={({pressed}) => [
+        styles.tile,
+        styles.dashed,
+        styles.connect,
+        pressed && styles.pressed,
+      ]}>
       {({pressed}) => (
         <>
           <Image
@@ -396,15 +432,40 @@ function ConnectCard({onPress}: {onPress: () => void}): React.JSX.Element {
             resizeMode="contain"
             accessibilityIgnoresInvertColors
           />
-          <Text style={[styles.connectTitle, pressed && styles.pressedText]}>
+          <Text
+            style={[styles.connectTitle, pressed && styles.pressedText]}
+            numberOfLines={3}>
             {t('boards.connectTitle')}
-          </Text>
-          <Text style={[styles.connectHint, pressed && styles.pressedText]}>
-            {t('boards.connectHint')}
           </Text>
         </>
       )}
     </Pressable>
+  );
+}
+
+/**
+ * Small dashed card with a "+" after the public boards; it opens the form
+ * adding a public board from its link or id. It sits at the start of its
+ * grid slot so that the tiles of the other rows stay aligned.
+ */
+function AddPublicTile({onPress}: {onPress: () => void}): React.JSX.Element {
+  const {t} = useTranslation();
+  return (
+    <View style={styles.addSlot}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t('settings.publicBoardNew')}
+        onPress={onPress}
+        style={({pressed}) => [
+          styles.dashed,
+          styles.addTile,
+          pressed && styles.pressed,
+        ]}>
+        {({pressed}) => (
+          <Text style={[styles.addPlus, pressed && styles.pressedText]}>+</Text>
+        )}
+      </Pressable>
+    </View>
   );
 }
 
@@ -712,32 +773,47 @@ const styles = StyleSheet.create({
     fontSize: typography.label,
     fontWeight: '700',
   },
-  connect: {
-    height: ROW_HEIGHTS.connect,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.md,
-    padding: spacing.lg,
+  formTitle: {
+    color: colors.foreground,
+    fontSize: typography.label,
+    fontWeight: '600',
+  },
+  dashed: {
     borderColor: colors.foreground,
     borderRadius: borders.radius + 2,
     borderStyle: 'dashed',
     borderWidth: borders.width,
     backgroundColor: colors.background,
   },
+  connect: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.md,
+  },
   trelloIcon: {
-    width: 112,
-    height: 112,
+    width: 64,
+    height: 64,
   },
   connectTitle: {
-    color: colors.foreground,
-    fontSize: typography.heading,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  connectHint: {
+    flex: 1,
     color: colors.foreground,
     fontSize: typography.body,
-    textAlign: 'center',
+    fontWeight: '700',
+  },
+  addSlot: {
+    flex: 1,
+    alignItems: 'flex-start',
+  },
+  addTile: {
+    width: ADD_TILE_WIDTH,
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addPlus: {
+    color: colors.foreground,
+    fontSize: 40,
   },
   logoBand: {
     backgroundColor: colors.background,

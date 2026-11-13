@@ -93,8 +93,9 @@ The package is written to `build/outputs/sINKforTrello.snplg`.
 ### Connect a Trello account
 
 Without an account, the boards page already shows Supernote's public
-roadmap (read with the API key only) and a **Connect your Trello account**
-card that opens the connection screen.
+roadmap (read with the API key only), a **+** card to add other public
+boards, and, under **My boards**, a **Connect your Trello account** card
+that opens the connection screen.
 
 1. Press the sINK button, then **Connect your Trello account**, and allow
    Internet access when asked.

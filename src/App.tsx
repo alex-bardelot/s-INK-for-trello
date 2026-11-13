@@ -159,8 +159,8 @@ export default function App(): React.JSX.Element {
     <BoardsScreen
       member={account?.member ?? null}
       client={client}
-      showRoadmap={boardsPreferences.showSupernoteRoadmap}
-      publicBoards={boardsPreferences.publicBoards}
+      preferences={boardsPreferences}
+      onPreferencesChange={updateBoardsPreferences}
       ensureNetwork={session.ensureNetwork}
       onOpenBoard={setOpenBoard}
       onOpenSettings={() => setSettingsOpen(true)}

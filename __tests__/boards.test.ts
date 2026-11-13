@@ -112,7 +112,7 @@ describe('buildDirectoryRows', () => {
     rows.flatMap(row =>
       row.kind === 'tiles'
         ? row.tiles.map(tile =>
-            tile.kind === 'roadmap' ? 'roadmap' : tile.board.id,
+            tile.kind === 'board' ? tile.board.id : tile.kind,
           )
         : [],
     );
@@ -140,7 +140,31 @@ describe('buildDirectoryRows', () => {
       'all:3',
     ]);
     // Each board appears once: starred ones are not repeated.
-    expect(tileIds(rows)).toEqual(['roadmap', 'p', 'a', 'b', 'c', 'd', 'e']);
+    expect(tileIds(rows)).toEqual([
+      'roadmap',
+      'p',
+      'addPublic',
+      'a',
+      'b',
+      'c',
+      'd',
+      'e',
+    ]);
+  });
+
+  it('ends the Public section with the card adding a public board', () => {
+    const rows = buildDirectoryRows({
+      boards: [],
+      publicBoards: [board('p'), board('q')],
+      columns: 3,
+    });
+    // Three slots taken: the "+" card wraps to its own row.
+    expect(rows.slice(0, 3).map(row => row.key)).toEqual([
+      'header:public',
+      'public:0',
+      'public:3',
+    ]);
+    expect(tileIds(rows)).toEqual(['roadmap', 'p', 'q', 'addPublic']);
   });
 
   it('skips the starred section when nothing is starred', () => {
@@ -161,21 +185,30 @@ describe('buildDirectoryRows', () => {
     ).toEqual(['header', 'tiles', 'header', 'message']);
   });
 
-  it('invites to connect an account when signed out', () => {
-    expect(keys({boards: null, signedIn: false, columns: 3})).toEqual([
+  it('invites to connect an account in My boards when signed out', () => {
+    const rows = buildDirectoryRows({boards: null, signedIn: false, columns: 3});
+    expect(rows.map(row => row.key)).toEqual([
       'header:public',
       'public:0',
-      'connect',
+      'header:mine',
+      'mine:0',
     ]);
-    expect(
-      keys({boards: null, showRoadmap: false, signedIn: false, columns: 3}),
-    ).toEqual(['connect']);
+    expect(tileIds(rows)).toEqual(['roadmap', 'addPublic', 'connect']);
   });
 
-  it('hides the Public section when it is empty', () => {
-    expect(
-      keys({boards: [board('a')], showRoadmap: false, columns: 3}),
-    ).toEqual(['header:all', 'all:0']);
+  it('keeps the Public section with only the "+" card when empty', () => {
+    const rows = buildDirectoryRows({
+      boards: [board('a')],
+      showRoadmap: false,
+      columns: 3,
+    });
+    expect(rows.map(row => row.key)).toEqual([
+      'header:public',
+      'public:0',
+      'header:all',
+      'all:0',
+    ]);
+    expect(tileIds(rows)).toEqual(['addPublic', 'a']);
   });
 
   it('keeps the public boards when the roadmap is hidden', () => {
@@ -185,14 +218,13 @@ describe('buildDirectoryRows', () => {
       showRoadmap: false,
       columns: 3,
     });
-    expect(tileIds(rows)).toEqual(['p']);
+    expect(tileIds(rows)).toEqual(['p', 'addPublic']);
   });
 });
 
 describe('paginateRows', () => {
   const heights: RowHeights = {
     header: 10,
-    connect: 60,
     tiles: 30,
     message: 30,
     gap: 5,
@@ -207,14 +239,14 @@ describe('paginateRows', () => {
     // header 10 + gap 5 + tiles 30 + gap 5 + header 10 = 60: the "all"
     // header would fit, but not with its first row of tiles.
     const rows = buildDirectoryRows({
-      boards: [board('a'), board('b')],
-      columns: 1,
+      boards: [board('a'), board('b'), board('c')],
+      columns: 2,
     });
     const pages = paginateRows(rows, 65, heights);
     expect(pages.map(page => page.map(row => row.key))).toEqual([
       ['header:public', 'public:0'],
       ['header:all', 'all:0'],
-      ['all:1'],
+      ['all:2'],
     ]);
   });
 

@@ -3,6 +3,18 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.14.0 — "+" card for public boards, "My boards" when signed out
+
+- The Public section ends with a small dashed card holding a "+". It
+  opens the form adding a public board from its link or id (the same as
+  in Settings) in place of the grid. The section is now always shown, so
+  a board can be added even when the roadmap is hidden.
+- Signed out, the card inviting to connect a Trello account is the size
+  of a board tile, in a "My boards" section, instead of a large card
+  across the page. It shows the Trello mark and the title; the longer
+  explanation is read out to screen readers.
+- Bumped the plugin to version 0.14.0 (`versionCode` 38).
+
 ## 0.13.1 — Roadmap tile within Supernote's logo clear space
 
 - The roadmap tile keeps its composition (round logo cut on the left, a

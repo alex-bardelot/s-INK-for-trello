@@ -93,14 +93,21 @@ export function boardImageUrl(
 /** One row of the boards page. */
 export type DirectoryRow =
   | {kind: 'header'; key: string; section: DirectorySection}
-  | {kind: 'connect'; key: string}
   | {kind: 'tiles'; key: string; tiles: DirectoryTile[]}
   | {kind: 'message'; key: string};
 
-/** A tile of the grid: Supernote's roadmap, or a board. */
-export type DirectoryTile = {kind: 'roadmap'} | {kind: 'board'; board: TrelloBoard};
+/**
+ * A slot of the grid: Supernote's roadmap, a board, the small "+" card
+ * adding a public board, or the card inviting to connect an account.
+ */
+export type DirectoryTile =
+  | {kind: 'roadmap'}
+  | {kind: 'board'; board: TrelloBoard}
+  | {kind: 'addPublic'}
+  | {kind: 'connect'};
 
-export type DirectorySection = 'public' | 'starred' | 'all';
+/** `mine` holds the connect card when no account is connected. */
+export type DirectorySection = 'public' | 'starred' | 'all' | 'mine';
 
 export interface DirectoryInput {
   /** The user's boards; `null` while loading or after a failure. */
@@ -109,15 +116,18 @@ export interface DirectoryInput {
   publicBoards?: readonly TrelloBoard[];
   /** Shows Supernote's roadmap first in the Public section. */
   showRoadmap?: boolean;
-  /** Without an account, a card inviting to connect one replaces the boards. */
+  /**
+   * Without an account, a "My boards" section holding a card inviting to
+   * connect one replaces the boards.
+   */
   signedIn?: boolean;
   /** Tiles per row. */
   columns: number;
 }
 
 /**
- * Rows of the boards page: the Public section (Supernote's roadmap, then
- * the public boards the user added; left out when empty), the starred
+ * Rows of the boards page: the Public section (Supernote's roadmap, the
+ * public boards the user added, then the "+" card adding one), the starred
  * boards, then the other boards (each board appears once), the tiles
  * grouped `columns` per row. When `boards` is `null` (loading, failure), a
  * message row stands for the user's boards.
@@ -150,13 +160,12 @@ export function buildDirectoryRows({
   const publicTiles: DirectoryTile[] = [
     ...(showRoadmap ? [{kind: 'roadmap'} as const] : []),
     ...asTiles(publicBoards),
+    {kind: 'addPublic'},
   ];
-  if (publicTiles.length > 0) {
-    addSection('public', publicTiles);
-  }
+  addSection('public', publicTiles);
 
   if (!signedIn) {
-    rows.push({kind: 'connect', key: 'connect'});
+    addSection('mine', [{kind: 'connect'}]);
     return rows;
   }
   if (!boards || boards.length === 0) {
@@ -178,7 +187,6 @@ export function buildDirectoryRows({
 /** Fixed heights of the rows, in pixels, so that pages can be computed upfront. */
 export interface RowHeights {
   header: number;
-  connect: number;
   tiles: number;
   message: number;
   /** Space between two rows. */
