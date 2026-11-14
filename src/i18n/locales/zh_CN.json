@@ -21,6 +21,8 @@
   "connect.openTrelloDirectly": "直接打开 Trello 页面（需自行复制令牌）",
   "connect.step2TitleFallback": "或粘贴令牌",
   "connect.step2Fallback": "如果自动连接不起作用，请直接打开 Trello 页面（在“显示地址”下），复制显示的令牌后点击“粘贴令牌”，或在下方输入。",
+  "connect.showToken": "显示",
+  "connect.hideToken": "隐藏",
   "connect.tokenValid": "已识别令牌（{count} 个字符）。",
   "connect.tokenInvalid": "这还不是 Trello 令牌（{count} 个字符）：令牌由至少 64 个字母和数字组成，通常以 ATTA 开头。",
   "connect.tokenPlaceholder": "Trello 令牌",

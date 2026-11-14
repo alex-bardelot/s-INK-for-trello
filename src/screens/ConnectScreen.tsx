@@ -13,6 +13,7 @@ import {Button} from '../components/Button';
 import {QrCodeView} from '../components/QrCodeView';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {SegmentedControl} from '../components/SegmentedControl';
+import {SmallButton} from '../components/SmallButton';
 import {TranslationKey, useTranslation} from '../i18n';
 import {isClipboardAvailable, readClipboardText} from '../platform/clipboard';
 import {watchClipboardForToken} from '../session/clipboardTokenWatch';
@@ -94,6 +95,7 @@ export function ConnectScreen({
   const [remember, setRemember] = useState(false);
   const [browserError, setBrowserError] = useState(false);
   const [showAddress, setShowAddress] = useState(false);
+  const [revealToken, setRevealToken] = useState(false);
   const [pasteError, setPasteError] = useState<TranslationKey | null>(null);
   const authorizeUrl = useMemo(
     () => buildAuthorizeUrl({apiKey: TRELLO_API_KEY}),
@@ -300,23 +302,39 @@ export function ConnectScreen({
                   {t('connect.clipboardWatch')}
                 </Text>
               )}
-              <TextInput
-                accessibilityLabel={t('connect.tokenPlaceholder')}
-                autoCapitalize="none"
-                autoComplete="off"
-                autoCorrect={false}
-                editable={!busy}
-                multiline
-                submitBehavior="blurAndSubmit"
-                onChangeText={changeToken}
-                onSubmitEditing={submit}
-                placeholder={t('connect.tokenPlaceholder')}
-                placeholderTextColor={colors.foreground}
-                returnKeyType="done"
-                spellCheck={false}
-                style={styles.input}
-                value={token}
-              />
+              <View style={styles.tokenRow}>
+                {/* Masked by default, like a password. Android cannot mask a
+                    multiline field, so it is a single line until revealed. */}
+                <TextInput
+                  accessibilityLabel={t('connect.tokenPlaceholder')}
+                  autoCapitalize="none"
+                  autoComplete="off"
+                  autoCorrect={false}
+                  editable={!busy}
+                  importantForAutofill="no"
+                  multiline={revealToken}
+                  secureTextEntry={!revealToken}
+                  submitBehavior="blurAndSubmit"
+                  onChangeText={changeToken}
+                  onSubmitEditing={submit}
+                  placeholder={t('connect.tokenPlaceholder')}
+                  placeholderTextColor={colors.foreground}
+                  returnKeyType="done"
+                  spellCheck={false}
+                  style={[styles.input, revealToken && styles.inputRevealed]}
+                  value={token}
+                />
+                <SmallButton
+                  active={revealToken}
+                  label={t(
+                    revealToken ? 'connect.hideToken' : 'connect.showToken',
+                  )}
+                  accessibilityLabel={t(
+                    revealToken ? 'connect.hideToken' : 'connect.showToken',
+                  )}
+                  onPress={() => setRevealToken(shown => !shown)}
+                />
+              </View>
               {typed.length > 0 && (
                 <Text
                   accessibilityLiveRegion="polite"
@@ -459,11 +477,19 @@ const styles = StyleSheet.create({
     borderRadius: borders.radius,
     borderWidth: borders.width,
     fontFamily: 'monospace',
+    flex: 1,
     fontSize: typography.body,
-    minHeight: typography.body * 3,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     textAlignVertical: 'top',
+  },
+  inputRevealed: {
+    minHeight: typography.body * 3,
+  },
+  tokenRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
   },
   actions: {
     flexDirection: 'row',

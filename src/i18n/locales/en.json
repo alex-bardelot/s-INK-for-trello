@@ -21,6 +21,8 @@
   "connect.openTrelloDirectly": "Open Trello’s page directly (you then copy the token yourself)",
   "connect.step2TitleFallback": "Or paste the token",
   "connect.step2Fallback": "If the automatic connection does not work, open Trello’s page directly (under Show the address), copy the token it displays and press Paste token, or type it below.",
+  "connect.showToken": "Show",
+  "connect.hideToken": "Hide",
   "connect.tokenValid": "Token recognized ({count} characters).",
   "connect.tokenInvalid": "This is not a Trello token yet ({count} characters): a token is made of 64 or more letters and digits, often starting with ATTA.",
   "connect.tokenPlaceholder": "Trello token",

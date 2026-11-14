@@ -3,6 +3,15 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.19.3 — Masked token field
+
+- The token field of the connection page is masked like a password, with
+  a **Show** / **Hide** button next to it. Masked, it is a single line
+  (Android cannot mask a multiline field); shown, it spans several lines
+  as before. The live "Token recognized (N characters)" check still tells
+  whether the token is complete without revealing it.
+- Bumped the plugin to version 0.19.3 (`versionCode` 50).
+
 ## 0.19.2 — Stay-connected choice first on the connection page
 
 - The choice of keeping the token is now step 1 of the connection page,
