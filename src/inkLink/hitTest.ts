@@ -209,25 +209,6 @@ export function unionOf(rects: readonly Rect[]): Rect | null {
   }));
 }
 
-/** Space between a linked selection and the line drawn under it. */
-export const UNDERLINE_GAP_PX = 8;
-
-/**
- * Line drawn under a linked selection, from its bottom left corner to its
- * bottom right corner, in screen pixels.
- */
-export function underlineOf(
-  bounds: Rect,
-  pageWidth: number,
-  pageHeight: number,
-): [{x: number; y: number}, {x: number; y: number}] {
-  const y = Math.min(bounds.bottom + UNDERLINE_GAP_PX, pageHeight - 1);
-  return [
-    {x: Math.max(0, bounds.left), y},
-    {x: Math.min(pageWidth - 1, bounds.right), y},
-  ];
-}
-
 /**
  * Merges the bounds of the elements of a link that lie close together.
  * Copies of a link placed apart stay separate hit zones.

@@ -7,14 +7,17 @@ import {
   mergeInkLinks,
   NoteElementType,
   PageElement,
-  UNDERLINE_GAP_PX,
-  underlineOf,
   unionOf,
 } from '../src/inkLink/hitTest';
 import {formatInkLink, parseInkLink} from '../src/inkLink/inkLink';
 import {
   layoutLink,
+  layoutLinkMark,
   LINK_FONT_SIZE,
+  MARK_LABEL_GAP_PX,
+  MARK_LABEL_PATTERN,
+  MARK_LINE_GAP_PX,
+  markLabel,
   LINK_ICON_SIZE,
   LINK_NAME_MAX_LENGTH,
   shortName,
@@ -87,23 +90,42 @@ describe('linked handwriting', () => {
     expect(inkLinkAt(merged, 190, 105)).not.toBeNull();
   });
 
-  it('unites bounds and places the underline below, inside the page', () => {
-    const bounds = unionOf([
-      {left: 10, top: 20, right: 30, bottom: 40},
-      {left: 5, top: 25, right: 50, bottom: 35},
-    ]);
-    expect(bounds).toEqual({left: 5, top: 20, right: 50, bottom: 40});
-    expect(unionOf([])).toBeNull();
-    expect(underlineOf(bounds!, 1920, 2560)).toEqual([
-      {x: 5, y: 40 + UNDERLINE_GAP_PX},
-      {x: 50, y: 40 + UNDERLINE_GAP_PX},
-    ]);
+  it('unites bounds', () => {
     expect(
-      underlineOf({left: -4, top: 0, right: 2000, bottom: 2558}, 1920, 2560),
-    ).toEqual([
-      {x: 0, y: 2559},
-      {x: 1919, y: 2559},
+      unionOf([
+        {left: 10, top: 20, right: 30, bottom: 40},
+        {left: 5, top: 25, right: 50, bottom: 35},
+      ]),
+    ).toEqual({left: 5, top: 20, right: 50, bottom: 40});
+    expect(unionOf([])).toBeNull();
+  });
+
+  it('marks a selection with a line and a label standing on its end', () => {
+    const bounds = {left: 300, top: 600, right: 800, bottom: 900};
+    const mark = layoutLinkMark(bounds, 'card', 1920, 2560);
+    const y = 900 + MARK_LINE_GAP_PX;
+    expect(mark.label).toBe('s-INK/c');
+    expect(mark.labelRect.left).toBe(800 + MARK_LABEL_GAP_PX);
+    expect(mark.labelRect.bottom).toBe(y);
+    expect(mark.labelRect.top).toBeLessThan(y);
+    expect(mark.line).toEqual([
+      {x: 300, y},
+      {x: mark.labelRect.right, y},
     ]);
+    expect(layoutLinkMark(bounds, 'board', 1920, 2560).label).toBe('s-INK/b');
+    expect(MARK_LABEL_PATTERN.test(markLabel('board'))).toBe(true);
+  });
+
+  it('keeps the mark on the page', () => {
+    const mark = layoutLinkMark(
+      {left: 1500, top: 2400, right: 1915, bottom: 2558},
+      'board',
+      1920,
+      2560,
+    );
+    expect(mark.labelRect.right).toBeLessThanOrEqual(1919);
+    expect(mark.line[0].y).toBe(2559);
+    expect(mark.line[0].x).toBeLessThanOrEqual(mark.labelRect.left);
   });
 
   it('keeps copies placed apart and other targets separate', () => {

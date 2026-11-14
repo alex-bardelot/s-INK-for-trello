@@ -5,7 +5,13 @@ import {i18n} from '../i18n';
 import {FALLBACK_PAGE_SIZE} from '../plugin/lassoText';
 import {ensureFileReadPermission} from '../plugin/permissions';
 import {logInkLink} from './diagnostics';
-import {boundsOf, PageElement, Rect, underlineOf, unionOf} from './hitTest';
+import {boundsOf, PageElement, Rect, unionOf} from './hitTest';
+import {
+  layoutLinkMark,
+  MARK_FONT_SIZE,
+  MARK_LABEL_PATTERN,
+  markLabel,
+} from './linkLayout';
 import {formatInkLink, InkLinkTarget, parseInkLink} from './inkLink';
 
 /**
@@ -134,10 +140,11 @@ export async function captureLassoSelection(): Promise<boolean> {
   }
 }
 
-/** Dark gray, technical pen: the look of the note app's own links. */
-const UNDERLINE_STYLE = {penColor: 0x9d, penType: 10, penWidth: 200};
+/** Black and thicker than the note app's links, to read well on E Ink. */
+const MARK_LINE_STYLE = {penColor: 0x00, penType: 10, penWidth: 400};
 
 const GEOMETRY = 700;
+const TEXT = 500;
 
 type Size = {width: number; height: number};
 
@@ -148,40 +155,64 @@ async function pageSizeOf(selection: PendingBinding): Promise<Size> {
   return size && size.width > 0 && size.height > 0 ? size : FALLBACK_PAGE_SIZE;
 }
 
+/** Latest element of a type, among those not holding the link yet. */
+function latest(
+  elements: readonly NoteElement[],
+  link: string,
+  matches: (element: NoteElement) => boolean,
+): NoteElement | undefined {
+  return elements
+    .filter(element => element.userData !== link && matches(element))
+    .sort((a, b) => (b.numInPage ?? 0) - (a.numInPage ?? 0))[0];
+}
+
 /**
- * Draws a line under a linked selection, so it shows as a link. The line
- * carries the link too: moved or copied with the selection, it stays part
- * of it. Geometry points are screen pixels.
+ * Marks a linked selection like the note app's own links: a line under it
+ * and a small `s-INK/c` or `s-INK/b` label at the line's end. Both carry
+ * the link too: moved or copied with the selection, they stay part of it.
+ * Geometry points and text box bounds are screen pixels.
  *
  * @returns A short result for the log.
  */
-async function drawUnderline(
+async function drawLinkMark(
   link: string,
+  kind: InkLinkTarget['kind'],
   bounds: Rect,
   selection: PendingBinding,
 ): Promise<string> {
   const size = await pageSizeOf(selection);
-  const created = unwrap<Record<string, any>>(
+  const mark = layoutLinkMark(bounds, kind, size.width, size.height);
+  const line = unwrap<Record<string, any>>(
     await PluginCommAPI.createElement(GEOMETRY),
   );
-  if (!created) {
+  const label = unwrap<Record<string, any>>(
+    await PluginCommAPI.createElement(TEXT),
+  );
+  if (!line || !label) {
     return 'not created';
   }
-  const points = underlineOf(bounds, size.width, size.height);
-  created.userData = link;
-  created.pageNum = selection.page;
-  created.geometry = {
-    ...(created.geometry ?? {}),
-    ...UNDERLINE_STYLE,
+  line.userData = link;
+  line.pageNum = selection.page;
+  line.geometry = {
+    ...(line.geometry ?? {}),
+    ...MARK_LINE_STYLE,
     type: 'straightLine',
-    points,
+    points: mark.line,
     ellipseCenterPoint: null,
     ellipseMajorAxisRadius: 0,
     ellipseMinorAxisRadius: 0,
     ellipseAngle: 0,
   };
+  label.userData = link;
+  label.pageNum = selection.page;
+  label.textBox = {
+    ...(label.textBox ?? {}),
+    textContentFull: mark.label,
+    textRect: mark.labelRect,
+    fontSize: MARK_FONT_SIZE,
+  };
   const inserted = await PluginCommAPI.insertPageElements(
-    [created],
+    [line, label],
     selection.page,
   );
   if ((inserted as SdkResponse<unknown> | null)?.success !== true) {
@@ -192,24 +223,29 @@ async function drawUnderline(
     await PluginFileAPI.getElements(selection.page, selection.path),
   );
   const elements = Array.isArray(page) ? page : [];
-  const line = elements
-    .filter(element => element.type === GEOMETRY && element.userData !== link)
-    .sort((a, b) => (b.numInPage ?? 0) - (a.numInPage ?? 0))[0];
-  let result = `${Math.round(points[0].x)},${Math.round(
-    points[0].y,
-  )}-${Math.round(points[1].x)},${Math.round(points[1].y)}`;
-  if (line) {
-    line.userData = link;
+  const found = [
+    latest(elements, link, element => element.type === GEOMETRY),
+    latest(
+      elements,
+      link,
+      element =>
+        element.type === TEXT &&
+        (element as PageElement).textBox?.textContentFull === mark.label,
+    ),
+  ].filter((element): element is NoteElement => element !== undefined);
+  const [from, to] = mark.line;
+  let result = `${Math.round(from.x)},${Math.round(from.y)}-${Math.round(
+    to.x,
+  )},${Math.round(to.y)}, ${found.length}/2 found`;
+  if (found.length > 0) {
+    found.forEach(element => {
+      element.userData = link;
+    });
     const modified = await PluginCommAPI.modifyPageElements(
-      [line] as any[],
+      found as any[],
       selection.page,
     );
-    const stored = (line as {geometry?: {points?: unknown}}).geometry?.points;
-    result += `, userData ${status(modified)}, stored ${JSON.stringify(
-      stored ?? null,
-    ).slice(0, 80)}`;
-  } else {
-    result += ', line not found';
+    result += `, userData ${status(modified)}`;
   }
   recycle(elements);
   return result;
@@ -251,13 +287,23 @@ export async function bindPendingSelection(
       );
       return false;
     }
-    // A selection linked before already holds its line: it is kept.
-    const underlined = selected.some(
+    // A selection linked before already holds its mark: it is kept, and
+    // its label follows the new target.
+    const marked = selected.some(
       element =>
         element.type === GEOMETRY && parseInkLink(element.userData) !== null,
     );
+    const label = markLabel(target.kind);
     selected.forEach(element => {
       element.userData = link;
+      const textBox = (element as PageElement).textBox;
+      if (
+        element.type === TEXT &&
+        textBox &&
+        MARK_LABEL_PATTERN.test(textBox.textContentFull ?? '')
+      ) {
+        textBox.textContentFull = label;
+      }
     });
     const modified = await PluginCommAPI.modifyPageElements(
       selected,
@@ -272,10 +318,10 @@ export async function bindPendingSelection(
         .map(element => boundsOf(element as PageElement))
         .filter((rect): rect is Rect => rect !== null),
     );
-    const underline = underlined
+    const mark = marked
       ? 'kept'
       : bounds
-      ? await drawUnderline(link, bounds, selection).catch(error =>
+      ? await drawLinkMark(link, target.kind, bounds, selection).catch(error =>
           String(error),
         )
       : 'no bounds';
@@ -283,9 +329,9 @@ export async function bindPendingSelection(
     logInkLink(
       `bind ${link}: ${selected.length}/${
         selection.elements.length
-      } elements on page ${
-        selection.page
-      }, underline ${underline}, save ${status(saved)}`,
+      } elements on page ${selection.page}, mark ${mark}, save ${status(
+        saved,
+      )}`,
     );
     setPending(null);
     return true;

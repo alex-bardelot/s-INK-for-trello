@@ -3,6 +3,17 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.30.0 — Linked selections marked with a bold line and an s-INK label
+
+- The line under a linked selection is now black and twice as thick
+  (pen width 400). It runs past the selection to a small label:
+  `s-INK/c` for a card, `s-INK/b` for a board. The label stands where the
+  note app draws its chain icon.
+- The label is a text box that holds the link in its `userData`, like
+  the line.
+- Linking an already marked selection again keeps its mark and updates
+  its label to the new target.
+
 ## 0.29.0 — Link a selection straight from the board and card tiles
 
 - After the lasso **Link to Trello** button, every tile gets a **Link**

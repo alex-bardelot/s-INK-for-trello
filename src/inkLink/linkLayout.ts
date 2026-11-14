@@ -16,6 +16,64 @@ export interface LinkLayout {
   textRect: Rect;
 }
 
+/** Space between a linked selection and the line drawn under it. */
+export const MARK_LINE_GAP_PX = 8;
+/** Space between a linked selection and its label. */
+export const MARK_LABEL_GAP_PX = 8;
+/** Font size of the `s-INK/c` or `s-INK/b` label of a linked selection. */
+export const MARK_FONT_SIZE = 28;
+
+/** Label of a linked selection: `s-INK/c` for a card, `s-INK/b` for a board. */
+export function markLabel(kind: 'card' | 'board'): string {
+  return `s-INK/${kind === 'card' ? 'c' : 'b'}`;
+}
+
+/** Matches the label of a linked selection. */
+export const MARK_LABEL_PATTERN = /^s-INK\/[cb]$/;
+
+/** What marks a linked selection, in screen pixels. */
+export interface LinkMarkLayout {
+  /** Ends of the line under the selection and its label. */
+  line: [{x: number; y: number}, {x: number; y: number}];
+  label: string;
+  labelRect: Rect;
+}
+
+/**
+ * Lays out the mark of a linked selection, like the note app's own links:
+ * a line under it, and at its right end, standing on the line, a small
+ * `s-INK/c` (card) or `s-INK/b` (board) label in place of the chain icon.
+ * Everything stays on the page.
+ */
+export function layoutLinkMark(
+  bounds: Rect,
+  kind: 'card' | 'board',
+  pageWidth: number,
+  pageHeight: number,
+): LinkMarkLayout {
+  const label = markLabel(kind);
+  const size = estimateTextSize(label, MARK_FONT_SIZE);
+  const y = Math.min(bounds.bottom + MARK_LINE_GAP_PX, pageHeight - 1);
+  const labelLeft = Math.max(
+    0,
+    Math.min(bounds.right + MARK_LABEL_GAP_PX, pageWidth - 1 - size.width),
+  );
+  const labelRect = {
+    left: labelLeft,
+    top: Math.max(0, y - size.height),
+    right: labelLeft + size.width,
+    bottom: y,
+  };
+  return {
+    line: [
+      {x: Math.max(0, Math.min(bounds.left, labelLeft)), y},
+      {x: labelRect.right, y},
+    ],
+    label,
+    labelRect,
+  };
+}
+
 /** Cuts a name to `LINK_NAME_MAX_LENGTH` characters. */
 export function shortName(name: string): string {
   const characters = Array.from(name.trim().replace(/\s+/g, ' '));
