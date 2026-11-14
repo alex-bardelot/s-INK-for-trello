@@ -35,7 +35,12 @@ import {
 import {BoardPreferences, loadBoardPreferences} from '../board/preferences';
 import {useTwoFingerSwipe} from '../board/useTwoFingerSwipe';
 import {formatCardDate} from '../cards/detail';
-import {BindSelectionButton} from '../components/BindSelectionButton';
+import {
+  BIND_TAB_HEIGHT,
+  BIND_TAB_ROOM,
+  BindSelectionButton,
+} from '../components/BindSelectionButton';
+import {usePendingBinding} from '../inkLink/lassoBinding';
 import {Checkbox} from '../components/Checkbox';
 import {InsertInkLinkButton} from '../components/InsertInkLinkButton';
 import {LabelChip} from '../components/LabelChip';
@@ -789,6 +794,8 @@ function CardTile({
   onPress?: OpenCard;
 }): React.JSX.Element {
   const {t} = useTranslation();
+  // A lasso selection waits to be linked: each card shows a "Link" tab.
+  const linking = usePendingBinding() !== null;
   const {checkItems, checkItemsChecked, description} = card.badges ?? {};
   const badges: string[] = [];
   if (card.due) {
@@ -808,14 +815,26 @@ function CardTile({
 
   const content = (
     <>
+      {linking && (
+        <View style={styles.cardAction}>
+          <BindSelectionButton
+            target={{kind: 'card', shortLink: card.shortLink || card.id}}
+          />
+        </View>
+      )}
       {labels.length > 0 && (
-        <View style={styles.labels}>
+        <View style={[styles.labels, linking && styles.besideTab]}>
           {labels.map(label => (
             <LabelChip key={label.id} label={label} />
           ))}
         </View>
       )}
-      <View style={styles.cardTitle}>
+      <View
+        style={[
+          styles.cardTitle,
+          // Without labels, the title line runs beside the tab.
+          linking && labels.length === 0 && styles.besideTab,
+        ]}>
         {card.dueComplete && (
           <View
             style={styles.completeMark}
@@ -827,9 +846,6 @@ function CardTile({
         <Text style={styles.cardName} numberOfLines={3}>
           {card.name}
         </Text>
-        <BindSelectionButton
-          target={{kind: 'card', shortLink: card.shortLink || card.id}}
-        />
       </View>
       {(badges.length > 0 || cardMembers.length > 0) && (
         <View style={styles.cardFooter}>
@@ -943,6 +959,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
     backgroundColor: colors.background,
+  },
+  cardAction: {
+    position: 'absolute',
+    top: 0,
+    right: spacing.sm,
+    zIndex: 1,
+  },
+  besideTab: {
+    paddingRight: BIND_TAB_ROOM,
+    minHeight: BIND_TAB_HEIGHT - spacing.sm,
   },
   cardPressed: {
     borderWidth: borders.width * 2,

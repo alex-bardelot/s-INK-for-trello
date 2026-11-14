@@ -25,6 +25,7 @@ import {BoardsPreferences, PublicBoardRef} from '../boards/preferences';
 import {BindSelectionButton} from '../components/BindSelectionButton';
 import {Button} from '../components/Button';
 import {InkLinkTarget} from '../inkLink/inkLink';
+import {usePendingBinding} from '../inkLink/lassoBinding';
 import {GearIcon} from '../components/GearIcon';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {Locale, useTranslation} from '../i18n';
@@ -109,6 +110,8 @@ export function BoardsScreen({
   onTokenRejected,
 }: BoardsScreenProps): React.JSX.Element {
   const {t} = useTranslation();
+  // A lasso selection waits to be linked: only boards and cards matter.
+  const linking = usePendingBinding() !== null;
   const {width, height} = useWindowDimensions();
   const signedIn = member !== null;
   const [state, setState] = useState<BoardsState>({status: 'loading'});
@@ -251,7 +254,8 @@ export function BoardsScreen({
               publicBoards: publicTiles,
               showRoadmap,
               signedIn,
-              showConnect: preferences.showConnectCard,
+              // Picking what to link a selection to is no time to connect.
+              showConnect: preferences.showConnectCard && !linking,
               columns,
             }),
             bodyHeight,
@@ -264,6 +268,7 @@ export function BoardsScreen({
       showRoadmap,
       signedIn,
       preferences.showConnectCard,
+      linking,
       bodyHeight,
     ],
   );
@@ -359,11 +364,13 @@ export function BoardsScreen({
     <ScreenFrame
       title={t('boards.title')}
       actions={
-        <Button
-          label={t('settings.open')}
-          onPress={onOpenSettings}
-          icon={settingsIcon}
-        />
+        linking ? null : (
+          <Button
+            label={t('settings.open')}
+            onPress={onOpenSettings}
+            icon={settingsIcon}
+          />
+        )
       }>
       <View
         style={styles.body}
@@ -934,8 +941,8 @@ const styles = StyleSheet.create({
   },
   tileAction: {
     position: 'absolute',
-    right: spacing.sm,
-    top: spacing.sm,
+    right: spacing.md,
+    top: 0,
   },
   workspace: {
     width: BADGE_SIZE,

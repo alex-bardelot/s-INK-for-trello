@@ -3,6 +3,17 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.32.0 — Link tabs with a chain icon; link mode shows only boards and cards
+
+- While a lasso selection waits to be linked, the boards page hides the
+  "Connect your Trello account" tile and the Settings button.
+- The **Link** button of board and card tiles is now a tab that hangs
+  from the tile's top edge, at its right, like a folder tab. It is black
+  with a chain icon (a new `ChainIcon`, drawn with views).
+- On card tiles, the tab sits at the top of the card instead of beside
+  the title. The labels, or the title when there are none, keep room
+  for it.
+
 ## 0.31.3 — No more endless "Opening the s-INK link…"
 
 - On the device, linking a selection could leave the view stuck on
