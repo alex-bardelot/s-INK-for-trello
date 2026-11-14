@@ -3,6 +3,24 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.26.0 — Lasso diagnostic for keeping s-INK links on moved elements
+
+- New design note `docs/ink-link-tracking.md`. It covers what the SDK
+  keeps when the user moves elements with the lasso (`uuid`, `numInPage`,
+  the host's hidden `trailNum`, `userData`, native stroke links). It
+  recommends native stroke links to Trello URLs for handwriting, with a
+  fallback: `userData` plus a move-invariant stroke fingerprint registry
+  that heals itself.
+- New diagnostic lasso button **"s-INK: Inspect"** (NOTE). It logs the
+  selected elements to the s-INK log in Settings > About, one line each:
+  - type, in-page number, `trailNum` when the host sends it, `uuid`, and
+    `userData`;
+  - stroke point count, EMR bounds and fingerprint;
+  - recognition box, text box, picture and native link data.
+  If no selected element carries `userData`, it tags them with a
+  non-link `s-INK/diag/…` value, to see whether it survives a move. The
+  log now keeps 60 lines. New string in all locales.
+
 ## 0.25.0 — s-INK links: app icon and a hit zone fitted to the text
 
 - A new link now starts with the **app icon** (a picture element, twice

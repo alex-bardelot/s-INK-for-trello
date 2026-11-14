@@ -108,6 +108,7 @@
   "error.unknown": "發生問題，請再試一次。",
   "error.browserUnavailable": "無法開啟瀏覽器。請在其他裝置上輸入此網址。",
   "button.lasso.createCard": "新增 Trello 卡片",
+  "button.lasso.inspect": "s-INK：檢查",
   "common.back": "返回",
   "card.title": "新增 Trello 卡片",
   "card.reading": "正在讀取選取範圍…",

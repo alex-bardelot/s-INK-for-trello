@@ -108,6 +108,7 @@
   "error.unknown": "Something went wrong. Please try again.",
   "error.browserUnavailable": "No browser could be opened. Type the address on another device.",
   "button.lasso.createCard": "New Trello Card",
+  "button.lasso.inspect": "s-INK: Inspect",
   "common.back": "Back",
   "card.title": "New Trello Card",
   "card.reading": "Reading the selection…",

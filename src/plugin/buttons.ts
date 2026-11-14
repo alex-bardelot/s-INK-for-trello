@@ -16,7 +16,8 @@ const ICON_URI = Image.resolveAssetSource(require('../../assets/icon.png')).uri;
  * Registers the s-INK buttons with labels in the active locale:
  * - the toolbar button of NOTE and DOC, which opens the boards view;
  * - the lasso toolbar button of NOTE, shown when the selection contains
- *   handwriting or text, which turns the selection into a Trello card.
+ *   handwriting or text, which turns the selection into a Trello card;
+ * - a diagnostic lasso button of NOTE that logs the selected elements.
  *
  * @returns `true` if the host accepted every registration.
  */
@@ -40,6 +41,19 @@ export async function registerButtons(): Promise<boolean> {
       showType: ButtonShowType.EventOnly,
       editDataTypes: [LassoDataType.Stroke, LassoDataType.Text],
     }),
+    PluginManager.registerButton(ButtonType.Lasso, [AppType.Note], {
+      id: ButtonId.LassoInspect,
+      name: i18n.t('button.lasso.inspect'),
+      icon: ICON_URI,
+      // Only writes to the s-INK log; the view stays closed.
+      showType: ButtonShowType.EventOnly,
+      editDataTypes: [
+        LassoDataType.Stroke,
+        LassoDataType.Text,
+        LassoDataType.Image,
+        LassoDataType.Link,
+      ],
+    }),
   ]);
   return results.every(Boolean);
 }
@@ -54,6 +68,7 @@ export async function refreshButtons(): Promise<boolean> {
   await Promise.all([
     PluginManager.unregisterButton(ButtonId.Open),
     PluginManager.unregisterButton(ButtonId.LassoCreateCard),
+    PluginManager.unregisterButton(ButtonId.LassoInspect),
   ]);
   return registerButtons();
 }

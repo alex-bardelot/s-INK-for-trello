@@ -6,7 +6,7 @@ import {useSyncExternalStore} from 'react';
  * host really sends.
  */
 
-const MAX_LINES = 30;
+const MAX_LINES = 60;
 
 let lines: readonly string[] = [];
 const listeners = new Set<() => void>();

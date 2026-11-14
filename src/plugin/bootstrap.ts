@@ -1,8 +1,10 @@
 import {PluginManager} from 'sn-plugin-lib';
 
 import {getSystemLocale, i18n} from '../i18n';
+import {inspectLassoSelection} from '../inkLink/lassoInspect';
 import {startInkLinkTaps} from '../inkLink/noteBridge';
 import {refreshButtons, registerButtons} from './buttons';
+import {ButtonId} from './constants';
 import {handleButtonPress} from './launchIntent';
 
 const LOG_TAG = '[sINK]';
@@ -43,6 +45,10 @@ export function bootstrapPlugin(): void {
       // The SDK requires buttons to be registered before the listener.
       PluginManager.registerButtonListener({
         onButtonPress: event => {
+          if (event.id === ButtonId.LassoInspect) {
+            inspectLassoSelection();
+            return;
+          }
           const intent = handleButtonPress(event.id);
           if (intent?.kind === 'lassoCreateCard') {
             // The lasso button does not open the view by itself: the

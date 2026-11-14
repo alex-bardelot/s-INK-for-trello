@@ -108,6 +108,7 @@
   "error.unknown": "Une erreur est survenue. Veuillez réessayer.",
   "error.browserUnavailable": "Aucun navigateur n’a pu être ouvert. Saisissez l’adresse sur un autre appareil.",
   "button.lasso.createCard": "Nouvelle carte Trello",
+  "button.lasso.inspect": "s-INK : Inspecter",
   "common.back": "Retour",
   "card.title": "Nouvelle carte Trello",
   "card.reading": "Lecture de la sélection…",

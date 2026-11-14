@@ -108,6 +108,7 @@
   "error.unknown": "問題が発生しました。もう一度お試しください。",
   "error.browserUnavailable": "ブラウザを開けませんでした。別の端末でアドレスを入力してください。",
   "button.lasso.createCard": "新しい Trello カード",
+  "button.lasso.inspect": "s-INK：検査",
   "common.back": "戻る",
   "card.title": "新しい Trello カード",
   "card.reading": "選択範囲を読み取っています…",

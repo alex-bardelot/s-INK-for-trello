@@ -35,6 +35,8 @@ export const AppType = {
 export const ButtonId = {
   Open: 100,
   LassoCreateCard: 101,
+  /** Diagnostic: logs the selected elements (docs/ink-link-tracking.md). */
+  LassoInspect: 102,
 } as const;
 
 /**

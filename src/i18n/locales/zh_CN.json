@@ -108,6 +108,7 @@
   "error.unknown": "出现问题，请重试。",
   "error.browserUnavailable": "无法打开浏览器。请在其他设备上输入该地址。",
   "button.lasso.createCard": "新建 Trello 卡片",
+  "button.lasso.inspect": "s-INK：检查",
   "common.back": "返回",
   "card.title": "新建 Trello 卡片",
   "card.reading": "正在读取选区…",
