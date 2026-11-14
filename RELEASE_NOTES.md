@@ -3,6 +3,23 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## Relay 1.0.0 — Cloudflare Worker for copy-free sign-in
+
+- New `relay/` folder: a Cloudflare Worker that hands the Trello token
+  from the browser where the user signed in (a phone scanning the QR code,
+  or the tablet's browser) to the plugin, so it no longer has to be
+  copied. The plugin does not use it yet; the plugin package is unchanged.
+- End-to-end encrypted: the key travels only in the URL fragment, which
+  browsers never send; the relay stores the ciphertext once, hands it over
+  once and forgets it after 10 minutes (one Durable Object per session).
+- The connection page it serves (in English, French, Japanese and Chinese)
+  sends the browser to Trello, encrypts the returned token with WebCrypto
+  and deposits it, or shows it for manual entry if anything fails.
+- `relay/README.md` explains the flow, the protocol, the security model,
+  the cost and how to deploy your own. Its tests run from the root with
+  `npx jest relay`; the root type check now leaves `relay/` to its own
+  `tsconfig.json`.
+
 ## 0.17.0 — Connect as soon as the token is copied
 
 - While the connection page is open, the plugin reads the clipboard every

@@ -1,0 +1,20 @@
+# Cloudflare Worker of the sINK relay. See README.md.
+name = "sink-relay"
+main = "src/index.ts"
+compatibility_date = "2025-10-01"
+
+# Public API key of the Trello Power-Up, the same as TRELLO_API_KEY in the
+# plugin's src/trello/config.ts. Change both if you use your own Power-Up.
+[vars]
+TRELLO_API_KEY = "1dd2751a51e6e9b628f86a3063078cb5"
+TRELLO_APP_NAME = "sINK for Trello"
+
+# One Durable Object per connection session (a single-message mailbox).
+[[durable_objects.bindings]]
+name = "SESSIONS"
+class_name = "SessionBox"
+
+# SQLite-backed Durable Objects are available on the Workers Free plan.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["SessionBox"]

@@ -148,6 +148,7 @@ and install the new package the same way.
 │   ├── i18n/                # Localization (catalogs, locale resolution, hook)
 │   │   └── locales/         # One JSON catalog per language
 │   ├── platform/            # Host capability wrappers (clipboard)
+│   ├── qr/                  # Dependency-free QR code encoder
 │   ├── plugin/              # Supernote SDK integration (buttons, permissions, lasso text)
 │   ├── screens/             # Screens
 │   ├── session/             # Trello account lifecycle (restore, connect, disconnect)
@@ -155,6 +156,7 @@ and install the new package the same way.
 │   ├── trello/              # Trello REST client, authorization URL, types
 │   └── theme.ts             # E-ink oriented design tokens
 ├── __tests__/               # Jest unit tests
+├── relay/                   # Cloudflare Worker for copy-free sign-in (see relay/README.md)
 ├── android/                 # Native Android project (only used for native modules)
 ├── buildPlugin.ps1 / .sh    # Official packaging scripts (from the SDK template)
 ├── deployPlugin.ps1         # Build + copy the .snplg to the Partner app's MyStyle folder
