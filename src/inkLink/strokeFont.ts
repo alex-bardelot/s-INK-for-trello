@@ -174,6 +174,27 @@ export function layoutStrokeText(
   return {segments, width: Math.round(x * capHeight)};
 }
 
+/** How far a stored point may be from the one drawn, in pixels. */
+const POINT_TOLERANCE_PX = 2;
+
+/** Whether stored geometry points are the ends of a drawn segment. */
+export function sameSegment(
+  points: readonly Point[] | null | undefined,
+  segment: Segment,
+): boolean {
+  if (!Array.isArray(points) || points.length !== 2) {
+    return false;
+  }
+  const near = (a: Point, b: Point) =>
+    Math.abs(a.x - b.x) <= POINT_TOLERANCE_PX &&
+    Math.abs(a.y - b.y) <= POINT_TOLERANCE_PX;
+  const [a, b] = points;
+  return (
+    (near(a, segment[0]) && near(b, segment[1])) ||
+    (near(a, segment[1]) && near(b, segment[0]))
+  );
+}
+
 /** Width of a text drawn by {@link layoutStrokeText}, in pixels. */
 export function strokeTextWidth(text: string, capHeight: number): number {
   return layoutStrokeText(text, 0, capHeight, capHeight).width;

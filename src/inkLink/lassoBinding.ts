@@ -7,7 +7,7 @@ import {ensureFileReadPermission} from '../plugin/permissions';
 import {logInkLink} from './diagnostics';
 import {boundsOf, PageElement, Rect, unionOf} from './hitTest';
 import {layoutLinkMark, MARK_LABEL_PATTERN} from './linkLayout';
-import {Segment} from './strokeFont';
+import {sameSegment, Segment} from './strokeFont';
 import {formatInkLink, InkLinkTarget, parseInkLink} from './inkLink';
 
 /**
@@ -160,12 +160,6 @@ async function readPage(selection: PendingBinding): Promise<NoteElement[]> {
   return Array.isArray(page) ? page : [];
 }
 
-function lastNumber(elements: readonly NoteElement[]): number {
-  return elements.reduce(
-    (last, element) => Math.max(last, element.numInPage ?? 0),
-    0,
-  );
-}
 
 async function createSegment(
   segment: Segment,
@@ -222,9 +216,6 @@ async function drawLinkMark(
   if (elements.length < created.length) {
     return `${created.length - elements.length} not created`;
   }
-  const before = await readPage(selection);
-  const last = lastNumber(before);
-  recycle(before);
   const inserted = await PluginCommAPI.insertPageElements(
     elements,
     selection.page,
@@ -232,23 +223,42 @@ async function drawLinkMark(
   if ((inserted as SdkResponse<unknown> | null)?.success !== true) {
     return `insert ${status(inserted)}`;
   }
-  // A value given at insertion may not be kept: write it again on the
-  // new elements, which come last on the page.
+  // The new segments are found by their points: page numbers do not tell
+  // them apart. A value given at insertion may not be kept, so the link is
+  // written again on those that lack it.
   const after = await readPage(selection);
-  const added = after.filter(element => (element.numInPage ?? 0) > last);
+  const segments = [mark.line, ...mark.label];
+  const drawn = after.filter(
+    element =>
+      element.type === GEOMETRY &&
+      segments.some(segment =>
+        sameSegment((element as PageElement).geometry?.points, segment),
+      ),
+  );
+  const untagged = drawn.filter(element => element.userData !== link);
   const [from, to] = mark.line;
   let result = `${Math.round(from.x)},${Math.round(from.y)}-${Math.round(
     to.x,
-  )},${Math.round(to.y)}, ${added.length}/${elements.length} added`;
-  if (added.length > 0) {
-    added.forEach(element => {
+  )},${Math.round(to.y)}, ${drawn.length}/${elements.length} found, ${
+    untagged.length
+  } untagged`;
+  if (untagged.length > 0) {
+    untagged.forEach(element => {
       element.userData = link;
     });
     const modified = await PluginCommAPI.modifyPageElements(
-      added as any[],
+      untagged as any[],
       selection.page,
     );
     result += `, userData ${status(modified)}`;
+  }
+  if (drawn.length === 0) {
+    const sample = after.find(element => element.type === GEOMETRY) as
+      | PageElement
+      | undefined;
+    result += `, sample ${JSON.stringify(
+      sample?.geometry?.points ?? null,
+    ).slice(0, 60)}`;
   }
   recycle(after);
   return result;

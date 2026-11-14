@@ -9,7 +9,11 @@ import {
   PageElement,
   unionOf,
 } from '../src/inkLink/hitTest';
-import {layoutStrokeText, strokeTextWidth} from '../src/inkLink/strokeFont';
+import {
+  layoutStrokeText,
+  sameSegment,
+  strokeTextWidth,
+} from '../src/inkLink/strokeFont';
 import {formatInkLink, parseInkLink} from '../src/inkLink/inkLink';
 import {
   layoutLink,
@@ -161,6 +165,18 @@ describe('linked handwriting', () => {
     const drawn = layoutStrokeText('s-INK/c', 0, 24, 24);
     expect(drawn.width).toBe(strokeTextWidth('s-INK/c', 24));
     expect(layoutStrokeText('?', 0, 24, 24)).toEqual({segments: [], width: 0});
+  });
+
+  it('recognizes a drawn segment from its stored points', () => {
+    const segment: [{x: number; y: number}, {x: number; y: number}] = [
+      {x: 10, y: 20},
+      {x: 30, y: 40},
+    ];
+    expect(sameSegment([{x: 11, y: 19}, {x: 30, y: 42}], segment)).toBe(true);
+    expect(sameSegment([{x: 30, y: 40}, {x: 10, y: 20}], segment)).toBe(true);
+    expect(sameSegment([{x: 14, y: 20}, {x: 30, y: 40}], segment)).toBe(false);
+    expect(sameSegment([{x: 10, y: 20}], segment)).toBe(false);
+    expect(sameSegment(null, segment)).toBe(false);
   });
 
   it('keeps the mark on the page', () => {

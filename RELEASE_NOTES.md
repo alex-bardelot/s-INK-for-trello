@@ -3,6 +3,16 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.31.1 — Find the drawn mark segments by their points
+
+- On the device, the 27 segments of a mark were inserted (the page went
+  from 73 to 100 elements), but none was found after the page's last
+  number, so the link was not written again on them.
+- They are now found by their two points, within 2 px. Only those
+  without the link get it written again.
+- The log shows how many were found and how many lacked the link. If
+  none is found, it also shows the stored points of a sample geometry.
+
 ## 0.31.0 — s-INK label drawn with lines, so it moves with the word
 
 - On the device, a lasso move took the word and its line but left the
