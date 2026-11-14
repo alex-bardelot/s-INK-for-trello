@@ -7,6 +7,9 @@ import {
   mergeInkLinks,
   NoteElementType,
   PageElement,
+  UNDERLINE_GAP_PX,
+  underlineOf,
+  unionOf,
 } from '../src/inkLink/hitTest';
 import {formatInkLink, parseInkLink} from '../src/inkLink/inkLink';
 import {
@@ -82,6 +85,25 @@ describe('linked handwriting', () => {
     expect(merged).toHaveLength(1);
     expect(merged[0].rect).toEqual({left: 100, top: 100, right: 330, bottom: 160});
     expect(inkLinkAt(merged, 190, 105)).not.toBeNull();
+  });
+
+  it('unites bounds and places the underline below, inside the page', () => {
+    const bounds = unionOf([
+      {left: 10, top: 20, right: 30, bottom: 40},
+      {left: 5, top: 25, right: 50, bottom: 35},
+    ]);
+    expect(bounds).toEqual({left: 5, top: 20, right: 50, bottom: 40});
+    expect(unionOf([])).toBeNull();
+    expect(underlineOf(bounds!, 1920, 2560)).toEqual([
+      {x: 5, y: 40 + UNDERLINE_GAP_PX},
+      {x: 50, y: 40 + UNDERLINE_GAP_PX},
+    ]);
+    expect(
+      underlineOf({left: -4, top: 0, right: 2000, bottom: 2558}, 1920, 2560),
+    ).toEqual([
+      {x: 0, y: 2559},
+      {x: 1919, y: 2559},
+    ]);
   });
 
   it('keeps copies placed apart and other targets separate', () => {

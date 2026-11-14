@@ -41,6 +41,12 @@ The *Inspect* button logged the following:
      its text) are merged with `mergeInkLinks`. Copies placed apart stay
      separate.
 
+3. Since 0.28.0, a linked selection is underlined:
+   - the line is a `straightLine` geometry (type 700, points in screen
+     pixels), dark gray, technical pen, width 200;
+   - it is drawn 8 px under the union of the selection's bounds;
+   - it holds the link in `userData` as well.
+
 The fingerprint registry (tier B below) is not needed.
 
 ## Problem

@@ -2,9 +2,11 @@ import {useSyncExternalStore} from 'react';
 import {PluginCommAPI, PluginFileAPI, PluginNoteAPI} from 'sn-plugin-lib';
 
 import {i18n} from '../i18n';
+import {FALLBACK_PAGE_SIZE} from '../plugin/lassoText';
 import {ensureFileReadPermission} from '../plugin/permissions';
 import {logInkLink} from './diagnostics';
-import {formatInkLink, InkLinkTarget} from './inkLink';
+import {boundsOf, PageElement, Rect, underlineOf, unionOf} from './hitTest';
+import {formatInkLink, InkLinkTarget, parseInkLink} from './inkLink';
 
 /**
  * Links a lasso selection (handwriting, text boxes) to a Trello card or
@@ -132,6 +134,87 @@ export async function captureLassoSelection(): Promise<boolean> {
   }
 }
 
+/** Dark gray, technical pen: the look of the note app's own links. */
+const UNDERLINE_STYLE = {penColor: 0x9d, penType: 10, penWidth: 200};
+
+const GEOMETRY = 700;
+
+type Size = {width: number; height: number};
+
+async function pageSizeOf(selection: PendingBinding): Promise<Size> {
+  const size = unwrap<Size>(
+    await PluginFileAPI.getPageSize(selection.path, selection.page),
+  );
+  return size && size.width > 0 && size.height > 0 ? size : FALLBACK_PAGE_SIZE;
+}
+
+/**
+ * Draws a line under a linked selection, so it shows as a link. The line
+ * carries the link too: moved or copied with the selection, it stays part
+ * of it. Geometry points are screen pixels.
+ *
+ * @returns A short result for the log.
+ */
+async function drawUnderline(
+  link: string,
+  bounds: Rect,
+  selection: PendingBinding,
+): Promise<string> {
+  const size = await pageSizeOf(selection);
+  const created = unwrap<Record<string, any>>(
+    await PluginCommAPI.createElement(GEOMETRY),
+  );
+  if (!created) {
+    return 'not created';
+  }
+  const points = underlineOf(bounds, size.width, size.height);
+  created.userData = link;
+  created.pageNum = selection.page;
+  created.geometry = {
+    ...(created.geometry ?? {}),
+    ...UNDERLINE_STYLE,
+    type: 'straightLine',
+    points,
+    ellipseCenterPoint: null,
+    ellipseMajorAxisRadius: 0,
+    ellipseMinorAxisRadius: 0,
+    ellipseAngle: 0,
+  };
+  const inserted = await PluginCommAPI.insertPageElements(
+    [created],
+    selection.page,
+  );
+  if ((inserted as SdkResponse<unknown> | null)?.success !== true) {
+    return `insert ${status(inserted)}`;
+  }
+  // A value given at insertion may not be kept: write it again.
+  const page = unwrap<NoteElement[]>(
+    await PluginFileAPI.getElements(selection.page, selection.path),
+  );
+  const elements = Array.isArray(page) ? page : [];
+  const line = elements
+    .filter(element => element.type === GEOMETRY && element.userData !== link)
+    .sort((a, b) => (b.numInPage ?? 0) - (a.numInPage ?? 0))[0];
+  let result = `${Math.round(points[0].x)},${Math.round(
+    points[0].y,
+  )}-${Math.round(points[1].x)},${Math.round(points[1].y)}`;
+  if (line) {
+    line.userData = link;
+    const modified = await PluginCommAPI.modifyPageElements(
+      [line] as any[],
+      selection.page,
+    );
+    const stored = (line as {geometry?: {points?: unknown}}).geometry?.points;
+    result += `, userData ${status(modified)}, stored ${JSON.stringify(
+      stored ?? null,
+    ).slice(0, 80)}`;
+  } else {
+    result += ', line not found';
+  }
+  recycle(elements);
+  return result;
+}
+
 /**
  * Writes the link to a card or board in the `userData` of the selection
  * waiting to be linked, then saves the note.
@@ -168,6 +251,11 @@ export async function bindPendingSelection(
       );
       return false;
     }
+    // A selection linked before already holds its line: it is kept.
+    const underlined = selected.some(
+      element =>
+        element.type === GEOMETRY && parseInkLink(element.userData) !== null,
+    );
     selected.forEach(element => {
       element.userData = link;
     });
@@ -179,11 +267,25 @@ export async function bindPendingSelection(
       logInkLink(`bind ${link}: modify ${status(modified)}`);
       return false;
     }
+    const bounds = unionOf(
+      selected
+        .map(element => boundsOf(element as PageElement))
+        .filter((rect): rect is Rect => rect !== null),
+    );
+    const underline = underlined
+      ? 'kept'
+      : bounds
+      ? await drawUnderline(link, bounds, selection).catch(error =>
+          String(error),
+        )
+      : 'no bounds';
     const saved = await PluginNoteAPI.saveCurrentNote();
     logInkLink(
       `bind ${link}: ${selected.length}/${
         selection.elements.length
-      } elements on page ${selection.page}, save ${status(saved)}`,
+      } elements on page ${
+        selection.page
+      }, underline ${underline}, save ${status(saved)}`,
     );
     setPending(null);
     return true;

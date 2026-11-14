@@ -125,7 +125,11 @@ function textBounds(textBox: NonNullable<PageElement['textBox']>): Rect | null {
   };
 }
 
-function boundsOf(
+/**
+ * Screen bounds of an element: text, native link, picture (with a
+ * converter) or recognized handwriting.
+ */
+export function boundsOf(
   element: PageElement,
   pictureToScreen?: (rect: Rect) => Rect,
 ): Rect | null {
@@ -190,6 +194,38 @@ function near(a: Rect, b: Rect, gap: number): boolean {
 
 function sameTarget(a: InkLinkTarget, b: InkLinkTarget): boolean {
   return a.kind === b.kind && a.shortLink === b.shortLink;
+}
+
+/** Smallest rectangle holding all the given ones, or `null` if none. */
+export function unionOf(rects: readonly Rect[]): Rect | null {
+  if (rects.length === 0) {
+    return null;
+  }
+  return rects.reduce((union, rect) => ({
+    left: Math.min(union.left, rect.left),
+    top: Math.min(union.top, rect.top),
+    right: Math.max(union.right, rect.right),
+    bottom: Math.max(union.bottom, rect.bottom),
+  }));
+}
+
+/** Space between a linked selection and the line drawn under it. */
+export const UNDERLINE_GAP_PX = 8;
+
+/**
+ * Line drawn under a linked selection, from its bottom left corner to its
+ * bottom right corner, in screen pixels.
+ */
+export function underlineOf(
+  bounds: Rect,
+  pageWidth: number,
+  pageHeight: number,
+): [{x: number; y: number}, {x: number; y: number}] {
+  const y = Math.min(bounds.bottom + UNDERLINE_GAP_PX, pageHeight - 1);
+  return [
+    {x: Math.max(0, bounds.left), y},
+    {x: Math.min(pageWidth - 1, bounds.right), y},
+  ];
 }
 
 /**

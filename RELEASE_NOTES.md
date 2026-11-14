@@ -3,6 +3,18 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.28.0 — Linked handwriting is underlined
+
+- **Link selection** now draws a dark gray line under the linked
+  elements, like the note app's own links.
+  - The line is a geometry element (`straightLine`, screen pixels). It
+    holds the link in its `userData`, so it moves and copies with the
+    selection.
+  - A selection that already holds such a line keeps it and gets no
+    second one.
+- The log shows the line's ends and how the host stored them, to check
+  the placement on the device.
+
 ## 0.27.0 — Link handwriting to a Trello card or board
 
 - New lasso button **"Link to Trello"**, for handwriting, text and
