@@ -3,6 +3,14 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.26.2 — s-INK link taps: log the page's native links
+
+- Each tap now logs the native links on the page (type 600), up to 3.
+  They are logged whatever their target: today a link to a website does
+  not show, because it is not an s-INK link.
+- The goal is to see what the note app stores for a link to a website
+  (`destPath`, link type, bounds).
+
 ## 0.26.1 — s-INK link taps: log every outcome and never stay blocked
 
 - On the device, accepted taps wrote no outcome line in the s-INK log.

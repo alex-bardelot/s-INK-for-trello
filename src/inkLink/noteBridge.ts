@@ -234,6 +234,30 @@ function rawText(event: unknown): string {
   }
 }
 
+/** Native links described per tap. */
+const NATIVE_LINKS_LOGGED = 3;
+
+/**
+ * Logs the native links of the page, whatever their target, to see what
+ * the note app stores for a link to a website (docs/ink-link-tracking.md).
+ */
+function logNativeLinks(elements: readonly PageElement[]): void {
+  const native = elements.filter(
+    element => element.type === NoteElementType.Link,
+  );
+  if (native.length === 0) {
+    return;
+  }
+  const described = native.slice(0, NATIVE_LINKS_LOGGED).map(element => {
+    try {
+      return JSON.stringify(element.link).slice(0, 160);
+    } catch {
+      return String(element.link);
+    }
+  });
+  logInkLink(`tap: ${native.length} native links: ${described.join(' | ')}`);
+}
+
 /** A tap still handled after this long no longer blocks the next ones. */
 const TAP_TIMEOUT_MS = 5000;
 
@@ -281,6 +305,7 @@ async function handleTap(x: number, y: number): Promise<void> {
             convertRect(rect, point => PointUtils.emrPoint2Android(point, size))
         : undefined,
     );
+    logNativeLinks(elements);
     recycle(elements);
     const hit = inkLinkAt(links, x, y);
     logInkLink(
