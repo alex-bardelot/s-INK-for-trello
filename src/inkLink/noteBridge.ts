@@ -298,6 +298,16 @@ function rawText(event: unknown): string {
   }
 }
 
+/** Whether a lasso selection is shown: the host only gives its bounds then. */
+async function lassoActive(): Promise<boolean> {
+  try {
+    const rect = unwrap<Rect>(await PluginCommAPI.getLassoRect());
+    return !!rect && rect.right > rect.left && rect.bottom > rect.top;
+  } catch {
+    return false;
+  }
+}
+
 /** Native links described per tap. */
 const NATIVE_LINKS_LOGGED = 3;
 
@@ -351,6 +361,12 @@ async function handleTap(x: number, y: number): Promise<void> {
       logInkLink(
         `tap ${Math.round(x)},${Math.round(y)}: no file read permission`,
       );
+      return;
+    }
+    // With a lasso selection, taps go to the lasso toolbar (its "Link to
+    // Trello" button may lie over a link): they open nothing.
+    if (await lassoActive()) {
+      logInkLink(`tap ${Math.round(x)},${Math.round(y)}: lasso active, ignored`);
       return;
     }
     const page = await readPageElements();

@@ -141,6 +141,9 @@ export default function App(): React.JSX.Element {
     })();
     return () => {
       cancelled = true;
+      // Another intent (the lasso "Link to Trello" button, say) replaced
+      // this one: the opening screen must not stay up.
+      setLinkStatus('idle');
     };
     // Runs once per tap: the request id changes on every tap.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -150,7 +153,12 @@ export default function App(): React.JSX.Element {
     return <StatusScreen message={t('session.checking')} />;
   }
   if (linkStatus === 'opening') {
-    return <StatusScreen message={t('inkLink.opening')} />;
+    return (
+      <StatusScreen
+        message={t('inkLink.opening')}
+        onBack={() => setLinkStatus('idle')}
+      />
+    );
   }
   if (linkStatus === 'failed') {
     return (

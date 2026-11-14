@@ -3,6 +3,18 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.31.3 — No more endless "Opening the s-INK link…"
+
+- On the device, linking a selection could leave the view stuck on
+  "Opening the s-INK link…". The press on the lasso **Link to Trello**
+  button was also seen as a tap on the link under it.
+  - That tap started opening the link, then the button replaced the
+    request.
+  - The cancelled request never reset the screen.
+- A replaced request now resets the opening screen.
+- The opening screen has a back button.
+- Taps open no link while a lasso selection is shown.
+
 ## 0.31.2 — s-INK label raised above the line
 
 - The drawn `s-INK/c|b` label now stands 14 px above the line instead
