@@ -1,4 +1,4 @@
-# sINK for Trello®
+# s-INK for Trello®
 
 A [Supernote](https://supernote.com) plugin that brings Trello boards to your
 e-ink tablet. The name mixes *sync* and *ink*.
@@ -204,7 +204,7 @@ Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Disclaimer
 
-sINK for Trello® is an independent community project. It is not affiliated,
+s-INK for Trello® is an independent community project. It is not affiliated,
 associated, authorized, endorsed by, or in any way officially connected with
 Trello, Inc., Atlassian or Ratta (Supernote). Trello® is a registered
 trademark of Atlassian; Supernote is a trademark of Ratta. Both are used here

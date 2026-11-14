@@ -2,7 +2,7 @@
   "name": "sink-relay",
   "version": "1.0.0",
   "private": true,
-  "description": "Cloudflare Worker that hands a Trello token to the sINK for Trello plugin, end-to-end encrypted.",
+  "description": "Cloudflare Worker that hands a Trello token to the s-INK for Trello plugin, end-to-end encrypted.",
   "license": "MIT",
   "scripts": {
     "dev": "wrangler dev",

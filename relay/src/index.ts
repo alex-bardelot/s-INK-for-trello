@@ -98,7 +98,7 @@ export async function handleRequest(
     const page = renderConnectPage(
       {
         apiKey: env.TRELLO_API_KEY,
-        appName: env.TRELLO_APP_NAME || 'sINK for Trello',
+        appName: env.TRELLO_APP_NAME || 's-INK for Trello',
         scope: 'read,write',
         expiration: 'never',
       },
@@ -114,7 +114,7 @@ export async function handleRequest(
 
   if (url.pathname === '/') {
     return new Response(
-      'sINK relay: hands a Trello token to the sINK for Trello plugin, end-to-end encrypted.\n',
+      'sINK relay: hands a Trello token to the s-INK for Trello plugin, end-to-end encrypted.\n',
       {headers: {'Content-Type': 'text/plain; charset=utf-8', ...API_HEADERS}},
     );
   }

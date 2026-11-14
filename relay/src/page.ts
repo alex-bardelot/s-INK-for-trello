@@ -116,7 +116,7 @@ export function renderConnectPage(config: PageConfig, nonce: string): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="no-referrer">
-<title>sINK for Trello</title>
+<title>s-INK for Trello</title>
 <style nonce="${nonce}">
   body { margin: 0; padding: 24px 16px; font: 18px/1.5 system-ui, sans-serif;
     background: #fff; color: #000; }
@@ -131,7 +131,7 @@ export function renderConnectPage(config: PageConfig, nonce: string): string {
 </head>
 <body>
 <main>
-  <h1 id="title">sINK for Trello</h1>
+  <h1 id="title">s-INK for Trello</h1>
   <p id="status" role="status">…</p>
   <section id="manual" hidden>
     <p id="manualHint"></p>

@@ -3,6 +3,16 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.21.1 — Display name spelled s-INK for Trello
+
+- The display name is now spelled **s-INK for Trello®** everywhere it is
+  shown: plugin list, toolbar button, title bars, disclaimer (all
+  locales), the Android app name, the README, the Trello authorization
+  page and the relay page.
+- Technical identifiers are unchanged: the package file stays
+  `sINKforTrello.snplg`, the Android namespace `com.sinkfortrello`, the
+  `pluginKey` `sINK` and the `pluginID`.
+
 ## 0.21.0 — Public boards and a favorite in the New card board picker
 
 - The board picker of **New Trello Card** now also offers the public

@@ -25,7 +25,7 @@ describe('buildAuthorizeUrl', () => {
   it('builds a manual token flow URL', () => {
     const url = buildAuthorizeUrl({apiKey: ' testkey '});
     expect(url).toBe(
-      'https://trello.com/1/authorize?key=testkey&name=sINK%20for%20Trello' +
+      'https://trello.com/1/authorize?key=testkey&name=s-INK%20for%20Trello' +
         '&scope=read%2Cwrite&expiration=never&response_type=token',
     );
   });

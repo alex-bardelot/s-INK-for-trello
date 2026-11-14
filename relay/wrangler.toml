@@ -7,7 +7,7 @@ compatibility_date = "2025-10-01"
 # plugin's src/trello/config.ts. Change both if you use your own Power-Up.
 [vars]
 TRELLO_API_KEY = "1dd2751a51e6e9b628f86a3063078cb5"
-TRELLO_APP_NAME = "sINK for Trello"
+TRELLO_APP_NAME = "s-INK for Trello"
 
 # One Durable Object per connection session (a single-message mailbox).
 [[durable_objects.bindings]]

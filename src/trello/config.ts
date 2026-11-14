@@ -13,7 +13,7 @@
 export const TRELLO_API_KEY = '1dd2751a51e6e9b628f86a3063078cb5';
 
 /** Application name shown to the user on the Trello authorization page. */
-export const TRELLO_APP_NAME = 'sINK for Trello';
+export const TRELLO_APP_NAME = 's-INK for Trello';
 
 /**
  * Permissions requested from the user. `write` is requested up front so that

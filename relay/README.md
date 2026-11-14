@@ -1,7 +1,7 @@
 # sINK relay
 
 A tiny [Cloudflare Worker](https://developers.cloudflare.com/workers/) that
-lets the sINK for Trello plugin get a Trello token **without copying and
+lets the s-INK for Trello plugin get a Trello token **without copying and
 pasting it**: the user signs in to Trello on a phone (by scanning the QR code
 shown by the plugin) or in the tablet's browser, and the token travels back
 to the plugin by itself.
