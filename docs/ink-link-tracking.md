@@ -1,7 +1,47 @@
 # Keeping s-INK links attached to moved note elements
 
-Status: study plus a diagnostic button (0.26.0). The tracking itself is
-not implemented yet.
+Status: decided after device tests (0.26.x). Linking a selection is
+implemented in 0.27.0 with `userData` alone, without a registry.
+
+## Device results (0.26.1 and 0.26.2)
+
+The *Inspect* button logged the following:
+
+- **`userData` survives a lasso move and a copy/paste.** It was written
+  with `modifyPageElements` on strokes, a text box and a native link
+  element. The note app recreates the elements, with new `numInPage`
+  values appended at the end of the page and the `userData` copied.
+- The earlier loss on an s-INK text box most likely came from giving
+  `userData` to `insertPageElements`. 0.27.0 writes it again with
+  `modifyPageElements` right after the insertion.
+- `trailNum` does not reach JS. Element keys: `angles`, `contoursSrc`,
+  `layerNum`, `maxX`, `maxY`, `numInPage`, `pageNum`, `recognizeResult`,
+  `status`, `stroke`/`textBox`, `thickness`, `type`, `userData`, `uuid`.
+- `recognizeResult` holds each stroke's box in **screen pixels**. Taps
+  can be hit-tested without reading points.
+- A native link stores, among other fields:
+  - `linkType: 4`;
+  - `destPath: "https://…"`;
+  - `controlTrailNums`, the `numInPage` of its targets. The note app
+    updates it when its targets move.
+- **Tapping a native website link opens the browser.** Tier A would
+  compete with the plugin, so it is dropped.
+
+## Implemented (0.27.0)
+
+1. The **"Link to Trello"** lasso button (strokes, text, geometry):
+   - it stores the `numInPage` of the selected elements, then opens the
+     boards view under a band that says what to do;
+   - on a board or card, **Link selection** reads the page and writes
+     `s-INK/c|b/{shortLink}` in the `userData` of those elements with
+     `modifyPageElements`, then saves the note.
+2. Taps:
+   - the hit zone of a stroke is its `recognizeResult` box;
+   - nearby zones of the same link (the strokes of a word, an icon and
+     its text) are merged with `mergeInkLinks`. Copies placed apart stay
+     separate.
+
+The fingerprint registry (tier B below) is not needed.
 
 ## Problem
 

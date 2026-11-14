@@ -109,6 +109,7 @@
   "error.browserUnavailable": "無法開啟瀏覽器。請在其他裝置上輸入此網址。",
   "button.lasso.createCard": "新增 Trello 卡片",
   "button.lasso.inspect": "s-INK：檢查",
+  "button.lasso.link": "連結到 Trello",
   "common.back": "返回",
   "card.title": "新增 Trello 卡片",
   "card.reading": "正在讀取選取範圍…",
@@ -179,5 +180,9 @@
   "inkLink.openFailed": "無法開啟 s-INK 連結。",
   "inkLink.diagnostics": "s-INK 連結診斷",
   "inkLink.clearLog": "清除",
-  "inkLink.emptyLog": "尚無記錄。"
+  "inkLink.emptyLog": "尚無記錄。",
+  "inkLink.bindSelection": "連結所選內容",
+  "inkLink.bindSelectionHint": "將套索所選內容連結到此頁面。在筆記中點按即可在此開啟。",
+  "inkLink.bindPending": "開啟要連結所選內容（{count} 個元素）的卡片或看板，然後按「連結所選內容」。",
+  "inkLink.bindCancel": "取消"
 }

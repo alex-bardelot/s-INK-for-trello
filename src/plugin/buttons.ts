@@ -17,6 +17,7 @@ const ICON_URI = Image.resolveAssetSource(require('../../assets/icon.png')).uri;
  * - the toolbar button of NOTE and DOC, which opens the boards view;
  * - the lasso toolbar button of NOTE, shown when the selection contains
  *   handwriting or text, which turns the selection into a Trello card;
+ * - the lasso button of NOTE that links the selection to a card or board;
  * - a diagnostic lasso button of NOTE that logs the selected elements.
  *
  * @returns `true` if the host accepted every registration.
@@ -40,6 +41,18 @@ export async function registerButtons(): Promise<boolean> {
       // The view is opened by the button listener once the selection is read.
       showType: ButtonShowType.EventOnly,
       editDataTypes: [LassoDataType.Stroke, LassoDataType.Text],
+    }),
+    PluginManager.registerButton(ButtonType.Lasso, [AppType.Note], {
+      id: ButtonId.LassoLink,
+      name: i18n.t('button.lasso.link'),
+      icon: ICON_URI,
+      // The view is opened by the button listener once the selection is read.
+      showType: ButtonShowType.EventOnly,
+      editDataTypes: [
+        LassoDataType.Stroke,
+        LassoDataType.Text,
+        LassoDataType.Geometry,
+      ],
     }),
     PluginManager.registerButton(ButtonType.Lasso, [AppType.Note], {
       id: ButtonId.LassoInspect,
@@ -68,6 +81,7 @@ export async function refreshButtons(): Promise<boolean> {
   await Promise.all([
     PluginManager.unregisterButton(ButtonId.Open),
     PluginManager.unregisterButton(ButtonId.LassoCreateCard),
+    PluginManager.unregisterButton(ButtonId.LassoLink),
     PluginManager.unregisterButton(ButtonId.LassoInspect),
   ]);
   return registerButtons();

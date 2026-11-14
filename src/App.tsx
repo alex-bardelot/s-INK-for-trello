@@ -6,6 +6,7 @@ import {
   loadBoardsPreferences,
   saveBoardsPreferences,
 } from './boards/preferences';
+import {PendingBindingBanner} from './components/PendingBindingBanner';
 import {useTranslation} from './i18n';
 import {loadLinkTrigger, setLinkTrigger} from './inkLink/trigger';
 import {useLaunchIntent} from './plugin/launchIntent';
@@ -192,7 +193,8 @@ export default function App(): React.JSX.Element {
   const client = account?.client ?? session.anonymousClient;
   if (openBoard) {
     return (
-      <BoardScreen
+      <PendingBindingBanner>
+        <BoardScreen
         key={`${openBoard.id}:${linkedCard?.requestId ?? 0}`}
         board={openBoard}
         client={client}
@@ -204,7 +206,8 @@ export default function App(): React.JSX.Element {
           setLinkedCard(null);
         }}
         onTokenRejected={session.retry}
-      />
+        />
+      </PendingBindingBanner>
     );
   }
   if (settingsOpen) {
@@ -230,16 +233,18 @@ export default function App(): React.JSX.Element {
     );
   }
   return (
-    <BoardsScreen
-      member={account?.member ?? null}
-      client={client}
-      preferences={boardsPreferences}
-      onPreferencesChange={updateBoardsPreferences}
-      ensureNetwork={session.ensureNetwork}
-      onOpenBoard={setOpenBoard}
-      onOpenSettings={() => setSettingsOpen(true)}
-      onConnect={() => setConnectOpen(true)}
-      onTokenRejected={session.retry}
-    />
+    <PendingBindingBanner>
+      <BoardsScreen
+        member={account?.member ?? null}
+        client={client}
+        preferences={boardsPreferences}
+        onPreferencesChange={updateBoardsPreferences}
+        ensureNetwork={session.ensureNetwork}
+        onOpenBoard={setOpenBoard}
+        onOpenSettings={() => setSettingsOpen(true)}
+        onConnect={() => setConnectOpen(true)}
+        onTokenRejected={session.retry}
+      />
+    </PendingBindingBanner>
   );
 }

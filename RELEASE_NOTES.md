@@ -3,6 +3,25 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.27.0 — Link handwriting to a Trello card or board
+
+- New lasso button **"Link to Trello"**, for handwriting, text and
+  shapes.
+  - It opens the boards view under a band that explains the next step,
+    with a Cancel button.
+  - On a board or a card, **Link selection** writes `s-INK/c|b/…` into
+    the `userData` of the selected elements, then saves the note.
+  - The link stays when the elements are moved or copied with the lasso.
+- Tapping linked handwriting opens its card or board.
+  - The hit zone of a stroke comes from its recognition box.
+  - Nearby elements of the same link form one zone; copies placed apart
+    stay separate.
+- Links inserted with **Link in note** get their `userData` written
+  again with `modifyPageElements`, so it is kept when the link is moved.
+- `docs/ink-link-tracking.md` now records the device results. Tapping a
+  native website link opens the browser, so native links are not used.
+- New strings in all locales.
+
 ## 0.26.2 — s-INK link taps: log the page's native links
 
 - Each tap now logs the native links on the page (type 600), up to 3.

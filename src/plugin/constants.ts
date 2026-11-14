@@ -37,6 +37,8 @@ export const ButtonId = {
   LassoCreateCard: 101,
   /** Diagnostic: logs the selected elements (docs/ink-link-tracking.md). */
   LassoInspect: 102,
+  /** Links the lasso selection to a card or board (s-INK link). */
+  LassoLink: 103,
 } as const;
 
 /**

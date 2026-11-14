@@ -11,9 +11,11 @@ import {FALLBACK_PAGE_SIZE} from '../plugin/lassoText';
 import {openInkLinkIntent} from '../plugin/launchIntent';
 import {Permission} from '../plugin/permissions';
 import {logInkLink} from './diagnostics';
+import {clearPendingBinding} from './lassoBinding';
 import {
   findInkLinks,
   inkLinkAt,
+  mergeInkLinks,
   NoteElementType,
   PageElement,
   Rect,
@@ -147,6 +149,60 @@ async function insertIcon(
     : 'failed';
 }
 
+function close(a: Rect | null | undefined, b: Rect, tolerance: number): boolean {
+  return (
+    !!a &&
+    Math.abs(a.left - b.left) <= tolerance &&
+    Math.abs(a.top - b.top) <= tolerance &&
+    Math.abs(a.right - b.right) <= tolerance &&
+    Math.abs(a.bottom - b.bottom) <= tolerance
+  );
+}
+
+/**
+ * Writes the link again in the `userData` of the elements just inserted:
+ * the host may not keep a value given at insertion, while one written by
+ * `modifyPageElements` survives moves and copies.
+ */
+async function rewriteUserData(
+  link: string,
+  text: string,
+  iconRect: Rect,
+  location: {path: string; page: number},
+): Promise<string> {
+  const page = await readPageElements();
+  if (!page) {
+    return 'page not read';
+  }
+  const size = await pageSize(location);
+  const icon = convertRect(iconRect, point =>
+    PointUtils.androidPoint2Emr(point, size),
+  );
+  const inserted = page.elements.filter(
+    element =>
+      element.userData !== link &&
+      ((element.type === NoteElementType.Text &&
+        element.textBox?.textContentFull === text) ||
+        (element.type === NoteElementType.Picture &&
+          close(element.picture?.rect, icon, 4))),
+  );
+  let result = `${inserted.length} without it`;
+  if (inserted.length > 0) {
+    inserted.forEach(element => {
+      element.userData = link;
+    });
+    const modified = await PluginCommAPI.modifyPageElements(
+      inserted as any[],
+      location.page,
+    );
+    result += `, modify ${
+      (modified as SdkResponse<unknown>)?.success ? 'ok' : errorOf(modified)
+    }`;
+  }
+  recycle(page.elements);
+  return result;
+}
+
 /**
  * Inserts an s-INK link to a card or board on the current page of the
  * open note: the app icon, then a text box sized to the name and the link.
@@ -182,9 +238,17 @@ export async function insertInkLink(
       return false;
     }
     const icon = await insertIcon(link, layout.iconRect, location);
+    const userData = await rewriteUserData(
+      link,
+      layout.text,
+      layout.iconRect,
+      location,
+    ).catch(error => String(error));
     const saved = await PluginNoteAPI.saveCurrentNote();
     logInkLink(
-      `insert: ${link} on page ${location.page}, icon ${icon}, save ${
+      `insert: ${link} on page ${
+        location.page
+      }, icon ${icon}, userData ${userData}, save ${
         (saved as SdkResponse<unknown>)?.success ? 'ok' : errorOf(saved)
       }`,
     );
@@ -298,12 +362,14 @@ async function handleTap(x: number, y: number): Promise<void> {
     const size = elements.some(element => element.picture?.rect)
       ? await pageSize(location)
       : null;
-    const links = findInkLinks(
-      elements,
+    const links = mergeInkLinks(
+      findInkLinks(
+        elements,
       size
         ? rect =>
             convertRect(rect, point => PointUtils.emrPoint2Android(point, size))
         : undefined,
+      ),
     );
     logNativeLinks(elements);
     recycle(elements);
@@ -325,6 +391,8 @@ async function handleTap(x: number, y: number): Promise<void> {
       }${hit ? ` -> ${formatInkLink(hit.target)}` : ''}`,
     );
     if (hit) {
+      // A selection still waiting to be linked is given up.
+      clearPendingBinding();
       openInkLinkIntent(hit.target);
       await PluginManager.showPluginView();
     }

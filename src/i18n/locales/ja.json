@@ -109,6 +109,7 @@
   "error.browserUnavailable": "ブラウザを開けませんでした。別の端末でアドレスを入力してください。",
   "button.lasso.createCard": "新しい Trello カード",
   "button.lasso.inspect": "s-INK：検査",
+  "button.lasso.link": "Trello にリンク",
   "common.back": "戻る",
   "card.title": "新しい Trello カード",
   "card.reading": "選択範囲を読み取っています…",
@@ -179,5 +180,9 @@
   "inkLink.openFailed": "s-INK リンクを開けませんでした。",
   "inkLink.diagnostics": "s-INK リンクの診断",
   "inkLink.clearLog": "消去",
-  "inkLink.emptyLog": "まだ記録はありません。"
+  "inkLink.emptyLog": "まだ記録はありません。",
+  "inkLink.bindSelection": "選択範囲をリンク",
+  "inkLink.bindSelectionHint": "投げ縄の選択範囲をこのページにリンクします。ノートでタップするとここで開きます。",
+  "inkLink.bindPending": "選択範囲（{count} 個の要素）をリンクするカードまたはボードを開き、「選択範囲をリンク」を押してください。",
+  "inkLink.bindCancel": "キャンセル"
 }

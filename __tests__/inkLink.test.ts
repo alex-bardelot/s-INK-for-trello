@@ -3,6 +3,8 @@ import {
   findInkLinks,
   HIT_SLOP_PX,
   inkLinkAt,
+  LINK_MERGE_GAP_PX,
+  mergeInkLinks,
   NoteElementType,
   PageElement,
 } from '../src/inkLink/hitTest';
@@ -32,6 +34,68 @@ import {
   saveLinkTrigger,
 } from '../src/inkLink/trigger';
 import {createMemoryStore} from '../src/storage/keyValueStore';
+
+describe('linked handwriting', () => {
+  const stroke = (
+    left: number,
+    top: number,
+    right: number,
+    bottom: number,
+    userData: string | null = 's-INK/c/abc123',
+  ): PageElement => ({
+    type: 0,
+    userData,
+    recognizeResult: {
+      up_left_point_x: left,
+      up_left_point_y: top,
+      down_right_point_x: right,
+      down_right_point_y: bottom,
+    },
+  });
+
+  it('finds linked strokes by their recognition box', () => {
+    const links = findInkLinks([stroke(10, 20, 30, 40), stroke(0, 0, 5, 5, null)]);
+    expect(links).toEqual([
+      {
+        target: {kind: 'card', shortLink: 'abc123'},
+        source: 'userData',
+        rect: {left: 10, top: 20, right: 30, bottom: 40},
+      },
+    ]);
+  });
+
+  it('ignores an empty recognition box', () => {
+    expect(
+      findInkLinks([{type: 0, userData: 's-INK/c/abc123', recognizeResult: {}}]),
+    ).toEqual([]);
+  });
+
+  it('merges the strokes of a word into one hit zone', () => {
+    const merged = mergeInkLinks(
+      findInkLinks([
+        stroke(100, 100, 130, 150),
+        stroke(300, 100, 330, 150),
+        stroke(150, 110, 180, 140),
+        stroke(200, 100, 280, 160),
+      ]),
+    );
+    expect(merged).toHaveLength(1);
+    expect(merged[0].rect).toEqual({left: 100, top: 100, right: 330, bottom: 160});
+    expect(inkLinkAt(merged, 190, 105)).not.toBeNull();
+  });
+
+  it('keeps copies placed apart and other targets separate', () => {
+    const far = 130 + LINK_MERGE_GAP_PX + 1;
+    const merged = mergeInkLinks(
+      findInkLinks([
+        stroke(100, 100, 130, 150),
+        stroke(far, 100, far + 30, 150),
+        stroke(140, 100, 160, 150, 's-INK/b/board1'),
+      ]),
+    );
+    expect(merged).toHaveLength(3);
+  });
+});
 
 describe('link trigger', () => {
   it('lets the chosen tools open links', () => {

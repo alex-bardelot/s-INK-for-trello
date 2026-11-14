@@ -30,6 +30,16 @@ export interface PageElement {
   } | null;
   /** Picture bounds are in EMR coordinates, not screen pixels. */
   picture?: {rect?: Rect | null} | null;
+  /**
+   * Recognition box of a stroke, in screen pixels: the host fills it for
+   * handwriting, which has no other bounds without reading its points.
+   */
+  recognizeResult?: {
+    up_left_point_x?: number;
+    up_left_point_y?: number;
+    down_right_point_x?: number;
+    down_right_point_y?: number;
+  } | null;
 }
 
 /** Where the link of an element was found. */
@@ -135,7 +145,94 @@ function boundsOf(
   if (picture && pictureToScreen) {
     return pictureToScreen(picture);
   }
-  return null;
+  return recognitionBounds(element.recognizeResult);
+}
+
+function recognitionBounds(
+  recognized: PageElement['recognizeResult'],
+): Rect | null {
+  if (!recognized) {
+    return null;
+  }
+  const {
+    up_left_point_x: left,
+    up_left_point_y: top,
+    down_right_point_x: right,
+    down_right_point_y: bottom,
+  } = recognized;
+  if (
+    typeof left !== 'number' ||
+    typeof top !== 'number' ||
+    typeof right !== 'number' ||
+    typeof bottom !== 'number' ||
+    right < left ||
+    bottom < top
+  ) {
+    return null;
+  }
+  return {left, top, right, bottom};
+}
+
+/**
+ * Elements of one link closer than this are merged into one hit zone: the
+ * strokes of a handwritten word, the icon and the text of an s-INK link.
+ */
+export const LINK_MERGE_GAP_PX = 48;
+
+function near(a: Rect, b: Rect, gap: number): boolean {
+  return (
+    a.left - gap <= b.right &&
+    b.left - gap <= a.right &&
+    a.top - gap <= b.bottom &&
+    b.top - gap <= a.bottom
+  );
+}
+
+function sameTarget(a: InkLinkTarget, b: InkLinkTarget): boolean {
+  return a.kind === b.kind && a.shortLink === b.shortLink;
+}
+
+/**
+ * Merges the bounds of the elements of a link that lie close together.
+ * Copies of a link placed apart stay separate hit zones.
+ */
+export function mergeInkLinks(
+  links: readonly InkLinkElement[],
+  gap: number = LINK_MERGE_GAP_PX,
+): InkLinkElement[] {
+  const merged: InkLinkElement[] = [];
+  for (const link of links) {
+    let current: InkLinkElement = {...link, rect: {...link.rect}};
+    let index = 0;
+    while (index < merged.length) {
+      const other = merged[index];
+      if (
+        sameTarget(other.target, current.target) &&
+        near(other.rect, current.rect, gap)
+      ) {
+        current = {
+          target: current.target,
+          source:
+            other.source === 'userData' || current.source === 'userData'
+              ? 'userData'
+              : 'text',
+          rect: {
+            left: Math.min(other.rect.left, current.rect.left),
+            top: Math.min(other.rect.top, current.rect.top),
+            right: Math.max(other.rect.right, current.rect.right),
+            bottom: Math.max(other.rect.bottom, current.rect.bottom),
+          },
+        };
+        merged.splice(index, 1);
+        // The grown zone may now reach links checked before.
+        index = 0;
+      } else {
+        index += 1;
+      }
+    }
+    merged.push(current);
+  }
+  return merged;
 }
 
 function textOf(element: PageElement): string | null {

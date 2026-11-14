@@ -109,6 +109,7 @@
   "error.browserUnavailable": "Aucun navigateur n’a pu être ouvert. Saisissez l’adresse sur un autre appareil.",
   "button.lasso.createCard": "Nouvelle carte Trello",
   "button.lasso.inspect": "s-INK : Inspecter",
+  "button.lasso.link": "Lier à Trello",
   "common.back": "Retour",
   "card.title": "Nouvelle carte Trello",
   "card.reading": "Lecture de la sélection…",
@@ -179,5 +180,9 @@
   "inkLink.openFailed": "Le lien s-INK n'a pas pu être ouvert.",
   "inkLink.diagnostics": "Diagnostic des liens s-INK",
   "inkLink.clearLog": "Effacer",
-  "inkLink.emptyLog": "Rien d'enregistré pour l'instant."
+  "inkLink.emptyLog": "Rien d'enregistré pour l'instant.",
+  "inkLink.bindSelection": "Lier la sélection",
+  "inkLink.bindSelectionHint": "Lie la sélection du lasso à cette page. Un appui dessus dans la note l'ouvre ici.",
+  "inkLink.bindPending": "Ouvrez la carte ou le tableau à lier à la sélection ({count} éléments), puis appuyez sur Lier la sélection.",
+  "inkLink.bindCancel": "Annuler"
 }

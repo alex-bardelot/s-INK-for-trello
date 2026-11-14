@@ -1,11 +1,15 @@
 import {PluginManager} from 'sn-plugin-lib';
 
 import {getSystemLocale, i18n} from '../i18n';
+import {
+  captureLassoSelection,
+  clearPendingBinding,
+} from '../inkLink/lassoBinding';
 import {inspectLassoSelection} from '../inkLink/lassoInspect';
 import {startInkLinkTaps} from '../inkLink/noteBridge';
 import {refreshButtons, registerButtons} from './buttons';
 import {ButtonId} from './constants';
-import {handleButtonPress} from './launchIntent';
+import {handleButtonPress, openBoardsIntent} from './launchIntent';
 
 const LOG_TAG = '[sINK]';
 
@@ -48,6 +52,23 @@ export function bootstrapPlugin(): void {
           if (event.id === ButtonId.LassoInspect) {
             inspectLassoSelection();
             return;
+          }
+          if (event.id === ButtonId.LassoLink) {
+            // Read the selection while the lasso is active, then let the
+            // user pick the card or board from the boards view.
+            openBoardsIntent();
+            captureLassoSelection().finally(() =>
+              PluginManager.showPluginView().catch(error =>
+                console.warn(
+                  `${LOG_TAG} Failed to show the plugin view`,
+                  error,
+                ),
+              ),
+            );
+            return;
+          }
+          if (event.id === ButtonId.Open) {
+            clearPendingBinding();
           }
           const intent = handleButtonPress(event.id);
           if (intent?.kind === 'lassoCreateCard') {

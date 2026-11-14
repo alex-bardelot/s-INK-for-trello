@@ -79,6 +79,13 @@ export function openInkLinkIntent(target: InkLinkTarget): LaunchIntent {
   return current;
 }
 
+/** Shows the boards view, for example to pick what to link a selection to. */
+export function openBoardsIntent(): LaunchIntent {
+  current = {kind: 'boards'};
+  listeners.forEach(listener => listener());
+  return current;
+}
+
 export function getLaunchIntent(): LaunchIntent {
   return current;
 }
