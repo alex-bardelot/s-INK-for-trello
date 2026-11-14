@@ -3,6 +3,18 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.19.1 — Roadmap tile drawn as designed
+
+- The SUPERNOTE wordmark of the roadmap tile no longer shows huge and cut
+  on the tablet: its width was a percentage, which the device ignores on
+  an image. It is now sized in pixels from the measured tile width, as
+  wide as possible between the two round logos while keeping one "S" of
+  clear space around it, and centered vertically in the band.
+- The tile is named "Supernote Roadmap" again and shows the board's last
+  change below, like the other tiles. Signed in, the roadmap is read with
+  the other public boards to get that date.
+- The unused `boards.roadmapTile` string is removed from the catalogs.
+
 ## 0.19.0 — Card detail page
 
 - Tapping a card on the board page (all cards, Focus or Review mode)

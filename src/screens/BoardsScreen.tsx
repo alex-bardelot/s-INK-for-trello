@@ -29,6 +29,7 @@ import {Locale, useTranslation} from '../i18n';
 import {toSessionError} from '../session/trelloSession';
 import {
   organizationLogoUrl,
+  SUPERNOTE_ROADMAP_NAME,
   SUPERNOTE_ROADMAP_SHORT_LINK,
   TrelloBoard,
   TrelloClient,
@@ -154,7 +155,11 @@ export function BoardsScreen({
       return;
     }
     let cancelled = false;
-    for (const {shortLink} of publicBoards) {
+    const shortLinks = publicBoards.map(ref => ref.shortLink);
+    if (showRoadmap) {
+      shortLinks.push(SUPERNOTE_ROADMAP_SHORT_LINK);
+    }
+    for (const shortLink of shortLinks) {
       client
         .getBoard(shortLink)
         .then(board => !cancelled && keepPublicBoard(shortLink, board))
@@ -165,7 +170,7 @@ export function BoardsScreen({
     return () => {
       cancelled = true;
     };
-  }, [client, keepPublicBoard, publicBoards, signedIn]);
+  }, [client, keepPublicBoard, publicBoards, showRoadmap, signedIn]);
 
   const openPublicBoard = useCallback(
     async (shortLink: string) => {
@@ -284,6 +289,7 @@ export function BoardsScreen({
                 return (
                   <RoadmapTile
                     key="roadmap"
+                    board={publicDetails.get(SUPERNOTE_ROADMAP_SHORT_LINK)}
                     status={opening.get(SUPERNOTE_ROADMAP_SHORT_LINK)}
                     onPress={() => openPublicBoard(SUPERNOTE_ROADMAP_SHORT_LINK)}
                   />
@@ -489,21 +495,31 @@ function openStatusLabel(
  * sides of the SUPERNOTE wordmark.
  */
 function RoadmapTile({
+  board,
   status,
   onPress,
 }: {
+  /** The roadmap board once read, for its last change. */
+  board: TrelloBoard | undefined;
   status: OpenStatus;
   onPress: () => void;
 }): React.JSX.Element {
-  const {t} = useTranslation();
+  const {t, locale} = useTranslation();
+  const [bandWidth, setBandWidth] = useState(0);
+  const wordmark = roadmapWordmarkFrame(bandWidth);
   return (
     <Tile
-      name={t('boards.roadmapTile')}
-      detail={openStatusLabel(status, t)}
+      name={SUPERNOTE_ROADMAP_NAME}
+      detail={
+        openStatusLabel(status, t) ??
+        lastActivityLabel(board?.dateLastActivity, t, locale)
+      }
       disabled={status === 'opening'}
       onPress={onPress}
       background={
-        <View style={[styles.band, styles.logoBand]}>
+        <View
+          style={[styles.band, styles.logoBand]}
+          onLayout={event => setBandWidth(event.nativeEvent.layout.width)}>
           <Image
             source={SUPERNOTE_ROUND_LOGO}
             style={[styles.roundLogo, styles.roundLogoLeft]}
@@ -516,18 +532,56 @@ function RoadmapTile({
             resizeMode="contain"
             accessibilityIgnoresInvertColors
           />
-          <View style={styles.wordmarkBox}>
+          {wordmark && (
             <Image
               source={SUPERNOTE_WORDMARK}
-              style={styles.wordmark}
-              resizeMode="contain"
+              style={[styles.wordmark, wordmark]}
+              resizeMode="stretch"
               accessibilityIgnoresInvertColors
             />
-          </View>
+          )}
         </View>
       }
     />
   );
+}
+
+/** Size of the SUPERNOTE wordmark image (748 × 101). */
+const WORDMARK_RATIO = 748 / 101;
+/** Width of its "S", the clear space Supernote's guideline asks around it. */
+const WORDMARK_CLEAR_SPACE = 57 / 748;
+/** Right edge of the left round logo, as drawn in the band. */
+const ROADMAP_LEFT_LOGO_EDGE = 122;
+/** Width of the round logo sliver in the bottom right corner. */
+const ROADMAP_CORNER_SLIVER = 32;
+/** The wordmark is never drawn wider than this. */
+const WORDMARK_MAX_WIDTH = 260;
+
+/**
+ * Position of the wordmark in a roadmap band `bandWidth` wide: as wide as
+ * possible between the two round logos, keeping one "S" of clear space on
+ * each side and above and below it. Computed in pixels: percentage widths
+ * on an image are not honored by the device. `null` before the band is laid
+ * out, or when it is too narrow.
+ */
+function roadmapWordmarkFrame(
+  bandWidth: number,
+): {left: number; top: number; width: number; height: number} | null {
+  const room = bandWidth - ROADMAP_LEFT_LOGO_EDGE - ROADMAP_CORNER_SLIVER;
+  const fitWidth = room / (1 + 2 * WORDMARK_CLEAR_SPACE);
+  const fitHeight =
+    (TILE_BAND_HEIGHT * WORDMARK_RATIO) /
+    (1 + 2 * WORDMARK_CLEAR_SPACE * WORDMARK_RATIO);
+  const width = Math.floor(Math.min(fitWidth, fitHeight, WORDMARK_MAX_WIDTH));
+  if (width < 60) {
+    return null;
+  }
+  const height = Math.round(width / WORDMARK_RATIO);
+  const clear = width * WORDMARK_CLEAR_SPACE;
+  // Centered in the room left between the logos.
+  const spare = (fitWidth - width) * (1 + 2 * WORDMARK_CLEAR_SPACE);
+  const left = Math.round(ROADMAP_LEFT_LOGO_EDGE + clear + spare / 2);
+  return {left, top: Math.round((TILE_BAND_HEIGHT - height) / 2), width, height};
 }
 
 function BoardTile({
@@ -838,15 +892,8 @@ const styles = StyleSheet.create({
     right: -(ROUND_LOGO_WIDTH - 32),
     top: -4,
   },
-  wordmarkBox: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-    paddingRight: '12%',
-  },
   wordmark: {
-    width: '56%',
-    aspectRatio: 748 / 101,
+    position: 'absolute',
   },
   withBadge: {
     paddingRight: spacing.md + BADGE_SIZE + spacing.sm,

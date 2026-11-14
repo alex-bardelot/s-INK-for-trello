@@ -48,7 +48,6 @@
   "boards.modifiedOn": "Modified on {date}",
   "boards.page": "Page {page} / {total}",
   "boards.sectionPublic": "Public",
-  "boards.roadmapTile": "Roadmap",
   "boards.roadmapOpening": "Opening…",
   "boards.roadmapFailedShort": "Could not be opened. Try again.",
   "settings.open": "Settings",
