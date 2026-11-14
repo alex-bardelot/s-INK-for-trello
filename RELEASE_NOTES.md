@@ -3,6 +3,20 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.19.2 — Stay-connected choice first on the connection page
+
+- The choice of keeping the token is now step 1 of the connection page,
+  before authorizing: with the relay, sINK connects as soon as Trello
+  answers, so it has to be made first. It is a two-option selector, "Stay
+  connected: Until restart | After restarts", instead of a checkbox at the
+  bottom of the paste step.
+- Each option explains what happens: in memory only (recommended, still
+  connected after closing and reopening sINK, connect again after a
+  restart), or written unencrypted in the plugin folder (who could read
+  it, how to change the choice in Settings, and that Disconnect deletes
+  and revokes it). Authorizing and pasting become steps 2 and 3.
+- Bumped the plugin to version 0.19.2 (`versionCode` 49).
+
 ## 0.19.1 — Roadmap tile drawn as designed
 
 - The SUPERNOTE wordmark of the roadmap tile no longer shows huge and cut

@@ -10,9 +10,9 @@ import {
 } from 'react-native';
 
 import {Button} from '../components/Button';
-import {Checkbox} from '../components/Checkbox';
 import {QrCodeView} from '../components/QrCodeView';
 import {ScreenFrame} from '../components/ScreenFrame';
+import {SegmentedControl} from '../components/SegmentedControl';
 import {TranslationKey, useTranslation} from '../i18n';
 import {isClipboardAvailable, readClipboardText} from '../platform/clipboard';
 import {watchClipboardForToken} from '../session/clipboardTokenWatch';
@@ -42,6 +42,9 @@ const ERROR_MESSAGES: Record<SessionErrorCode, TranslationKey> = {
 
 /** Side of the QR code of the authorization page, quiet zone included. */
 const QR_SIZE = 260;
+
+/** Where the token is kept once connected. */
+type Persistence = 'session' | 'device';
 
 /** Size of the step number discs. */
 const STEP_BADGE_SIZE = 40;
@@ -200,7 +203,27 @@ export function ConnectScreen({
 
         {canConnect && (
           <>
-            <StepCard number={1} title={t('connect.step1Title')}>
+            {/* First, since the relay connects as soon as Trello answers. */}
+            <StepCard number={1} title={t('connect.persistTitle')}>
+              <SegmentedControl<Persistence>
+                label={t('connect.persistLabel')}
+                segments={[
+                  {value: 'session', label: t('connect.persistSession')},
+                  {value: 'device', label: t('connect.persistDevice')},
+                ]}
+                value={remember ? 'device' : 'session'}
+                onChange={value => setRemember(value === 'device')}
+              />
+              <Text
+                accessibilityLiveRegion="polite"
+                style={[styles.paragraph, remember && styles.warning]}>
+                {t(
+                  remember ? 'connect.rememberWarning' : 'connect.sessionOnly',
+                )}
+              </Text>
+            </StepCard>
+
+            <StepCard number={2} title={t('connect.step1Title')}>
               <View style={styles.allowRow}>
                 <View style={styles.allowTexts}>
                   <Text style={styles.paragraph}>
@@ -263,7 +286,7 @@ export function ConnectScreen({
             </StepCard>
 
             <StepCard
-              number={2}
+              number={3}
               title={t(
                 relaySession
                   ? 'connect.step2TitleFallback'
@@ -319,23 +342,6 @@ export function ConnectScreen({
                   onPress={submit}
                 />
               </View>
-              <View style={styles.remember}>
-                <Checkbox
-                  checked={remember}
-                  disabled={busy}
-                  label={t('connect.remember')}
-                  onChange={setRemember}
-                />
-                <Text
-                  accessibilityRole={remember ? 'alert' : undefined}
-                  style={[styles.note, remember && styles.warning]}>
-                  {t(
-                    remember
-                      ? 'connect.rememberWarning'
-                      : 'connect.sessionOnly',
-                  )}
-                </Text>
-              </View>
             </StepCard>
           </>
         )}
@@ -377,10 +383,6 @@ const styles = StyleSheet.create({
   paragraph: {
     color: colors.foreground,
     fontSize: typography.body,
-  },
-  note: {
-    color: colors.foreground,
-    fontSize: typography.small,
   },
   card: {
     gap: spacing.md,
@@ -434,10 +436,6 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     fontFamily: 'monospace',
     fontSize: typography.small,
-  },
-  remember: {
-    gap: spacing.sm,
-    marginTop: spacing.sm,
   },
   warning: {
     borderColor: colors.foreground,

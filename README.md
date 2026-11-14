@@ -121,8 +121,8 @@ How the connection works and why:
   (`response_type=token` without `return_url`) remains available.
 - By default the token is only kept in memory: it survives closing the plugin
   view, but must be pasted again after the tablet restarts.
-- Saving it on the tablet is opt-in: tick **Save the token on this tablet**
-  when connecting, or press **Save on this tablet** in **Settings**. The
+- Saving it on the tablet is opt-in: choose **Stay connected: After
+  restarts** in step 1 of the connection page, or press **Save on this tablet** in **Settings**. The
   plugin warns first that the token is then stored unencrypted, readable by
   anyone (or any plugin) with access to the tablet's files. **Forget on this
   tablet** removes it again while staying connected.
