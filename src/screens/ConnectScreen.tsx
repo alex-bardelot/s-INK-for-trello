@@ -17,7 +17,17 @@ import {TranslationKey, useTranslation} from '../i18n';
 import {isClipboardAvailable, readClipboardText} from '../platform/clipboard';
 import {watchClipboardForToken} from '../session/clipboardTokenWatch';
 import {SessionErrorCode} from '../session/trelloSession';
-import {buildAuthorizeUrl, normalizeToken, TRELLO_API_KEY} from '../trello';
+import {
+  createRelaySession,
+  RelaySession,
+  watchRelaySession,
+} from '../relay/relaySession';
+import {
+  buildAuthorizeUrl,
+  normalizeToken,
+  TRELLO_API_KEY,
+  TRELLO_RELAY_URL,
+} from '../trello';
 import {borders, colors, spacing, typography} from '../theme';
 
 const ERROR_MESSAGES: Record<SessionErrorCode, TranslationKey> = {
@@ -55,10 +65,18 @@ const TRANSIENT_ERRORS: ReadonlySet<SessionErrorCode> = new Set([
   'unknown',
 ]);
 
+/** A new relay session, or `null` when no relay is configured. */
+function newRelaySession(): RelaySession | null {
+  return TRELLO_RELAY_URL ? createRelaySession(TRELLO_RELAY_URL) : null;
+}
+
 /**
- * Shown when no Trello account is linked: guides the user through the manual
- * token flow in two framed steps (allow sINK on Trello, then paste the token
- * Trello displays).
+ * Shown when no Trello account is linked, in two framed steps:
+ *
+ * 1. Allow sINK on Trello. With the relay, the QR code and the browser
+ *    button open the relay's page, and the token comes back by itself.
+ * 2. Paste the token, as a fallback (or the only way without a relay); the
+ *    clipboard is watched too.
  */
 export function ConnectScreen({
   error,
@@ -102,16 +120,38 @@ export function ConnectScreen({
     });
   }, [canConnect, clipboardWatched]);
 
+  // Copy-free flow: wait for the token the browser deposits on the relay.
+  // A session is single-use, so a new one (and a new QR code) replaces it
+  // once it delivered a token or expired.
+  const [relaySession, setRelaySession] = useState(newRelaySession);
+  useEffect(() => {
+    if (!canConnect || !relaySession) {
+      return undefined;
+    }
+    return watchRelaySession({
+      session: relaySession,
+      isPaused: () => latest.current.busy,
+      onToken: relayToken => {
+        setToken(relayToken);
+        setPasteError(null);
+        setRelaySession(newRelaySession());
+        latest.current.onConnect(relayToken, latest.current.remember);
+      },
+      onExpired: () => setRelaySession(newRelaySession()),
+    });
+  }, [canConnect, relaySession]);
+
+  const pageUrl = relaySession?.pageUrl ?? authorizeUrl;
   const typed = token.replace(/\s+/g, '');
   const validToken = normalizeToken(token) !== null;
 
-  const openBrowser = useCallback(() => {
+  const openUrl = useCallback((url: string) => {
     setBrowserError(false);
-    Linking.openURL(authorizeUrl).catch(openError => {
+    Linking.openURL(url).catch(openError => {
       console.warn('[sINK] Failed to open the browser', openError);
       setBrowserError(true);
     });
-  }, [authorizeUrl]);
+  }, []);
 
   const submit = useCallback(() => {
     if (validToken) {
@@ -163,23 +203,29 @@ export function ConnectScreen({
             <StepCard number={1} title={t('connect.step1Title')}>
               <View style={styles.allowRow}>
                 <View style={styles.allowTexts}>
-                  <Text style={styles.paragraph}>{t('connect.step1')}</Text>
+                  <Text style={styles.paragraph}>
+                    {t(relaySession ? 'connect.step1Relay' : 'connect.step1')}
+                  </Text>
                   <Button
                     primary
                     label={t('connect.openBrowser')}
-                    onPress={openBrowser}
+                    onPress={() => openUrl(pageUrl)}
                   />
                   {browserError && (
                     <Text style={styles.paragraph}>
                       {t('error.browserUnavailable')}
                     </Text>
                   )}
-                  <Text style={styles.paragraph}>{t('connect.scan')}</Text>
+                  <Text
+                    accessibilityLiveRegion="polite"
+                    style={[styles.paragraph, relaySession && styles.valid]}>
+                    {t(relaySession ? 'connect.waiting' : 'connect.scan')}
+                  </Text>
                 </View>
                 <QrCodeView
                   accessibilityLabel={t('connect.qrLabel')}
                   size={QR_SIZE}
-                  value={authorizeUrl}
+                  value={pageUrl}
                 />
               </View>
               <Pressable
@@ -195,13 +241,31 @@ export function ConnectScreen({
               </Pressable>
               {showAddress && (
                 <Text selectable style={styles.url}>
-                  {authorizeUrl}
+                  {pageUrl}
                 </Text>
+              )}
+              {showAddress && relaySession && (
+                <Pressable
+                  accessibilityRole="button"
+                  hitSlop={spacing.sm}
+                  onPress={() => openUrl(authorizeUrl)}>
+                  <Text style={styles.link}>
+                    {t('connect.openTrelloDirectly')}
+                  </Text>
+                </Pressable>
               )}
             </StepCard>
 
-            <StepCard number={2} title={t('connect.step2Title')}>
-              <Text style={styles.paragraph}>{t('connect.step2')}</Text>
+            <StepCard
+              number={2}
+              title={t(
+                relaySession
+                  ? 'connect.step2TitleFallback'
+                  : 'connect.step2Title',
+              )}>
+              <Text style={styles.paragraph}>
+                {t(relaySession ? 'connect.step2Fallback' : 'connect.step2')}
+              </Text>
               {clipboardWatched && (
                 <Text style={[styles.paragraph, styles.valid]}>
                   {t('connect.clipboardWatch')}

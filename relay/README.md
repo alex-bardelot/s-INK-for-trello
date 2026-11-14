@@ -10,9 +10,9 @@ The relay never sees the token in clear: it is encrypted in the browser with
 a key that only the tablet knows, and the relay only stores that ciphertext,
 once, for at most ten minutes.
 
-> **Status:** the relay is ready to deploy; the plugin does not use it yet
-> (that is the next step: generate the session, show its QR code, poll and
-> decrypt). Until then the plugin keeps the manual token flow.
+The plugin side lives in `src/relay/` (session, polling, decryption) and
+`src/screens/ConnectScreen.tsx`; the relay address is `TRELLO_RELAY_URL` in
+`src/trello/config.ts` (leave it empty to use the manual flow only).
 
 ## Why a relay is needed
 
@@ -91,9 +91,11 @@ All binary values are written in base64url without padding.
 - The tag lets the tablet reject anything it did not encrypt itself: a
   message forged by the relay, or one moved from another session (the id is
   part of the tagged data). The tablet must check it before using the token.
-- The page uses WebCrypto (`crypto.subtle`); the plugin will use a small
-  SHA-256 written in plain JavaScript, tested against the same vectors
-  (`relay/test/relay.test.ts` holds a reference decryption).
+- The page uses WebCrypto (`crypto.subtle`); the plugin uses a small
+  SHA-256 and HMAC written in plain JavaScript (`src/relay/sha256.ts`),
+  tested against Node's, and its decryption is tested against the page's
+  own script (`__tests__/relaySession.test.ts`). `relay/test/relay.test.ts`
+  holds a third, independent reference decryption.
 
 ## API
 
@@ -138,11 +140,14 @@ and the tablet. What they cannot see: the key, hence the token.
   who learns one can at most collect the ciphertext (useless without the
   key) or deposit a message first (rejected by the tablet's tag check, and
   the user simply scans a new code).
-- **Randomness on the tablet.** The id and key must come from a
-  cryptographic random generator (`crypto.getRandomValues`). Whether the
-  Supernote JavaScript engine provides one is still to be checked on the
-  device; the plugin will refuse to use the relay rather than fall back to
-  `Math.random`.
+- **Randomness on the tablet.** The id and key come from
+  `crypto.getRandomValues` when the JavaScript engine provides it. Otherwise
+  (`src/platform/random.ts`) they are SHA-256 digests of an entropy pool:
+  many `Math.random()` outputs, which the engine seeds from the system, plus
+  the jitter of the clock over tight loops. Since only digests leave the
+  pool, the session id the relay sees reveals nothing about the key or the
+  generator's state. This is weaker than a system generator, which is why
+  sessions are short-lived and single-use.
 - **Limits.** Messages are capped at 1 KB and checked for shape before they
   are stored. For extra protection against floods, a
   [rate limiting rule](https://developers.cloudflare.com/waf/rate-limiting-rules/)

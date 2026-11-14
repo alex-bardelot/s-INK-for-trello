@@ -1,5 +1,5 @@
 export {buildAuthorizeUrl, normalizeToken} from './authorize';
-export {hasApiKey, TRELLO_API_KEY} from './config';
+export {hasApiKey, TRELLO_API_KEY, TRELLO_RELAY_URL} from './config';
 export {isTrelloApiError, TrelloApiError} from './errors';
 export {
   isSupernoteRoadmap,

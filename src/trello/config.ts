@@ -21,6 +21,13 @@ export const TRELLO_APP_NAME = 'sINK for Trello';
  */
 export const TRELLO_SCOPES = ['read', 'write'] as const;
 
+/**
+ * sINK relay (see relay/README.md) that brings the token back from the
+ * browser without copy and paste. Its origin must be listed in the
+ * Power-Up's "Allowed origins". Leave empty to use the manual flow only.
+ */
+export const TRELLO_RELAY_URL = 'https://sink-relay.sink-relay.workers.dev';
+
 /** Base URL of the Trello REST API (version 1). */
 export const TRELLO_API_BASE_URL = 'https://api.trello.com/1';
 

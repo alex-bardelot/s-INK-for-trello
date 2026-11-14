@@ -3,6 +3,25 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.18.0 — Copy-free sign-in through the relay
+
+- The QR code and **Open in browser** now open the sINK relay's page for a
+  fresh session. Once the user has pressed Allow on Trello (on a phone or
+  on the tablet), the token comes back by itself, end-to-end encrypted:
+  the plugin polls the relay every 2 seconds and connects. Step 1 says
+  "Waiting for Trello's authorization…".
+- Sessions are single-use and last 10 minutes; a new one (with a new QR
+  code) replaces them automatically.
+- Step 2 becomes "Or paste the token": **Show the address** also offers to
+  open Trello's page directly, for the manual flow and the clipboard watch.
+- New `src/relay/` (SHA-256, HMAC-SHA256, base64url, session and
+  decryption, all in plain JavaScript) and `src/platform/random.ts`
+  (`crypto.getRandomValues` when available, otherwise a hashed entropy
+  pool). The relay address is `TRELLO_RELAY_URL` in
+  `src/trello/config.ts`; it is deployed at
+  `https://sink-relay.sink-relay.workers.dev`.
+- Bumped the plugin to version 0.18.0 (`versionCode` 45).
+
 ## Relay 1.0.0 — Cloudflare Worker for copy-free sign-in
 
 - New `relay/` folder: a Cloudflare Worker that hands the Trello token
