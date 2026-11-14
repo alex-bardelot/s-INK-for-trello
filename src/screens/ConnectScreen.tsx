@@ -216,17 +216,23 @@ export function ConnectScreen({
                       {t('error.browserUnavailable')}
                     </Text>
                   )}
-                  <Text
-                    accessibilityLiveRegion="polite"
-                    style={[styles.paragraph, relaySession && styles.valid]}>
-                    {t(relaySession ? 'connect.waiting' : 'connect.scan')}
-                  </Text>
+                  {relaySession && (
+                    <Text
+                      accessibilityLiveRegion="polite"
+                      style={[styles.paragraph, styles.valid]}>
+                      {t('connect.waiting')}
+                    </Text>
+                  )}
                 </View>
-                <QrCodeView
-                  accessibilityLabel={t('connect.qrLabel')}
-                  size={QR_SIZE}
-                  value={pageUrl}
-                />
+                {/* Without a relay, a phone would show the token, which would
+                    then have to be typed on the tablet: no QR code then. */}
+                {relaySession && (
+                  <QrCodeView
+                    accessibilityLabel={t('connect.qrLabel')}
+                    size={QR_SIZE}
+                    value={pageUrl}
+                  />
+                )}
               </View>
               <Pressable
                 accessibilityRole="button"

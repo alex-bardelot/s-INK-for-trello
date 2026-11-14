@@ -3,6 +3,14 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.18.1 — No QR code without a relay
+
+- When no relay is configured (`TRELLO_RELAY_URL` empty), the connection
+  page no longer shows a QR code: it would open Trello on a phone, whose
+  token would then have to be typed on the tablet. **Open in browser** and
+  the clipboard watch remain.
+- Bumped the plugin to version 0.18.1 (`versionCode` 46).
+
 ## 0.18.0 — Copy-free sign-in through the relay
 
 - The QR code and **Open in browser** now open the sINK relay's page for a

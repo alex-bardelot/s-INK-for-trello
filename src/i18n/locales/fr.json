@@ -10,7 +10,6 @@
   "connect.step1Title": "Autoriser sINK sur Trello",
   "connect.step1": "Ouvrez la page d’autorisation de Trello, connectez-vous et appuyez sur Autoriser.",
   "connect.openBrowser": "Ouvrir dans le navigateur",
-  "connect.scan": "Ou scannez ce code pour ouvrir la page sur votre téléphone, puis saisissez ci-dessous le jeton affiché.",
   "connect.qrLabel": "QR code de la page d’autorisation de Trello",
   "connect.showAddress": "Afficher l’adresse",
   "connect.hideAddress": "Masquer l’adresse",

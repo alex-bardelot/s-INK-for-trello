@@ -10,7 +10,6 @@
   "connect.step1Title": "在 Trello 上允许 sINK",
   "connect.step1": "打开 Trello 授权页面，登录并点击“允许”。",
   "connect.openBrowser": "在浏览器中打开",
-  "connect.scan": "或扫描此二维码在手机上打开该页面，然后在下方输入显示的令牌。",
   "connect.qrLabel": "Trello 授权页面的二维码",
   "connect.showAddress": "显示地址",
   "connect.hideAddress": "隐藏地址",
