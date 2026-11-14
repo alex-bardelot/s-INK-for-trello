@@ -42,7 +42,7 @@ const ERROR_MESSAGES: Record<SessionErrorCode, TranslationKey> = {
 };
 
 /** Side of the QR code of the authorization page, quiet zone included. */
-const QR_SIZE = 260;
+const QR_SIZE = 220;
 
 /** Where the token is kept once connected. */
 type Persistence = 'session' | 'device';
@@ -192,7 +192,7 @@ export function ConnectScreen({
       <ScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled">
-        <Text style={styles.paragraph}>{t('connect.intro')}</Text>
+        <Text style={styles.intro}>{t('connect.intro')}</Text>
 
         {error && (
           <Text accessibilityRole="alert" style={styles.error}>
@@ -225,65 +225,39 @@ export function ConnectScreen({
               </Text>
             </StepCard>
 
-            <StepCard number={2} title={t('connect.step1Title')}>
-              <View style={styles.allowRow}>
-                <View style={styles.allowTexts}>
-                  <Text style={styles.paragraph}>
-                    {t(relaySession ? 'connect.step1Relay' : 'connect.step1')}
-                  </Text>
-                  <Button
-                    primary
-                    label={t('connect.openBrowser')}
-                    onPress={() => openUrl(pageUrl)}
-                  />
-                  {browserError && (
-                    <Text style={styles.paragraph}>
-                      {t('error.browserUnavailable')}
-                    </Text>
-                  )}
-                  {relaySession && (
-                    <Text
-                      accessibilityLiveRegion="polite"
-                      style={[styles.paragraph, styles.valid]}>
-                      {t('connect.waiting')}
-                    </Text>
-                  )}
-                </View>
-                {/* Without a relay, a phone would show the token, which would
-                    then have to be typed on the tablet: no QR code then. */}
-                {relaySession && (
+            <StepCard
+              number={2}
+              title={t('connect.step1Title')}
+              // Without a relay, a phone would show the token, which would
+              // then have to be typed on the tablet: no QR code then.
+              aside={
+                relaySession && (
                   <QrCodeView
                     accessibilityLabel={t('connect.qrLabel')}
                     size={QR_SIZE}
                     value={pageUrl}
                   />
-                )}
-              </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityState={{expanded: showAddress}}
-                hitSlop={spacing.sm}
-                onPress={() => setShowAddress(shown => !shown)}>
-                <Text style={styles.link}>
-                  {t(
-                    showAddress ? 'connect.hideAddress' : 'connect.showAddress',
-                  )}
-                </Text>
-              </Pressable>
-              {showAddress && (
-                <Text selectable style={styles.url}>
-                  {pageUrl}
+                )
+              }>
+              <Text style={styles.paragraph}>
+                {t(relaySession ? 'connect.step1Relay' : 'connect.step1')}
+              </Text>
+              <Button
+                primary
+                label={t('connect.openBrowser')}
+                onPress={() => openUrl(pageUrl)}
+              />
+              {browserError && (
+                <Text style={styles.paragraph}>
+                  {t('error.browserUnavailable')}
                 </Text>
               )}
-              {showAddress && relaySession && (
-                <Pressable
-                  accessibilityRole="button"
-                  hitSlop={spacing.sm}
-                  onPress={() => openUrl(authorizeUrl)}>
-                  <Text style={styles.link}>
-                    {t('connect.openTrelloDirectly')}
-                  </Text>
-                </Pressable>
+              {relaySession && (
+                <Text
+                  accessibilityLiveRegion="polite"
+                  style={[styles.paragraph, styles.valid]}>
+                  {t('connect.waiting')}
+                </Text>
               )}
             </StepCard>
 
@@ -297,9 +271,34 @@ export function ConnectScreen({
               <Text style={styles.paragraph}>
                 {t(relaySession ? 'connect.step2Fallback' : 'connect.step2')}
               </Text>
-              {clipboardWatched && (
-                <Text style={[styles.paragraph, styles.valid]}>
-                  {t('connect.clipboardWatch')}
+              <View style={styles.links}>
+                {relaySession && (
+                  <Pressable
+                    accessibilityRole="button"
+                    hitSlop={spacing.sm}
+                    onPress={() => openUrl(authorizeUrl)}>
+                    <Text style={styles.link}>
+                      {t('connect.openTrelloDirectly')}
+                    </Text>
+                  </Pressable>
+                )}
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityState={{expanded: showAddress}}
+                  hitSlop={spacing.sm}
+                  onPress={() => setShowAddress(shown => !shown)}>
+                  <Text style={styles.link}>
+                    {t(
+                      showAddress
+                        ? 'connect.hideAddress'
+                        : 'connect.showAddress',
+                    )}
+                  </Text>
+                </Pressable>
+              </View>
+              {showAddress && (
+                <Text selectable style={styles.url}>
+                  {authorizeUrl}
                 </Text>
               )}
               <View style={styles.tokenRow}>
@@ -335,15 +334,6 @@ export function ConnectScreen({
                   onPress={() => setRevealToken(shown => !shown)}
                 />
               </View>
-              {typed.length > 0 && (
-                <Text
-                  accessibilityLiveRegion="polite"
-                  style={[styles.paragraph, validToken && styles.valid]}>
-                  {validToken
-                    ? t('connect.tokenValid', {count: typed.length})
-                    : t('connect.tokenInvalid', {count: typed.length})}
-                </Text>
-              )}
               {pasteError && (
                 <Text style={styles.paragraph}>{t(pasteError)}</Text>
               )}
@@ -359,6 +349,19 @@ export function ConnectScreen({
                   label={busy ? t('connect.connecting') : t('connect.submit')}
                   onPress={submit}
                 />
+                {typed.length > 0 && (
+                  <Text
+                    accessibilityLiveRegion="polite"
+                    style={[
+                      styles.paragraph,
+                      styles.feedback,
+                      validToken && styles.valid,
+                    ]}>
+                    {validToken
+                      ? t('connect.tokenValid', {count: typed.length})
+                      : t('connect.tokenInvalid', {count: typed.length})}
+                  </Text>
+                )}
               </View>
             </StepCard>
           </>
@@ -368,46 +371,76 @@ export function ConnectScreen({
   );
 }
 
-/** A framed, numbered step of the connection flow. */
+/**
+ * A framed, numbered step of the connection flow. An `aside` (the QR code)
+ * sits at the right, beside the title and the content, so it adds no
+ * height of its own.
+ */
 function StepCard({
   number,
   title,
+  aside,
   children,
 }: {
   number: number;
   title: string;
+  aside?: React.ReactNode;
   children: React.ReactNode;
 }): React.JSX.Element {
   return (
     <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{number}</Text>
+      <View style={styles.cardMain}>
+        <View style={styles.cardHeader}>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>{number}</Text>
+          </View>
+          <Text accessibilityRole="header" style={styles.cardTitle}>
+            {title}
+          </Text>
         </View>
-        <Text accessibilityRole="header" style={styles.cardTitle}>
-          {title}
-        </Text>
+        {children}
       </View>
-      {children}
+      {aside}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   content: {
-    gap: spacing.lg,
-    paddingBottom: spacing.xl,
+    gap: spacing.md,
+    paddingBottom: spacing.md,
   },
   paragraph: {
     color: colors.foreground,
     fontSize: typography.body,
   },
+  intro: {
+    color: colors.foreground,
+    fontSize: typography.small,
+  },
   card: {
-    gap: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.lg,
     borderColor: colors.foreground,
     borderWidth: borders.width,
     borderRadius: borders.radius * 2,
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  cardMain: {
+    flex: 1,
+    gap: spacing.sm,
+  },
+  links: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: spacing.lg,
+    rowGap: spacing.sm,
+  },
+  feedback: {
+    flex: 1,
+    alignSelf: 'center',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -433,18 +466,6 @@ const styles = StyleSheet.create({
     fontSize: typography.label,
     fontWeight: '700',
   },
-  allowRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: spacing.lg,
-  },
-  allowTexts: {
-    flexBasis: 320,
-    flexGrow: 1,
-    flexShrink: 1,
-    gap: spacing.md,
-  },
   link: {
     color: colors.foreground,
     fontSize: typography.small,
@@ -458,7 +479,7 @@ const styles = StyleSheet.create({
   warning: {
     borderColor: colors.foreground,
     borderWidth: borders.width,
-    padding: spacing.md,
+    padding: spacing.sm,
   },
   valid: {
     fontWeight: '700',
@@ -469,7 +490,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     borderColor: colors.foreground,
     borderWidth: borders.width,
-    padding: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
   input: {
     color: colors.foreground,

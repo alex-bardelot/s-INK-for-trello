@@ -3,6 +3,22 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.20.2 — Connection page fits the Manta screen
+
+- Step 2 "Allow sINK on Trello": the QR code now sits at the right of the
+  whole card, beside the title, so the text starts right under the title
+  and the empty space below the QR code is gone. It is a little smaller
+  (220 instead of 260).
+- **Show the address** moves to step 3, next to **Open Trello's page
+  directly**, and shows Trello's authorization address: both serve the
+  manual flow described there.
+- The separate "As soon as you copy the token…" sentence is folded into
+  the step 3 text, and the token check ("Token recognized…") sits on the
+  row of the Paste and Connect buttons.
+- Tighter spacing (card padding, gaps, error box) and a smaller intro line,
+  so the page fits the Manta screen without scrolling.
+- Bumped the plugin to version 0.20.2 (`versionCode` 53).
+
 ## 0.20.1 — Clipboard watch ignores the token already copied
 
 - Opening the connection page could fail at once with "Trello rejected
