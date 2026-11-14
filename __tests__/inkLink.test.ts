@@ -16,6 +16,35 @@ import {
   Touch,
   TouchSample,
 } from '../src/inkLink/tapDetector';
+import {
+  acceptsTool,
+  DEFAULT_LINK_TRIGGER,
+  LINK_TRIGGER_KEY,
+  loadLinkTrigger,
+  saveLinkTrigger,
+} from '../src/inkLink/trigger';
+import {createMemoryStore} from '../src/storage/keyValueStore';
+
+describe('link trigger', () => {
+  it('lets the chosen tools open links', () => {
+    expect(acceptsTool('finger', ToolType.Finger)).toBe(true);
+    expect(acceptsTool('finger', 0)).toBe(true);
+    expect(acceptsTool('finger', ToolType.Pen)).toBe(false);
+    expect(acceptsTool('pen', ToolType.Pen)).toBe(true);
+    expect(acceptsTool('pen', ToolType.Finger)).toBe(false);
+    expect(acceptsTool('both', ToolType.Pen)).toBe(true);
+    expect(acceptsTool('both', ToolType.Finger)).toBe(true);
+  });
+
+  it('saves and reads the setting, finger by default', async () => {
+    const store = createMemoryStore();
+    expect(await loadLinkTrigger(store)).toBe(DEFAULT_LINK_TRIGGER);
+    await saveLinkTrigger(store, 'both');
+    expect(await loadLinkTrigger(store)).toBe('both');
+    await store.setItem(LINK_TRIGGER_KEY, 'elbow');
+    expect(await loadLinkTrigger(store)).toBe(DEFAULT_LINK_TRIGGER);
+  });
+});
 
 describe('s-INK links', () => {
   it('formats card and board links after Trello URLs', () => {
@@ -154,6 +183,19 @@ describe('TapDetector', () => {
       distancePx: 30,
       tap: false,
     });
+  });
+
+  it('detects pen taps when the pen is accepted', () => {
+    const detector = new TapDetector(tool => acceptsTool('pen', tool));
+    const pen = {toolType: ToolType.Pen};
+    detector.feed(sample(MotionAction.Down, 50, 60, 0, pen));
+    expect(detector.feed(sample(MotionAction.Up, 52, 61, 90, pen))).toEqual({
+      x: 50,
+      y: 60,
+    });
+    detector.feed(sample(MotionAction.Down, 50, 60, 200));
+    expect(detector.feed(sample(MotionAction.Up, 50, 60, 250))).toBeNull();
+    expect(detector.lastRelease).toBeNull();
   });
 
   it('accepts an unknown tool', () => {

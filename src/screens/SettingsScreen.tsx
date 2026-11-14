@@ -21,6 +21,13 @@ import {ScreenFrame} from '../components/ScreenFrame';
 import {SegmentedControl} from '../components/SegmentedControl';
 import {SmallButton} from '../components/SmallButton';
 import {clearInkLinkLog, useInkLinkLog} from '../inkLink/diagnostics';
+import {
+  getLinkTrigger,
+  LinkTrigger,
+  loadLinkTrigger,
+  saveLinkTrigger,
+  setLinkTrigger,
+} from '../inkLink/trigger';
 import {Switch} from '../components/Switch';
 import {BoardsPreferences} from '../boards/preferences';
 import {useTranslation} from '../i18n';
@@ -130,6 +137,8 @@ export function SettingsScreen({
 
               <BoardViewSettings store={store} />
 
+              <NoteLinkSettings store={store} />
+
               <Section title={t('settings.account')}>
                 {member && tokenStorage ? (
                   <AccountCard
@@ -201,6 +210,52 @@ function InkLinkDiagnostics(): React.JSX.Element {
         {lines.length ? lines.join('\n') : t('inkLink.emptyLog')}
       </Text>
     </View>
+  );
+}
+
+/** Which tool opens an s-INK link tapped in a note. */
+function NoteLinkSettings({store}: {store: KeyValueStore}): React.JSX.Element {
+  const {t} = useTranslation();
+  const [trigger, setTrigger] = useState<LinkTrigger>(getLinkTrigger);
+
+  useEffect(() => {
+    let active = true;
+    loadLinkTrigger(store).then(loaded => {
+      if (active) {
+        setTrigger(loaded);
+        setLinkTrigger(loaded);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [store]);
+
+  const change = useCallback(
+    (next: LinkTrigger) => {
+      setTrigger(next);
+      setLinkTrigger(next);
+      saveLinkTrigger(store, next);
+    },
+    [store],
+  );
+
+  const triggers: {value: LinkTrigger; label: string}[] = [
+    {value: 'finger', label: t('settings.linkTriggerFinger')},
+    {value: 'pen', label: t('settings.linkTriggerPen')},
+    {value: 'both', label: t('settings.linkTriggerBoth')},
+  ];
+
+  return (
+    <Section title={t('settings.noteLinks')}>
+      <SegmentedControl
+        label={t('settings.linkTrigger')}
+        help={t('settings.linkTriggerHelp')}
+        segments={triggers}
+        value={trigger}
+        onChange={change}
+      />
+    </Section>
   );
 }
 

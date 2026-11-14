@@ -3,6 +3,19 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.24.0 — Open s-INK links with the finger, the pen or both
+
+- New **Settings > General > Links in notes** setting: s-INK links open
+  with a finger tap (default), a pen tap, or both. A pen tap is detected
+  like a finger tap (short and still); the dot it draws stays in the note,
+  as the help text says. The choice is saved with the other settings; the
+  tap listener reads it at startup when note read access is already
+  granted (never prompting while writing), and again whenever the view
+  opens. New strings in all locales.
+- Diagnostics: a release made with a tool that does not open links is
+  logged as ignored, instead of repeating the figures of the previous
+  release.
+
 ## 0.23.1 — s-INK link taps: robust touch reading, detailed log
 
 - On the device, touch events reached the plugin but no tap was ever

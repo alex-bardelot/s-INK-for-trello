@@ -7,6 +7,7 @@ import {
   saveBoardsPreferences,
 } from './boards/preferences';
 import {useTranslation} from './i18n';
+import {loadLinkTrigger, setLinkTrigger} from './inkLink/trigger';
 import {useLaunchIntent} from './plugin/launchIntent';
 import {ensureFileReadPermission} from './plugin/permissions';
 import {BoardScreen} from './screens/BoardScreen';
@@ -56,6 +57,8 @@ export default function App(): React.JSX.Element {
         setBoardsPreferences(preferences);
       }
     });
+    // The tap listener starts before the view and cannot always read it.
+    loadLinkTrigger(settingsStore).then(setLinkTrigger);
     return () => {
       cancelled = true;
     };

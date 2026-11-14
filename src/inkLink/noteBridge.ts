@@ -9,7 +9,14 @@ import {openInkLinkIntent} from '../plugin/launchIntent';
 import {Permission} from '../plugin/permissions';
 import {logInkLink} from './diagnostics';
 import {findInkLinks, inkLinkAt, NoteElementType, PageElement} from './hitTest';
+import {getDeviceStore} from '../storage/stores';
 import {formatInkLink, InkLinkTarget} from './inkLink';
+import {
+  acceptsTool,
+  getLinkTrigger,
+  loadLinkTrigger,
+  setLinkTrigger,
+} from './trigger';
 import {
   MotionAction,
   normalizeTouch,
@@ -190,11 +197,31 @@ async function handleTap(x: number, y: number): Promise<void> {
 }
 
 /**
- * Listens to the touches on the note and opens the plugin when a finger
- * taps an s-INK link. Must be called once, after `PluginManager.init()`.
+ * Reads the saved link trigger at startup, only if note read access is
+ * already granted: a permission prompt must not appear while writing. The
+ * plugin view reads it again when it opens.
+ */
+async function restoreLinkTrigger(): Promise<void> {
+  try {
+    const permission = await PluginManager.hasPermission(Permission.FileRead);
+    if (permission === 1 || permission === 2) {
+      setLinkTrigger(await loadLinkTrigger(getDeviceStore()));
+    }
+  } catch (error) {
+    console.warn('[sINK] Failed to restore the link trigger', error);
+  }
+}
+
+/**
+ * Listens to the touches on the note and opens the plugin when an s-INK
+ * link is tapped with the tool chosen in Settings (finger, pen or both).
+ * Must be called once, after `PluginManager.init()`.
  */
 export function startInkLinkTaps(): void {
-  const detector = new TapDetector();
+  restoreLinkTrigger();
+  const detector = new TapDetector(toolType =>
+    acceptsTool(getLinkTrigger(), toolType),
+  );
   let received = 0;
   let unreadable = 0;
   const actions = new Map<number, number>();
@@ -226,7 +253,9 @@ export function startInkLinkTaps(): void {
                 ? `${Math.round(release.durationMs)} ms, ${Math.round(
                     release.distancePx,
                   )} px, ${release.tap ? 'tap' : 'not a tap'}`
-                : 'no press seen'
+                : acceptsTool(getLinkTrigger(), touch.toolType)
+                ? 'no press seen'
+                : `ignored (links open with: ${getLinkTrigger()})`
             } (events ${received}, by action ${Array.from(actions)
               .map(([action, count]) => `${action}:${count}`)
               .join(' ')})`,

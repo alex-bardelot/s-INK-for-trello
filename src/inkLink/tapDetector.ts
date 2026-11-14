@@ -85,8 +85,20 @@ export class TapDetector {
   private start: {x: number; y: number; time: number} | null = null;
   private moved = false;
 
-  /** The last finger release, whether it made a tap or not. */
+  /**
+   * The release judged by the last `feed` call, whether it made a tap or
+   * not; `null` if that event was not an accepted release.
+   */
   lastRelease: Release | null = null;
+
+  /**
+   * @param acceptsTool - Whether taps made with a tool count, by
+   *   `toolType`. By default every tool but the pen.
+   */
+  constructor(
+    private readonly acceptsTool: (toolType: number) => boolean = toolType =>
+      toolType !== ToolType.Pen,
+  ) {}
 
   /**
    * Feeds one touch event.
@@ -94,8 +106,8 @@ export class TapDetector {
    * @returns The tap position when this event ends a tap, else `null`.
    */
   feed(touch: Touch): Tap | null {
-    // An unknown tool (0) is accepted: only the pen is ruled out.
-    if (touch.toolType === ToolType.Pen || touch.pointerCount > 1) {
+    this.lastRelease = null;
+    if (!this.acceptsTool(touch.toolType) || touch.pointerCount > 1) {
       this.start = null;
       return null;
     }
