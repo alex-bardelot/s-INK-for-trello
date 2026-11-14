@@ -7,9 +7,9 @@ import {
   mergeInkLinks,
   NoteElementType,
   PageElement,
-  TEXT_BOX_PADDING_PX,
   unionOf,
 } from '../src/inkLink/hitTest';
+import {layoutStrokeText, strokeTextWidth} from '../src/inkLink/strokeFont';
 import {formatInkLink, parseInkLink} from '../src/inkLink/inkLink';
 import {
   layoutLink,
@@ -17,9 +17,10 @@ import {
   LINK_FONT_SIZE,
   MARK_LABEL_GAP_PX,
   MARK_LABEL_PATTERN,
+  MARK_CAP_HEIGHT_PX,
+  MARK_LABEL_RISE_PX,
   MARK_LINE_GAP_PX,
   markLabel,
-  markLabelDrop,
   LINK_ICON_SIZE,
   LINK_NAME_MAX_LENGTH,
   shortName,
@@ -72,6 +73,29 @@ describe('linked handwriting', () => {
     ]);
   });
 
+  it('finds the lines of a link mark by their points', () => {
+    expect(
+      findInkLinks([
+        {
+          type: 700,
+          userData: 's-INK/b/board1',
+          geometry: {
+            points: [
+              {x: 40, y: 90},
+              {x: 10, y: 90},
+            ],
+          },
+        },
+      ]),
+    ).toEqual([
+      {
+        target: {kind: 'board', shortLink: 'board1'},
+        source: 'userData',
+        rect: {left: 10, top: 90, right: 40, bottom: 90},
+      },
+    ]);
+  });
+
   it('ignores an empty recognition box', () => {
     expect(
       findInkLinks([{type: 0, userData: 's-INK/c/abc123', recognizeResult: {}}]),
@@ -106,21 +130,37 @@ describe('linked handwriting', () => {
     const bounds = {left: 300, top: 600, right: 800, bottom: 900};
     const mark = layoutLinkMark(bounds, 'card', 1920, 2560);
     const y = 900 + MARK_LINE_GAP_PX;
-    expect(mark.label).toBe('s-INK/c');
-    // The letters start just after the word, inside the box margin.
-    expect(mark.labelRect.left).toBe(
-      800 + MARK_LABEL_GAP_PX - TEXT_BOX_PADDING_PX,
+    expect(mark.labelRect.left).toBe(800 + MARK_LABEL_GAP_PX);
+    // The letters stand just above the line.
+    expect(mark.labelRect.bottom).toBe(y - MARK_LABEL_RISE_PX);
+    expect(mark.labelRect.top).toBe(
+      y - MARK_LABEL_RISE_PX - MARK_CAP_HEIGHT_PX,
     );
-    // The letters, not the box, rest on the line.
-    expect(mark.labelRect.bottom).toBe(y + markLabelDrop());
-    expect(mark.labelRect.top).toBeLessThan(y);
-    expect(mark.line[0]).toEqual({x: 300, y});
-    expect(mark.line[1].y).toBe(y);
-    // The line stops at the end of the letters, inside the box.
-    expect(mark.line[1].x).toBeGreaterThan(mark.labelRect.left);
-    expect(mark.line[1].x).toBeLessThan(mark.labelRect.right);
-    expect(layoutLinkMark(bounds, 'board', 1920, 2560).label).toBe('s-INK/b');
+    // The line runs from the word to the end of the label.
+    expect(mark.line).toEqual([
+      {x: 300, y},
+      {x: mark.labelRect.right, y},
+    ]);
+    // Every segment of the label lies in its box.
+    expect(mark.label.length).toBeGreaterThan(10);
+    for (const point of mark.label.flat()) {
+      expect(point.x).toBeGreaterThanOrEqual(mark.labelRect.left);
+      expect(point.x).toBeLessThanOrEqual(mark.labelRect.right);
+      expect(point.y).toBeGreaterThanOrEqual(mark.labelRect.top);
+      expect(point.y).toBeLessThanOrEqual(mark.labelRect.bottom);
+    }
+    // A board label ends with a "b", which has one more stroke than "c".
+    expect(layoutLinkMark(bounds, 'board', 1920, 2560).label.length).toBe(
+      mark.label.length + 1,
+    );
+    expect(markLabel('card')).toBe('s-INK/c');
     expect(MARK_LABEL_PATTERN.test(markLabel('board'))).toBe(true);
+  });
+
+  it('draws text with the stroke font, skipping unknown characters', () => {
+    const drawn = layoutStrokeText('s-INK/c', 0, 24, 24);
+    expect(drawn.width).toBe(strokeTextWidth('s-INK/c', 24));
+    expect(layoutStrokeText('?', 0, 24, 24)).toEqual({segments: [], width: 0});
   });
 
   it('keeps the mark on the page', () => {
@@ -131,7 +171,7 @@ describe('linked handwriting', () => {
       2560,
     );
     expect(mark.labelRect.right).toBeLessThanOrEqual(1919);
-    expect(mark.labelRect.bottom).toBeLessThanOrEqual(2559);
+    expect(mark.line[1].x).toBeLessThanOrEqual(1919);
     expect(mark.line[0].y).toBe(2559);
     expect(mark.line[0].x).toBeLessThanOrEqual(mark.labelRect.left);
   });

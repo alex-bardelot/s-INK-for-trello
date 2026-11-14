@@ -6,12 +6,8 @@ import {FALLBACK_PAGE_SIZE} from '../plugin/lassoText';
 import {ensureFileReadPermission} from '../plugin/permissions';
 import {logInkLink} from './diagnostics';
 import {boundsOf, PageElement, Rect, unionOf} from './hitTest';
-import {
-  layoutLinkMark,
-  MARK_FONT_SIZE,
-  MARK_LABEL_PATTERN,
-  markLabel,
-} from './linkLayout';
+import {layoutLinkMark, MARK_LABEL_PATTERN} from './linkLayout';
+import {Segment} from './strokeFont';
 import {formatInkLink, InkLinkTarget, parseInkLink} from './inkLink';
 
 /**
@@ -142,6 +138,8 @@ export async function captureLassoSelection(): Promise<boolean> {
 
 /** Black and thicker than the note app's links, to read well on E Ink. */
 const MARK_LINE_STYLE = {penColor: 0x00, penType: 10, penWidth: 400};
+/** The label's letters, thinner than the line. */
+const MARK_LABEL_STYLE = {penColor: 0x00, penType: 10, penWidth: 200};
 
 const GEOMETRY = 700;
 const TEXT = 500;
@@ -155,22 +153,52 @@ async function pageSizeOf(selection: PendingBinding): Promise<Size> {
   return size && size.width > 0 && size.height > 0 ? size : FALLBACK_PAGE_SIZE;
 }
 
-/** Latest element of a type, among those not holding the link yet. */
-function latest(
-  elements: readonly NoteElement[],
+async function readPage(selection: PendingBinding): Promise<NoteElement[]> {
+  const page = unwrap<NoteElement[]>(
+    await PluginFileAPI.getElements(selection.page, selection.path),
+  );
+  return Array.isArray(page) ? page : [];
+}
+
+function lastNumber(elements: readonly NoteElement[]): number {
+  return elements.reduce(
+    (last, element) => Math.max(last, element.numInPage ?? 0),
+    0,
+  );
+}
+
+async function createSegment(
+  segment: Segment,
+  style: typeof MARK_LINE_STYLE,
   link: string,
-  matches: (element: NoteElement) => boolean,
-): NoteElement | undefined {
-  return elements
-    .filter(element => element.userData !== link && matches(element))
-    .sort((a, b) => (b.numInPage ?? 0) - (a.numInPage ?? 0))[0];
+  page: number,
+): Promise<Record<string, any> | null> {
+  const element = unwrap<Record<string, any>>(
+    await PluginCommAPI.createElement(GEOMETRY),
+  );
+  if (!element) {
+    return null;
+  }
+  element.userData = link;
+  element.pageNum = page;
+  element.geometry = {
+    ...(element.geometry ?? {}),
+    ...style,
+    type: 'straightLine',
+    points: segment,
+    ellipseCenterPoint: null,
+    ellipseMajorAxisRadius: 0,
+    ellipseMinorAxisRadius: 0,
+    ellipseAngle: 0,
+  };
+  return element;
 }
 
 /**
  * Marks a linked selection like the note app's own links: a line under it
- * and a small `s-INK/c` or `s-INK/b` label at the line's end. Both carry
- * the link too: moved or copied with the selection, they stay part of it.
- * Geometry points and text box bounds are screen pixels.
+ * and a small `s-INK/c` or `s-INK/b` label at the line's end, drawn with
+ * line segments. All of them carry the link too: moved or copied with the
+ * selection, they stay part of it. Geometry points are screen pixels.
  *
  * @returns A short result for the log.
  */
@@ -182,73 +210,65 @@ async function drawLinkMark(
 ): Promise<string> {
   const size = await pageSizeOf(selection);
   const mark = layoutLinkMark(bounds, kind, size.width, size.height);
-  const line = unwrap<Record<string, any>>(
-    await PluginCommAPI.createElement(GEOMETRY),
+  const created = await Promise.all([
+    createSegment(mark.line, MARK_LINE_STYLE, link, selection.page),
+    ...mark.label.map(segment =>
+      createSegment(segment, MARK_LABEL_STYLE, link, selection.page),
+    ),
+  ]);
+  const elements = created.filter(
+    (element): element is Record<string, any> => element !== null,
   );
-  const label = unwrap<Record<string, any>>(
-    await PluginCommAPI.createElement(TEXT),
-  );
-  if (!line || !label) {
-    return 'not created';
+  if (elements.length < created.length) {
+    return `${created.length - elements.length} not created`;
   }
-  line.userData = link;
-  line.pageNum = selection.page;
-  line.geometry = {
-    ...(line.geometry ?? {}),
-    ...MARK_LINE_STYLE,
-    type: 'straightLine',
-    points: mark.line,
-    ellipseCenterPoint: null,
-    ellipseMajorAxisRadius: 0,
-    ellipseMinorAxisRadius: 0,
-    ellipseAngle: 0,
-  };
-  label.userData = link;
-  label.pageNum = selection.page;
-  label.textBox = {
-    ...(label.textBox ?? {}),
-    textContentFull: mark.label,
-    textRect: mark.labelRect,
-    fontSize: MARK_FONT_SIZE,
-  };
+  const before = await readPage(selection);
+  const last = lastNumber(before);
+  recycle(before);
   const inserted = await PluginCommAPI.insertPageElements(
-    [line, label],
+    elements,
     selection.page,
   );
   if ((inserted as SdkResponse<unknown> | null)?.success !== true) {
     return `insert ${status(inserted)}`;
   }
-  // A value given at insertion may not be kept: write it again.
-  const page = unwrap<NoteElement[]>(
-    await PluginFileAPI.getElements(selection.page, selection.path),
-  );
-  const elements = Array.isArray(page) ? page : [];
-  const found = [
-    latest(elements, link, element => element.type === GEOMETRY),
-    latest(
-      elements,
-      link,
-      element =>
-        element.type === TEXT &&
-        (element as PageElement).textBox?.textContentFull === mark.label,
-    ),
-  ].filter((element): element is NoteElement => element !== undefined);
+  // A value given at insertion may not be kept: write it again on the
+  // new elements, which come last on the page.
+  const after = await readPage(selection);
+  const added = after.filter(element => (element.numInPage ?? 0) > last);
   const [from, to] = mark.line;
   let result = `${Math.round(from.x)},${Math.round(from.y)}-${Math.round(
     to.x,
-  )},${Math.round(to.y)}, ${found.length}/2 found`;
-  if (found.length > 0) {
-    found.forEach(element => {
+  )},${Math.round(to.y)}, ${added.length}/${elements.length} added`;
+  if (added.length > 0) {
+    added.forEach(element => {
       element.userData = link;
     });
     const modified = await PluginCommAPI.modifyPageElements(
-      found as any[],
+      added as any[],
       selection.page,
     );
     result += `, userData ${status(modified)}`;
   }
-  recycle(elements);
+  recycle(after);
   return result;
+}
+
+/**
+ * Whether an element is part of the mark of a linked selection: one of
+ * its line segments, or the label text box of versions 0.30.x.
+ */
+function isMark(element: NoteElement): boolean {
+  if (parseInkLink(element.userData) === null) {
+    return false;
+  }
+  return (
+    element.type === GEOMETRY ||
+    (element.type === TEXT &&
+      MARK_LABEL_PATTERN.test(
+        (element as PageElement).textBox?.textContentFull ?? '',
+      ))
+  );
 }
 
 /**
@@ -287,26 +307,18 @@ export async function bindPendingSelection(
       );
       return false;
     }
-    // A selection linked before already holds its mark: it is kept, and
-    // its label follows the new target.
-    const marked = selected.some(
-      element =>
-        element.type === GEOMETRY && parseInkLink(element.userData) !== null,
-    );
-    const label = markLabel(target.kind);
-    selected.forEach(element => {
+    // A selection linked before holds an old mark: it is replaced.
+    const oldMark = selected.filter(isMark);
+    const content = selected.filter(element => !isMark(element));
+    if (content.length === 0) {
+      logInkLink(`bind ${link}: only a link mark is selected`);
+      return false;
+    }
+    content.forEach(element => {
       element.userData = link;
-      const textBox = (element as PageElement).textBox;
-      if (
-        element.type === TEXT &&
-        textBox &&
-        MARK_LABEL_PATTERN.test(textBox.textContentFull ?? '')
-      ) {
-        textBox.textContentFull = label;
-      }
     });
     const modified = await PluginCommAPI.modifyPageElements(
-      selected,
+      content,
       selection.page,
     );
     if ((modified as SdkResponse<unknown> | null)?.success !== true) {
@@ -314,24 +326,32 @@ export async function bindPendingSelection(
       return false;
     }
     const bounds = unionOf(
-      selected
+      content
         .map(element => boundsOf(element as PageElement))
         .filter((rect): rect is Rect => rect !== null),
     );
-    const mark = marked
-      ? 'kept'
-      : bounds
+    let removed = '';
+    if (oldMark.length > 0) {
+      const deleted = await PluginCommAPI.deletePageElements(
+        oldMark
+          .map(element => element.numInPage)
+          .filter((value): value is number => typeof value === 'number'),
+        selection.page,
+      );
+      removed = `, old mark ${oldMark.length} deleted ${status(deleted)}`;
+    }
+    const mark = bounds
       ? await drawLinkMark(link, target.kind, bounds, selection).catch(error =>
           String(error),
         )
       : 'no bounds';
     const saved = await PluginNoteAPI.saveCurrentNote();
     logInkLink(
-      `bind ${link}: ${selected.length}/${
+      `bind ${link}: ${content.length}/${
         selection.elements.length
-      } elements on page ${selection.page}, mark ${mark}, save ${status(
-        saved,
-      )}`,
+      } elements on page ${
+        selection.page
+      }${removed}, mark ${mark}, save ${status(saved)}`,
     );
     setPending(null);
     return true;

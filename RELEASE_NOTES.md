@@ -3,6 +3,22 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.31.0 — s-INK label drawn with lines, so it moves with the word
+
+- On the device, a lasso move took the word and its line but left the
+  `s-INK/c` text box behind. The label is now drawn with line segments
+  (geometry elements), like the line under the word. A small built-in
+  stroke font covers `s`, `-`, `I`, `N`, `K`, `/`, `c` and `b`.
+  - The letters are 24 px high, black, pen width 200.
+  - They stand 6 px above the line, 10 px after the word, and the line
+    ends with them.
+- Every segment holds the link in its `userData`. The new elements are
+  found as those placed after the page's last element.
+- Linking a marked selection again deletes its old mark and draws a new
+  one, so the label follows the target. Old marks from 0.28 to 0.30
+  (gray line, text box label) are replaced the same way.
+- The lines of a mark also count in the tap zone (geometry points).
+
 ## 0.30.2 — s-INK label closer to the word, shorter line
 
 - The letters of the `s-INK/c|b` label now start 6 px after the linked

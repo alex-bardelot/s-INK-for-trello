@@ -34,6 +34,8 @@ export interface PageElement {
    * Recognition box of a stroke, in screen pixels: the host fills it for
    * handwriting, which has no other bounds without reading its points.
    */
+  /** Geometry (lines drawn by s-INK), points in screen pixels. */
+  geometry?: {points?: {x: number; y: number}[] | null} | null;
   recognizeResult?: {
     up_left_point_x?: number;
     up_left_point_y?: number;
@@ -149,7 +151,24 @@ export function boundsOf(
   if (picture && pictureToScreen) {
     return pictureToScreen(picture);
   }
-  return recognitionBounds(element.recognizeResult);
+  return (
+    recognitionBounds(element.recognizeResult) ??
+    pointsBounds(element.geometry?.points)
+  );
+}
+
+function pointsBounds(
+  points: readonly {x: number; y: number}[] | null | undefined,
+): Rect | null {
+  if (!Array.isArray(points) || points.length === 0) {
+    return null;
+  }
+  return {
+    left: Math.min(...points.map(point => point.x)),
+    top: Math.min(...points.map(point => point.y)),
+    right: Math.max(...points.map(point => point.x)),
+    bottom: Math.max(...points.map(point => point.y)),
+  };
 }
 
 function recognitionBounds(

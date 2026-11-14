@@ -41,12 +41,15 @@ The *Inspect* button logged the following:
      its text) are merged with `mergeInkLinks`. Copies placed apart stay
      separate.
 
-3. Since 0.30.0, a linked selection is marked like a native link:
+3. Since 0.31.0, a linked selection is marked like a native link:
    - a `straightLine` geometry (type 700, points in screen pixels),
      black, technical pen, width 400, 8 px under the selection's bounds;
-   - a small `s-INK/c` or `s-INK/b` text box at the line's right end,
-     where the note app draws its chain icon;
-   - both hold the link in `userData` as well.
+   - at its right end, a small `s-INK/c` or `s-INK/b` label, drawn with
+     `straightLine` segments (`strokeFont.ts`);
+   - every segment holds the link in `userData` too.
+
+   0.30.x drew the label as a text box. On the device, a lasso move took
+   the strokes and the line but left the text box behind.
 
 The fingerprint registry (tier B below) is not needed.
 
