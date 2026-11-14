@@ -19,6 +19,8 @@ export interface ScreenFrameProps {
   onBack?: () => void;
   /** Extra controls shown between the title and the close button. */
   actions?: React.ReactNode;
+  /** Content without the frame's padding, for screens drawing to its edges. */
+  flush?: boolean;
 }
 
 /** Common layout of the plugin screens: title bar with a close button. */
@@ -27,6 +29,7 @@ export function ScreenFrame({
   children,
   onBack,
   actions,
+  flush,
 }: ScreenFrameProps): React.JSX.Element {
   const {t} = useTranslation();
 
@@ -62,7 +65,7 @@ export function ScreenFrame({
           <CloseIcon size={HEADER_ICON_SIZE} color={colors.foreground} />
         </Pressable>
       </View>
-      <View style={styles.content}>{children}</View>
+      <View style={[styles.content, flush && styles.flush]}>{children}</View>
     </View>
   );
 }
@@ -107,5 +110,8 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: spacing.lg,
+  },
+  flush: {
+    padding: 0,
   },
 });

@@ -1,6 +1,7 @@
 import React, {useCallback, useEffect, useState} from 'react';
-import {StyleSheet, Text, View} from 'react-native';
+import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 
+import pluginConfig from '../../PluginConfig.json';
 import {
   DEFAULT_FOCUS_SETTINGS,
   FocusSettings,
@@ -51,9 +52,12 @@ export interface SettingsScreenProps {
 }
 
 /**
- * Settings that are rarely needed, kept off the boards page: the boards
- * page display, the board view, the connected account and where its token
- * is kept, then the non-affiliation notice.
+ * Settings that are rarely needed, kept off the boards page. Laid out like
+ * the Supernote system settings: categories in a left column, separated by
+ * dotted lines, and the selected one's settings on the right. "General"
+ * holds the public boards, the board view and the connected account (and
+ * where its token is kept); "About" the version and the non-affiliation
+ * notice.
  */
 export function SettingsScreen({
   store,
@@ -70,45 +74,107 @@ export function SettingsScreen({
   onBack,
 }: SettingsScreenProps): React.JSX.Element {
   const {t} = useTranslation();
+  const [category, setCategory] = useState<SettingsCategory>('general');
+
+  const categories: {value: SettingsCategory; label: string}[] = [
+    {value: 'general', label: t('settings.general')},
+    {value: 'about', label: t('settings.about')},
+  ];
 
   return (
-    <ScreenFrame title={t('settings.title')} onBack={onBack}>
-      <Section title={t('settings.publicBoards')}>
-        <PublicBoardsSettings
-          client={client}
-          ensureNetwork={ensureNetwork}
-          preferences={boardsPreferences}
-          onChange={onBoardsPreferencesChange}
-        />
-      </Section>
+    <ScreenFrame title={t('settings.title')} onBack={onBack} flush>
+      <View style={styles.layout}>
+        <View accessibilityRole="tablist" style={styles.sidebar}>
+          {categories.map(item => {
+            const selected = item.value === category;
+            return (
+              <React.Fragment key={item.value}>
+                <Pressable
+                  accessibilityRole="tab"
+                  accessibilityState={{selected}}
+                  onPress={() => setCategory(item.value)}
+                  style={styles.category}>
+                  <Text
+                    style={[styles.categoryLabel, selected && styles.bold]}
+                    numberOfLines={1}>
+                    {item.label}
+                  </Text>
+                  <View
+                    style={[
+                      styles.selectionBar,
+                      selected && styles.selectionBarOn,
+                    ]}
+                  />
+                </Pressable>
+                <DottedSeparator />
+              </React.Fragment>
+            );
+          })}
+        </View>
 
-      <BoardViewSettings store={store} />
+        <ScrollView
+          style={styles.panel}
+          contentContainerStyle={styles.panelContent}>
+          {category === 'general' ? (
+            <>
+              <Section title={t('settings.publicBoards')}>
+                <PublicBoardsSettings
+                  client={client}
+                  ensureNetwork={ensureNetwork}
+                  preferences={boardsPreferences}
+                  onChange={onBoardsPreferencesChange}
+                />
+              </Section>
 
-      <Section title={t('settings.account')}>
-        {member && tokenStorage ? (
-          <AccountCard
-            member={member}
-            tokenStorage={tokenStorage}
-            saveFailed={saveFailed}
-            onRememberChange={onRememberChange}
-            onDisconnect={onDisconnect}
-          />
-        ) : (
-          <SignedOutCard
-            showConnectCard={boardsPreferences.showConnectCard}
-            onShowConnectCardChange={showConnectCard =>
-              onBoardsPreferencesChange({
-                ...boardsPreferences,
-                showConnectCard,
-              })
-            }
-            onConnect={onConnect}
-          />
-        )}
-      </Section>
+              <BoardViewSettings store={store} />
 
-      <Text style={styles.disclaimer}>{t('settings.disclaimer')}</Text>
+              <Section title={t('settings.account')}>
+                {member && tokenStorage ? (
+                  <AccountCard
+                    member={member}
+                    tokenStorage={tokenStorage}
+                    saveFailed={saveFailed}
+                    onRememberChange={onRememberChange}
+                    onDisconnect={onDisconnect}
+                  />
+                ) : (
+                  <SignedOutCard
+                    showConnectCard={boardsPreferences.showConnectCard}
+                    onShowConnectCardChange={showConnectCard =>
+                      onBoardsPreferencesChange({
+                        ...boardsPreferences,
+                        showConnectCard,
+                      })
+                    }
+                    onConnect={onConnect}
+                  />
+                )}
+              </Section>
+            </>
+          ) : (
+            <AboutSettings />
+          )}
+        </ScrollView>
+      </View>
     </ScreenFrame>
+  );
+}
+
+/** Categories of the left column, like the Supernote system settings. */
+type SettingsCategory = 'general' | 'about';
+
+/** Name, version and description of the plugin, then the non-affiliation notice. */
+function AboutSettings(): React.JSX.Element {
+  const {t} = useTranslation();
+  return (
+    <Section title={t('settings.about')}>
+      <Text style={styles.name}>{t('app.name')}</Text>
+      <Text style={styles.text}>
+        {t('settings.version', {version: pluginConfig.versionName})}
+      </Text>
+      <Text style={styles.text}>{t('settings.aboutDescription')}</Text>
+      <Text style={styles.disclaimer}>{t('settings.disclaimer')}</Text>
+    </Section>
   );
 }
 
@@ -343,7 +409,69 @@ function Section({
   );
 }
 
+const SIDEBAR_WIDTH = 240;
+const DOT_SIZE = 2;
+/** Dots of a separator: one every three dot widths across the column. */
+const DOT_COUNT = Math.floor(SIDEBAR_WIDTH / (DOT_SIZE * 3));
+
+/**
+ * Dotted line under a category. Drawn with small squares: Android renders
+ * a dotted border on one side only unreliably.
+ */
+function DottedSeparator(): React.JSX.Element {
+  return (
+    <View style={styles.dots}>
+      {Array.from({length: DOT_COUNT}, (_, index) => (
+        <View key={index} style={styles.dot} />
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  layout: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  sidebar: {
+    width: SIDEBAR_WIDTH,
+    borderRightColor: colors.foreground,
+    borderRightWidth: borders.width / 2,
+  },
+  category: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+  },
+  categoryLabel: {
+    flex: 1,
+    color: colors.foreground,
+    fontSize: typography.label,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  selectionBar: {
+    width: borders.width * 2,
+  },
+  selectionBarOn: {
+    backgroundColor: colors.foreground,
+  },
+  dots: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    overflow: 'hidden',
+    paddingHorizontal: spacing.xs,
+  },
+  dot: {
+    width: DOT_SIZE,
+    height: DOT_SIZE,
+    backgroundColor: colors.foreground,
+  },
+  panel: {
+    flex: 1,
+  },
+  panelContent: {
+    padding: spacing.lg,
+  },
   section: {
     gap: spacing.sm,
     marginBottom: spacing.xl,

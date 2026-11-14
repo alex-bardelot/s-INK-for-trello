@@ -3,6 +3,17 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.22.0 — Settings categories, like the Supernote system settings
+
+- **Settings** now has a left column of categories, separated by dotted
+  lines, with the selected one marked by a black bar; its settings show on
+  the right and scroll when they do not fit.
+- **General** holds the public boards, the board view and the Trello
+  account; **About** shows the plugin name, its version (read from
+  `PluginConfig.json`), a short description and the non-affiliation
+  notice. New strings in all locales.
+- `ScreenFrame` gains a `flush` option for screens drawn to its edges.
+
 ## 0.21.2 — Short name spelled s-INK in every text
 
 - The short name is now spelled **s-INK** in the texts too (all
