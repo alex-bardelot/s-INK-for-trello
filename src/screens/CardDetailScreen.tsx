@@ -18,6 +18,7 @@ import {
   formatCardDate,
   paginateBlocks,
 } from '../cards/detail';
+import {InsertInkLinkButton} from '../components/InsertInkLinkButton';
 import {LabelChip} from '../components/LabelChip';
 import {MemberAvatar} from '../components/MemberAvatar';
 import {RefreshIcon} from '../components/RefreshIcon';
@@ -105,14 +106,20 @@ export function CardDetailScreen({
       title={boardName}
       onBack={onBack}
       actions={
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('board.refresh')}
-          hitSlop={spacing.md}
-          onPress={load}
-          style={styles.iconButton}>
-          <RefreshIcon size={HEADER_ICON_SIZE} color={colors.foreground} />
-        </Pressable>
+        <>
+          <InsertInkLinkButton
+            target={{kind: 'card', shortLink: detail.shortLink ?? card.id}}
+            name={detail.name}
+          />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('board.refresh')}
+            hitSlop={spacing.md}
+            onPress={load}
+            style={styles.iconButton}>
+            <RefreshIcon size={HEADER_ICON_SIZE} color={colors.foreground} />
+          </Pressable>
+        </>
       }>
       <DetailPages
         // Pages are measured again for new content.

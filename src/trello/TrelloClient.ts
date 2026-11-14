@@ -7,6 +7,7 @@ import {
   TrelloBoardMember,
   TrelloCard,
   TrelloCardDetail,
+  TrelloCardLocation,
   TrelloList,
   TrelloMember,
   TrelloOrganization,
@@ -42,7 +43,7 @@ const BOARD_CARD_FIELDS =
   'name,idList,pos,due,dueComplete,badges,labels,idMembers';
 const BOARD_MEMBER_FIELDS = 'fullName,initials,username,avatarUrl';
 const CARD_DETAIL_FIELDS =
-  'name,desc,idList,url,shortUrl,start,due,dueComplete,dateLastActivity,labels,idMembers';
+  'name,desc,idList,url,shortUrl,shortLink,start,due,dueComplete,dateLastActivity,labels,idMembers';
 /** Comments shown on the card detail page, newest first. */
 export const CARD_COMMENTS_LIMIT = 20;
 const ORGANIZATION_FIELDS = 'displayName,name,logoUrl,logoHash';
@@ -204,6 +205,22 @@ export class TrelloClient {
       },
     );
     if (!card || typeof card !== 'object' || typeof card.id !== 'string') {
+      throw new TrelloApiError('invalidResponse', 'Expected a card');
+    }
+    return card;
+  }
+
+  /** Returns the id and board of a card, given its id or short link. */
+  async getCardLocation(idOrShortLink: string): Promise<TrelloCardLocation> {
+    const card = await this.request<TrelloCardLocation>(
+      `/cards/${encodeURIComponent(idOrShortLink)}`,
+      {query: {fields: 'idBoard'}},
+    );
+    if (
+      !card ||
+      typeof card.id !== 'string' ||
+      typeof card.idBoard !== 'string'
+    ) {
       throw new TrelloApiError('invalidResponse', 'Expected a card');
     }
     return card;

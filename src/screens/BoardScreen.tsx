@@ -36,6 +36,7 @@ import {BoardPreferences, loadBoardPreferences} from '../board/preferences';
 import {useTwoFingerSwipe} from '../board/useTwoFingerSwipe';
 import {formatCardDate} from '../cards/detail';
 import {Checkbox} from '../components/Checkbox';
+import {InsertInkLinkButton} from '../components/InsertInkLinkButton';
 import {LabelChip} from '../components/LabelChip';
 import {MemberAvatar} from '../components/MemberAvatar';
 import {RefreshIcon} from '../components/RefreshIcon';
@@ -82,6 +83,8 @@ export interface BoardScreenProps {
   store: KeyValueStore;
   /** Id of the signed-in member, whose cards Focus mode keeps. */
   memberId: string;
+  /** Card opened over the board once it is loaded (from an s-INK link). */
+  initialCardId?: string;
   onBack: () => void;
   /** Called when Trello rejects the token while loading. */
   onTokenRejected: () => void;
@@ -97,6 +100,7 @@ export function BoardScreen({
   client,
   store,
   memberId,
+  initialCardId,
   onBack,
   onTokenRejected,
 }: BoardScreenProps): React.JSX.Element {
@@ -154,6 +158,22 @@ export function BoardScreen({
   useEffect(() => {
     load();
   }, [load]);
+
+  // A card asked for by an s-INK link opens once, on the first load.
+  const [initialCardShown, setInitialCardShown] = useState(false);
+  useEffect(() => {
+    if (!initialCardId || initialCardShown || state.status !== 'loaded') {
+      return;
+    }
+    setInitialCardShown(true);
+    for (const cards of state.cardsByList.values()) {
+      const card = cards.find(candidate => candidate.id === initialCardId);
+      if (card) {
+        setOpenCard(card);
+        return;
+      }
+    }
+  }, [initialCardId, initialCardShown, state]);
 
   const columns = preferences[orientation];
 
@@ -272,6 +292,10 @@ export function BoardScreen({
                 onChange={changeMode}
               />
             )}
+            <InsertInkLinkButton
+              target={{kind: 'board', shortLink: board.shortLink || board.id}}
+              name={board.name}
+            />
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={t('board.refresh')}

@@ -7,13 +7,18 @@ import {colors, typography} from '../theme';
 
 export interface StatusScreenProps {
   message: string;
+  /** Shows a back button, for a message the user can leave. */
+  onBack?: () => void;
 }
 
 /** Full-screen message, used while the Trello account is being checked. */
-export function StatusScreen({message}: StatusScreenProps): React.JSX.Element {
+export function StatusScreen({
+  message,
+  onBack,
+}: StatusScreenProps): React.JSX.Element {
   const {t} = useTranslation();
   return (
-    <ScreenFrame title={t('app.name')}>
+    <ScreenFrame title={t('app.name')} onBack={onBack}>
       <View style={styles.center}>
         <Text style={styles.message}>{message}</Text>
       </View>

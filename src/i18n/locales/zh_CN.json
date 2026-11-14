@@ -164,5 +164,13 @@
   "cardDetail.description": "描述",
   "cardDetail.checklists": "清单",
   "cardDetail.attachments": "附件",
-  "cardDetail.comments": "评论"
+  "cardDetail.comments": "评论",
+  "inkLink.insert": "链接到笔记",
+  "inkLink.insertHint": "在当前笔记页放置指向此页面的链接。用手指点按即可在此打开。",
+  "inkLink.insertFailed": "链接失败",
+  "inkLink.opening": "正在打开 s-INK 链接…",
+  "inkLink.openFailed": "无法打开 s-INK 链接。",
+  "inkLink.diagnostics": "s-INK 链接诊断",
+  "inkLink.clearLog": "清除",
+  "inkLink.emptyLog": "暂无记录。"
 }

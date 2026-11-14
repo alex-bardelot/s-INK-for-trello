@@ -3,6 +3,26 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.23.0 — s-INK links in notes (prototype)
+
+- **Link in note**, a new title bar button on a board and on a card
+  detail, places a text box on the current note page showing the name and
+  its s-INK link, `s-INK/c/{shortLink}` for a card or `s-INK/b/{shortLink}`
+  for a board (after Trello's own URLs). The link is also stored in the
+  element's `userData`. The plugin view then closes to show the note.
+- A **finger tap** on such a text box opens the plugin on that board, and
+  on the card over it for a card link. Taps come from
+  `PluginManager.registerMotionListener`; the page elements are read with
+  `PluginFileAPI.getElements` (no permission prompt from a tap) and the
+  link is looked for in `userData`, then in the text.
+- **Settings > About** shows an s-INK link diagnostics log: touch events
+  received, links found on the page with their bounds and source, and
+  insertion results. Not yet verified on the device: that motion events
+  reach the plugin while its view is closed, that touch and element
+  coordinates match, and that `userData` survives saving and sync.
+- Trello client: `getCardLocation` (card id and board from a short link);
+  the card detail now reads `shortLink`. New strings in all locales.
+
 ## 0.22.0 — Settings categories, like the Supernote system settings
 
 - **Settings** now has a left column of categories, separated by dotted

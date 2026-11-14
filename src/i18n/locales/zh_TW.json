@@ -164,5 +164,13 @@
   "cardDetail.description": "描述",
   "cardDetail.checklists": "檢查清單",
   "cardDetail.attachments": "附件",
-  "cardDetail.comments": "留言"
+  "cardDetail.comments": "留言",
+  "inkLink.insert": "連結到筆記",
+  "inkLink.insertHint": "在目前筆記頁放置指向此頁面的連結。用手指點按即可在此開啟。",
+  "inkLink.insertFailed": "連結失敗",
+  "inkLink.opening": "正在開啟 s-INK 連結…",
+  "inkLink.openFailed": "無法開啟 s-INK 連結。",
+  "inkLink.diagnostics": "s-INK 連結診斷",
+  "inkLink.clearLog": "清除",
+  "inkLink.emptyLog": "尚無記錄。"
 }

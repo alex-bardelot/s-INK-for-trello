@@ -188,12 +188,20 @@ export interface TrelloCardDetail {
   dateLastActivity: string | null;
   labels: TrelloLabel[];
   idMembers: string[];
+  /** Short id used in card URLs (`trello.com/c/{shortLink}/...`). */
+  shortLink?: string;
   members?: TrelloBoardMember[];
   checklists?: TrelloChecklist[];
   attachments?: TrelloAttachment[];
   /** Latest comments, newest first. */
   actions?: TrelloComment[];
   list?: Pick<TrelloList, 'id' | 'name'> | null;
+}
+
+/** Where a card lives, to open it from its short link. */
+export interface TrelloCardLocation {
+  id: string;
+  idBoard: string;
 }
 
 /** A card, as returned by `POST /1/cards`. */

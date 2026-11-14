@@ -164,5 +164,13 @@
   "cardDetail.description": "Description",
   "cardDetail.checklists": "Checklists",
   "cardDetail.attachments": "Attachments",
-  "cardDetail.comments": "Comments"
+  "cardDetail.comments": "Comments",
+  "inkLink.insert": "Link in note",
+  "inkLink.insertHint": "Places a link to this page on the current note page. A finger tap on it opens it here.",
+  "inkLink.insertFailed": "Link failed",
+  "inkLink.opening": "Opening the s-INK link…",
+  "inkLink.openFailed": "The s-INK link could not be opened.",
+  "inkLink.diagnostics": "s-INK link diagnostics",
+  "inkLink.clearLog": "Clear",
+  "inkLink.emptyLog": "Nothing recorded yet."
 }

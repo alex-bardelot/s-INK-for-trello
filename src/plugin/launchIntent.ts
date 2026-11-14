@@ -1,5 +1,6 @@
 import {useSyncExternalStore} from 'react';
 
+import type {InkLinkTarget} from '../inkLink/inkLink';
 import {ButtonId} from './constants';
 import {LassoTextResult, readLassoText} from './lassoText';
 
@@ -16,6 +17,13 @@ export type LaunchIntent =
        * lasso APIs fail with error 904 ("no lasso").
        */
       lasso: Promise<LassoTextResult>;
+    }
+  | {
+      /** An s-INK link was tapped in a note. */
+      kind: 'inkLink';
+      /** Changes on every tap, to open the target again. */
+      requestId: number;
+      target: InkLinkTarget;
     };
 
 /** Reads the current lasso selection. */
@@ -59,6 +67,14 @@ export function handleButtonPress(
   } else {
     return null;
   }
+  listeners.forEach(listener => listener());
+  return current;
+}
+
+/** Records that an s-INK link was tapped, to open its card or board. */
+export function openInkLinkIntent(target: InkLinkTarget): LaunchIntent {
+  requestCounter += 1;
+  current = {kind: 'inkLink', requestId: requestCounter, target};
   listeners.forEach(listener => listener());
   return current;
 }

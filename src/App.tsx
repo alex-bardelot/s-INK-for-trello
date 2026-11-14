@@ -34,6 +34,14 @@ export default function App(): React.JSX.Element {
   const intent = useLaunchIntent();
   const {state} = session;
   const [openBoard, setOpenBoard] = useState<TrelloBoard | null>(null);
+  // Card to open over the board, and key of the request that asked for it.
+  const [linkedCard, setLinkedCard] = useState<{
+    requestId: number;
+    cardId?: string;
+  } | null>(null);
+  const [linkStatus, setLinkStatus] = useState<'idle' | 'opening' | 'failed'>(
+    'idle',
+  );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [connectOpen, setConnectOpen] = useState(false);
   const [boardsPreferences, setBoardsPreferences] = useState(
@@ -89,8 +97,64 @@ export default function App(): React.JSX.Element {
     }
   }, [signedIn]);
 
+  // An s-INK link tapped in a note opens its board, and its card if any.
+  const linkIntent = intent.kind === 'inkLink' ? intent : null;
+  const linkClient =
+    state.status === 'signedIn' ? state.client : session.anonymousClient;
+  const {ensureNetwork} = session;
+  useEffect(() => {
+    if (!linkIntent || !sessionChecked) {
+      return;
+    }
+    let cancelled = false;
+    const {requestId, target} = linkIntent;
+    setSettingsOpen(false);
+    setConnectOpen(false);
+    setLinkStatus('opening');
+    (async () => {
+      try {
+        if (!(await ensureNetwork())) {
+          throw new Error('No network access');
+        }
+        const location =
+          target.kind === 'card'
+            ? await linkClient.getCardLocation(target.shortLink)
+            : null;
+        const board = await linkClient.getBoard(
+          location ? location.idBoard : target.shortLink,
+        );
+        if (!cancelled) {
+          setOpenBoard(board);
+          setLinkedCard({requestId, cardId: location?.id});
+          setLinkStatus('idle');
+        }
+      } catch (error) {
+        console.warn('[sINK] Failed to open an s-INK link', error);
+        if (!cancelled) {
+          setLinkStatus('failed');
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // Runs once per tap: the request id changes on every tap.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linkIntent?.requestId, sessionChecked]);
+
   if (state.status === 'checking') {
     return <StatusScreen message={t('session.checking')} />;
+  }
+  if (linkStatus === 'opening') {
+    return <StatusScreen message={t('inkLink.opening')} />;
+  }
+  if (linkStatus === 'failed') {
+    return (
+      <StatusScreen
+        message={t('inkLink.openFailed')}
+        onBack={() => setLinkStatus('idle')}
+      />
+    );
   }
   const account = state.status === 'signedIn' ? state : null;
   const lasso = intent.kind === 'lassoCreateCard' ? intent : null;
@@ -126,12 +190,16 @@ export default function App(): React.JSX.Element {
   if (openBoard) {
     return (
       <BoardScreen
-        key={openBoard.id}
+        key={`${openBoard.id}:${linkedCard?.requestId ?? 0}`}
         board={openBoard}
         client={client}
         store={session.settingsStore}
         memberId={account?.member.id ?? ''}
-        onBack={() => setOpenBoard(null)}
+        initialCardId={linkedCard?.cardId}
+        onBack={() => {
+          setOpenBoard(null);
+          setLinkedCard(null);
+        }}
         onTokenRejected={session.retry}
       />
     );

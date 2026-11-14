@@ -1,6 +1,7 @@
 import {PluginManager} from 'sn-plugin-lib';
 
 import {getSystemLocale, i18n} from '../i18n';
+import {startInkLinkTaps} from '../inkLink/noteBridge';
 import {refreshButtons, registerButtons} from './buttons';
 import {handleButtonPress} from './launchIntent';
 
@@ -26,6 +27,8 @@ export function bootstrapPlugin(): void {
       }
     },
   });
+
+  startInkLinkTaps();
 
   registerButtons()
     .then(registered => {

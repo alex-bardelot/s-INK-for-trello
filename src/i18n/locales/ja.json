@@ -164,5 +164,13 @@
   "cardDetail.description": "説明",
   "cardDetail.checklists": "チェックリスト",
   "cardDetail.attachments": "添付ファイル",
-  "cardDetail.comments": "コメント"
+  "cardDetail.comments": "コメント",
+  "inkLink.insert": "ノートにリンク",
+  "inkLink.insertHint": "現在のノートページにこのページへのリンクを配置します。指でタップするとここで開きます。",
+  "inkLink.insertFailed": "リンク失敗",
+  "inkLink.opening": "s-INK リンクを開いています…",
+  "inkLink.openFailed": "s-INK リンクを開けませんでした。",
+  "inkLink.diagnostics": "s-INK リンクの診断",
+  "inkLink.clearLog": "消去",
+  "inkLink.emptyLog": "まだ記録はありません。"
 }

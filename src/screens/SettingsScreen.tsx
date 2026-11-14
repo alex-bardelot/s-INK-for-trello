@@ -19,6 +19,8 @@ import {Button} from '../components/Button';
 import {MemberAvatar} from '../components/MemberAvatar';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {SegmentedControl} from '../components/SegmentedControl';
+import {SmallButton} from '../components/SmallButton';
+import {clearInkLinkLog, useInkLinkLog} from '../inkLink/diagnostics';
 import {Switch} from '../components/Switch';
 import {BoardsPreferences} from '../boards/preferences';
 import {useTranslation} from '../i18n';
@@ -174,7 +176,31 @@ function AboutSettings(): React.JSX.Element {
       </Text>
       <Text style={styles.text}>{t('settings.aboutDescription')}</Text>
       <Text style={styles.disclaimer}>{t('settings.disclaimer')}</Text>
+      <InkLinkDiagnostics />
     </Section>
+  );
+}
+
+/** Log of the s-INK link prototype, to check on the tablet what happens. */
+function InkLinkDiagnostics(): React.JSX.Element {
+  const {t} = useTranslation();
+  const lines = useInkLinkLog();
+  return (
+    <View style={styles.diagnostics}>
+      <View style={styles.diagnosticsHeader}>
+        <Text style={[styles.text, styles.bold]}>
+          {t('inkLink.diagnostics')}
+        </Text>
+        <SmallButton
+          label={t('inkLink.clearLog')}
+          accessibilityLabel={t('inkLink.clearLog')}
+          onPress={clearInkLinkLog}
+        />
+      </View>
+      <Text style={styles.logLine}>
+        {lines.length ? lines.join('\n') : t('inkLink.emptyLog')}
+      </Text>
+    </View>
   );
 }
 
@@ -535,5 +561,21 @@ const styles = StyleSheet.create({
     borderTopColor: colors.foreground,
     borderTopWidth: borders.width / 2,
     paddingTop: spacing.md,
+  },
+  diagnostics: {
+    gap: spacing.sm,
+    borderTopColor: colors.foreground,
+    borderTopWidth: borders.width / 2,
+    paddingTop: spacing.md,
+  },
+  diagnosticsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  logLine: {
+    color: colors.foreground,
+    fontSize: typography.small,
+    fontFamily: 'monospace',
   },
 });

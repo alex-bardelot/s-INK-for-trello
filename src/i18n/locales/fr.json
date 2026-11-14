@@ -164,5 +164,13 @@
   "cardDetail.description": "Description",
   "cardDetail.checklists": "Checklists",
   "cardDetail.attachments": "Pièces jointes",
-  "cardDetail.comments": "Commentaires"
+  "cardDetail.comments": "Commentaires",
+  "inkLink.insert": "Lier dans la note",
+  "inkLink.insertHint": "Place un lien vers cette page sur la page de note en cours. Un tap du doigt dessus l'ouvre ici.",
+  "inkLink.insertFailed": "Échec du lien",
+  "inkLink.opening": "Ouverture du lien s-INK…",
+  "inkLink.openFailed": "Le lien s-INK n'a pas pu être ouvert.",
+  "inkLink.diagnostics": "Diagnostic des liens s-INK",
+  "inkLink.clearLog": "Effacer",
+  "inkLink.emptyLog": "Rien d'enregistré pour l'instant."
 }
