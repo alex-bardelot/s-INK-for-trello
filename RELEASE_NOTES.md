@@ -3,6 +3,11 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.31.2 — s-INK label raised above the line
+
+- The drawn `s-INK/c|b` label now stands 14 px above the line instead
+  of 6 px. On the device, it almost touched the line.
+
 ## 0.31.1 — Find the drawn mark segments by their points
 
 - On the device, the 27 segments of a mark were inserted (the page went

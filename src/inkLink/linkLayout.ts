@@ -22,7 +22,7 @@ export const MARK_LINE_GAP_PX = 8;
 /** Space between a linked selection and its label. */
 export const MARK_LABEL_GAP_PX = 10;
 /** Space between the label's baseline and the line. */
-export const MARK_LABEL_RISE_PX = 6;
+export const MARK_LABEL_RISE_PX = 14;
 /** Height of the label's capitals. */
 export const MARK_CAP_HEIGHT_PX = 24;
 
