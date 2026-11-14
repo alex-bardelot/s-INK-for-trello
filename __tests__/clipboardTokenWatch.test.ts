@@ -34,17 +34,24 @@ describe('watchClipboardForToken', () => {
     stop();
   });
 
-  it('picks up a token already in the clipboard', async () => {
+  it('ignores the token already in the clipboard (often a revoked one)', async () => {
+    let clipboard: string | null = TOKEN;
     const onToken = jest.fn();
-    const stop = watchClipboardForToken({read: async () => TOKEN, onToken});
+    const stop = watchClipboardForToken({read: async () => clipboard, onToken});
     await tick(0);
-    expect(onToken).toHaveBeenCalledWith(TOKEN);
+    await tick();
+    expect(onToken).not.toHaveBeenCalled();
+
+    clipboard = OTHER_TOKEN;
+    await tick();
+    expect(onToken).toHaveBeenCalledWith(OTHER_TOKEN);
     stop();
   });
 
   it('skips reads while paused and stops for good', async () => {
     let paused = true;
-    const read = jest.fn(async () => TOKEN);
+    let clipboard = 'hello';
+    const read = jest.fn(async () => clipboard);
     const onToken = jest.fn();
     const stop = watchClipboardForToken({
       read,
@@ -55,6 +62,8 @@ describe('watchClipboardForToken', () => {
     expect(read).not.toHaveBeenCalled();
 
     paused = false;
+    await tick();
+    clipboard = TOKEN;
     await tick();
     expect(onToken).toHaveBeenCalledTimes(1);
 

@@ -3,6 +3,16 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.20.1 — Clipboard watch ignores the token already copied
+
+- Opening the connection page could fail at once with "Trello rejected
+  the token": the clipboard watch tried the token already in the
+  clipboard, typically an old one revoked by Disconnect. It now takes
+  what is in the clipboard when the page opens as a baseline and only
+  reacts to a token copied afterwards. **Paste token** still uses the
+  clipboard as it is, on request.
+- Bumped the plugin to version 0.20.1 (`versionCode` 52).
+
 ## 0.20.0 — Account section in Settings when signed out
 
 - Signed out, Settings now shows the Trello account section too: "No

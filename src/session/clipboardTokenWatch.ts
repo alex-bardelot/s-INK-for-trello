@@ -17,10 +17,12 @@ export interface ClipboardTokenWatchOptions {
  * Polls the clipboard and reports a token as soon as one is copied, so the
  * user can copy it in the browser and come back without pressing Paste.
  *
- * A clipboard text is reported at most once: a token already rejected by
- * Trello is not tried again until something else is copied. The text found
- * on the first read counts as new, so a token copied before opening the
- * page is picked up too.
+ * Only a token copied after the watch starts is reported: the text already
+ * in the clipboard is taken as a baseline, since it is often an old token
+ * (revoked by Disconnect, or expired) that Trello would reject. Paste token
+ * still uses it on request. A clipboard text is reported at most once: a
+ * token rejected by Trello is not tried again until something else is
+ * copied.
  *
  * @returns A function that stops watching.
  */
@@ -32,6 +34,7 @@ export function watchClipboardForToken({
 }: ClipboardTokenWatchOptions): () => void {
   let stopped = false;
   let reading = false;
+  let baselineTaken = false;
   let lastSeen: string | null = null;
 
   const check = async () => {
@@ -41,7 +44,15 @@ export function watchClipboardForToken({
     reading = true;
     try {
       const text = await read();
-      if (stopped || text === null || text === lastSeen) {
+      if (stopped) {
+        return;
+      }
+      if (!baselineTaken) {
+        baselineTaken = true;
+        lastSeen = text;
+        return;
+      }
+      if (text === null || text === lastSeen) {
         return;
       }
       lastSeen = text;
