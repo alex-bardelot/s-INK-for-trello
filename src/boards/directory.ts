@@ -7,7 +7,12 @@ import {TrelloBoard} from '../trello';
  */
 
 /** Greys a board background is reduced to, from light to dark. */
-export const BOARD_SHADES = ['#E2E2E2', '#AFAFAF', '#7C7C7C', '#4A4A4A'] as const;
+export const BOARD_SHADES = [
+  '#E2E2E2',
+  '#AFAFAF',
+  '#7C7C7C',
+  '#4A4A4A',
+] as const;
 
 /** Grey used when a board gives no background color. */
 export const DEFAULT_BOARD_SHADE = '#C8C8C8';
@@ -83,8 +88,7 @@ export function boardImageUrl(
     .sort((a, b) => a.width - b.width);
   if (scaled.length > 0) {
     return (
-      scaled.find(image => image.width >= minWidth) ??
-      scaled[scaled.length - 1]
+      scaled.find(image => image.width >= minWidth) ?? scaled[scaled.length - 1]
     ).url;
   }
   return board.prefs?.backgroundImage || null;
@@ -121,6 +125,11 @@ export interface DirectoryInput {
    * connect one replaces the boards.
    */
   signedIn?: boolean;
+  /**
+   * Signed out, shows the "My boards" section with its connect card (off
+   * for someone who reads public boards only).
+   */
+  showConnect?: boolean;
   /** Tiles per row. */
   columns: number;
 }
@@ -137,6 +146,7 @@ export function buildDirectoryRows({
   publicBoards = [],
   showRoadmap = true,
   signedIn = true,
+  showConnect = true,
   columns,
 }: DirectoryInput): DirectoryRow[] {
   const rows: DirectoryRow[] = [];
@@ -165,7 +175,9 @@ export function buildDirectoryRows({
   addSection('public', publicTiles);
 
   if (!signedIn) {
-    addSection('mine', [{kind: 'connect'}]);
+    if (showConnect) {
+      addSection('mine', [{kind: 'connect'}]);
+    }
     return rows;
   }
   if (!boards || boards.length === 0) {

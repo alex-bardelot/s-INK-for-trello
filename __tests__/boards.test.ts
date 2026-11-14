@@ -92,9 +92,7 @@ describe('boardImageUrl', () => {
   });
 
   it('uses the full size image without scaled versions', () => {
-    expect(boardImageUrl({prefs: {backgroundImage: 'full'}}, 400)).toBe(
-      'full',
-    );
+    expect(boardImageUrl({prefs: {backgroundImage: 'full'}}, 400)).toBe('full');
   });
 
   it('returns null for plain color backgrounds', () => {
@@ -174,9 +172,12 @@ describe('buildDirectoryRows', () => {
   });
 
   it('skips the other boards section when every board is starred', () => {
-    expect(
-      keys({boards: [board('a', {starred: true})], columns: 3}),
-    ).toEqual(['header:public', 'public:0', 'header:starred', 'starred:0']);
+    expect(keys({boards: [board('a', {starred: true})], columns: 3})).toEqual([
+      'header:public',
+      'public:0',
+      'header:starred',
+      'starred:0',
+    ]);
   });
 
   it('shows a message row while the boards are not loaded', () => {
@@ -186,7 +187,11 @@ describe('buildDirectoryRows', () => {
   });
 
   it('invites to connect an account in My boards when signed out', () => {
-    const rows = buildDirectoryRows({boards: null, signedIn: false, columns: 3});
+    const rows = buildDirectoryRows({
+      boards: null,
+      signedIn: false,
+      columns: 3,
+    });
     expect(rows.map(row => row.key)).toEqual([
       'header:public',
       'public:0',
@@ -194,6 +199,22 @@ describe('buildDirectoryRows', () => {
       'mine:0',
     ]);
     expect(tileIds(rows)).toEqual(['roadmap', 'addPublic', 'connect']);
+  });
+
+  it('leaves My boards out when the connect card is turned off', () => {
+    const rows = buildDirectoryRows({
+      boards: null,
+      signedIn: false,
+      showConnect: false,
+      columns: 3,
+    });
+    expect(rows.map(row => row.key)).toEqual(['header:public', 'public:0']);
+    // Signed in, the setting has no effect.
+    expect(
+      buildDirectoryRows({boards: [], showConnect: false, columns: 3}).map(
+        row => row.kind,
+      ),
+    ).toEqual(['header', 'tiles', 'header', 'message']);
   });
 
   it('keeps the Public section with only the "+" card when empty', () => {
@@ -310,7 +331,11 @@ describe('boards preferences', () => {
 
   it('saves and reads the roadmap choice and the public boards', async () => {
     const store = createMemoryStore();
-    const preferences = {showSupernoteRoadmap: false, publicBoards: [ref]};
+    const preferences = {
+      showSupernoteRoadmap: false,
+      publicBoards: [ref],
+      showConnectCard: false,
+    };
     await saveBoardsPreferences(store, preferences);
     expect(await loadBoardsPreferences(store)).toEqual(preferences);
   });
@@ -322,11 +347,13 @@ describe('boards preferences', () => {
       JSON.stringify({
         showSupernoteRoadmap: 1,
         publicBoards: [ref, {shortLink: 'bad'}, 'x'],
+        showConnectCard: 'no',
       }),
     );
     expect(await loadBoardsPreferences(store)).toEqual({
       showSupernoteRoadmap: true,
       publicBoards: [ref],
+      showConnectCard: true,
     });
     await store.setItem(BOARDS_PREFERENCES_KEY, 'not json');
     expect(await loadBoardsPreferences(store)).toEqual(
@@ -338,9 +365,9 @@ describe('boards preferences', () => {
     const once = addPublicBoard(DEFAULT_BOARDS_PREFERENCES, ref);
     expect(once.publicBoards).toEqual([ref]);
     expect(addPublicBoard(once, ref)).toBe(once);
-    expect(
-      addPublicBoard(once, {shortLink: 'l0COP24j', name: 'Roadmap'}),
-    ).toBe(once);
+    expect(addPublicBoard(once, {shortLink: 'l0COP24j', name: 'Roadmap'})).toBe(
+      once,
+    );
   });
 
   it('removes a public board', () => {

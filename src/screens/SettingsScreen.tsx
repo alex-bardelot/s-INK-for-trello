@@ -18,6 +18,7 @@ import {Button} from '../components/Button';
 import {MemberAvatar} from '../components/MemberAvatar';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {SegmentedControl} from '../components/SegmentedControl';
+import {Switch} from '../components/Switch';
 import {BoardsPreferences} from '../boards/preferences';
 import {useTranslation} from '../i18n';
 import {TokenStorage} from '../session/trelloSession';
@@ -31,7 +32,7 @@ const AVATAR_SIZE = 64;
 export interface SettingsScreenProps {
   /** Where the board view settings are kept. */
   store: KeyValueStore;
-  /** The connected member; the account settings are hidden without one. */
+  /** The connected member; without one, the account section offers to connect. */
   member: TrelloMember | null;
   tokenStorage?: TokenStorage;
   saveFailed?: boolean;
@@ -44,6 +45,8 @@ export interface SettingsScreenProps {
   /** Saves the token on the tablet, or removes it from there. */
   onRememberChange: (remember: boolean) => void;
   onDisconnect: () => void;
+  /** Opens the connection screen (signed out only). */
+  onConnect: () => void;
   onBack: () => void;
 }
 
@@ -63,6 +66,7 @@ export function SettingsScreen({
   onBoardsPreferencesChange,
   onRememberChange,
   onDisconnect,
+  onConnect,
   onBack,
 }: SettingsScreenProps): React.JSX.Element {
   const {t} = useTranslation();
@@ -80,8 +84,8 @@ export function SettingsScreen({
 
       <BoardViewSettings store={store} />
 
-      {member && tokenStorage && (
-        <Section title={t('settings.account')}>
+      <Section title={t('settings.account')}>
+        {member && tokenStorage ? (
           <AccountCard
             member={member}
             tokenStorage={tokenStorage}
@@ -89,8 +93,19 @@ export function SettingsScreen({
             onRememberChange={onRememberChange}
             onDisconnect={onDisconnect}
           />
-        </Section>
-      )}
+        ) : (
+          <SignedOutCard
+            showConnectCard={boardsPreferences.showConnectCard}
+            onShowConnectCardChange={showConnectCard =>
+              onBoardsPreferencesChange({
+                ...boardsPreferences,
+                showConnectCard,
+              })
+            }
+            onConnect={onConnect}
+          />
+        )}
+      </Section>
 
       <Text style={styles.disclaimer}>{t('settings.disclaimer')}</Text>
     </ScreenFrame>
@@ -101,11 +116,7 @@ export function SettingsScreen({
  * Column counts and board mode, the same settings the board view changes
  * from its toolbar: they are read and saved in the same place.
  */
-function BoardViewSettings({
-  store,
-}: {
-  store: KeyValueStore;
-}): React.JSX.Element {
+function BoardViewSettings({store}: {store: KeyValueStore}): React.JSX.Element {
   const {t} = useTranslation();
   const [columns, setColumns] = useState<BoardPreferences>(DEFAULT_COLUMNS);
   const [focus, setFocus] = useState<FocusSettings>(DEFAULT_FOCUS_SETTINGS);
@@ -253,6 +264,39 @@ function AccountCard({
           onConfirm={onDisconnect}
         />
       )}
+    </View>
+  );
+}
+
+/**
+ * No account connected: a way to connect, and a switch hiding the "My
+ * boards" section (and its connect card) of the boards page, for someone
+ * who only reads public boards.
+ */
+function SignedOutCard({
+  showConnectCard,
+  onShowConnectCardChange,
+  onConnect,
+}: {
+  showConnectCard: boolean;
+  onShowConnectCardChange: (show: boolean) => void;
+  onConnect: () => void;
+}): React.JSX.Element {
+  const {t} = useTranslation();
+  return (
+    <View style={styles.card}>
+      <Text style={[styles.text, styles.bold]}>
+        {t('settings.notConnected')}
+      </Text>
+      <Text style={styles.text}>{t('boards.connectHint')}</Text>
+      <Button primary label={t('boards.connectTitle')} onPress={onConnect} />
+      <View style={styles.separator} />
+      <Switch
+        label={t('settings.showConnectCard')}
+        help={t('settings.showConnectCardHelp')}
+        value={showConnectCard}
+        onChange={onShowConnectCardChange}
+      />
     </View>
   );
 }

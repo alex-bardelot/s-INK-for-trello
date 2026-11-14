@@ -146,9 +146,12 @@ export function BoardsScreen({
   const [opening, setOpening] = useState<
     ReadonlyMap<string, 'opening' | 'failed'>
   >(new Map());
-  const keepPublicBoard = useCallback((shortLink: string, board: TrelloBoard) => {
-    setPublicDetails(previous => new Map(previous).set(shortLink, board));
-  }, []);
+  const keepPublicBoard = useCallback(
+    (shortLink: string, board: TrelloBoard) => {
+      setPublicDetails(previous => new Map(previous).set(shortLink, board));
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!signedIn) {
@@ -164,7 +167,10 @@ export function BoardsScreen({
         .getBoard(shortLink)
         .then(board => !cancelled && keepPublicBoard(shortLink, board))
         .catch(error =>
-          console.warn(`[sINK] Failed to read public board ${shortLink}`, error),
+          console.warn(
+            `[sINK] Failed to read public board ${shortLink}`,
+            error,
+          ),
         );
     }
     return () => {
@@ -231,10 +237,7 @@ export function BoardsScreen({
   const organizations = useOrganizations(
     client,
     signedIn,
-    useMemo(
-      () => [...(boards ?? []), ...publicTiles],
-      [boards, publicTiles],
-    ),
+    useMemo(() => [...(boards ?? []), ...publicTiles], [boards, publicTiles]),
   );
   const pages = useMemo(
     () =>
@@ -246,12 +249,21 @@ export function BoardsScreen({
               publicBoards: publicTiles,
               showRoadmap,
               signedIn,
+              showConnect: preferences.showConnectCard,
               columns,
             }),
             bodyHeight,
             ROW_HEIGHTS,
           ),
-    [boards, publicTiles, columns, showRoadmap, signedIn, bodyHeight],
+    [
+      boards,
+      publicTiles,
+      columns,
+      showRoadmap,
+      signedIn,
+      preferences.showConnectCard,
+      bodyHeight,
+    ],
   );
   const totalPages = pages?.length ?? 1;
   const pageIndex = Math.min(page, totalPages - 1);
@@ -291,7 +303,9 @@ export function BoardsScreen({
                     key="roadmap"
                     board={publicDetails.get(SUPERNOTE_ROADMAP_SHORT_LINK)}
                     status={opening.get(SUPERNOTE_ROADMAP_SHORT_LINK)}
-                    onPress={() => openPublicBoard(SUPERNOTE_ROADMAP_SHORT_LINK)}
+                    onPress={() =>
+                      openPublicBoard(SUPERNOTE_ROADMAP_SHORT_LINK)
+                    }
                   />
                 );
               }
@@ -581,7 +595,12 @@ function roadmapWordmarkFrame(
   // Centered in the room left between the logos.
   const spare = (fitWidth - width) * (1 + 2 * WORDMARK_CLEAR_SPACE);
   const left = Math.round(ROADMAP_LEFT_LOGO_EDGE + clear + spare / 2);
-  return {left, top: Math.round((TILE_BAND_HEIGHT - height) / 2), width, height};
+  return {
+    left,
+    top: Math.round((TILE_BAND_HEIGHT - height) / 2),
+    width,
+    height,
+  };
 }
 
 function BoardTile({
@@ -766,9 +785,7 @@ function useOrganizations(
           return null;
         })
         .then(organization =>
-          setOrganizations(previous =>
-            new Map(previous).set(id, organization),
-          ),
+          setOrganizations(previous => new Map(previous).set(id, organization)),
         );
     }
   }, [boards, client, signedIn]);

@@ -3,6 +3,18 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.20.0 — Account section in Settings when signed out
+
+- Signed out, Settings now shows the Trello account section too: "No
+  Trello account connected", what connecting brings, and a **Connect your
+  Trello account** button that opens the connection page (and comes back
+  to Settings).
+- A switch "Show “Connect your Trello account” on the boards page" hides
+  the My boards section and its connect card, for someone who only reads
+  public boards. It is on by default, saved with the boards page
+  preferences, and has no effect once connected.
+- Bumped the plugin to version 0.20.0 (`versionCode` 51).
+
 ## 0.19.3 — Masked token field
 
 - The token field of the connection page is masked like a password, with

@@ -151,6 +151,8 @@ export default function App(): React.JSX.Element {
           setSettingsOpen(false);
           session.disconnect();
         }}
+        // The connection screen opens over Settings and comes back to it.
+        onConnect={() => setConnectOpen(true)}
         onBack={() => setSettingsOpen(false)}
       />
     );

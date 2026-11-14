@@ -17,11 +17,17 @@ export interface BoardsPreferences {
   showSupernoteRoadmap: boolean;
   /** Public boards added by the user, in the order they were added. */
   publicBoards: readonly PublicBoardRef[];
+  /**
+   * Signed out, shows the "My boards" section with the card inviting to
+   * connect. Someone who only reads public boards can turn it off.
+   */
+  showConnectCard: boolean;
 }
 
 export const DEFAULT_BOARDS_PREFERENCES: BoardsPreferences = {
   showSupernoteRoadmap: true,
   publicBoards: [],
+  showConnectCard: true,
 };
 
 /** Trello short links are 8 letters or digits. */
@@ -37,9 +43,10 @@ export function parseBoardShortLink(input: string): string | null {
   if (SHORT_LINK.test(text)) {
     return text;
   }
-  const match = /^(?:https?:\/\/)?(?:www\.)?trello\.com\/b\/([A-Za-z0-9]{8})(?:[/?#].*)?$/i.exec(
-    text,
-  );
+  const match =
+    /^(?:https?:\/\/)?(?:www\.)?trello\.com\/b\/([A-Za-z0-9]{8})(?:[/?#].*)?$/i.exec(
+      text,
+    );
   return match ? match[1] : null;
 }
 
@@ -100,6 +107,10 @@ export async function loadBoardsPreferences(
       publicBoards: Array.isArray(parsed.publicBoards)
         ? parsed.publicBoards.filter(isPublicBoardRef)
         : DEFAULT_BOARDS_PREFERENCES.publicBoards,
+      showConnectCard:
+        typeof parsed.showConnectCard === 'boolean'
+          ? parsed.showConnectCard
+          : DEFAULT_BOARDS_PREFERENCES.showConnectCard,
     };
   } catch (error) {
     console.warn('[sINK] Failed to read boards preferences', error);
