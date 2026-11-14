@@ -18,6 +18,7 @@ import {
   MARK_LABEL_PATTERN,
   MARK_LINE_GAP_PX,
   markLabel,
+  markLabelDrop,
   LINK_ICON_SIZE,
   LINK_NAME_MAX_LENGTH,
   shortName,
@@ -106,12 +107,14 @@ describe('linked handwriting', () => {
     const y = 900 + MARK_LINE_GAP_PX;
     expect(mark.label).toBe('s-INK/c');
     expect(mark.labelRect.left).toBe(800 + MARK_LABEL_GAP_PX);
-    expect(mark.labelRect.bottom).toBe(y);
+    // The letters, not the box, rest on the line.
+    expect(mark.labelRect.bottom).toBe(y + markLabelDrop());
     expect(mark.labelRect.top).toBeLessThan(y);
-    expect(mark.line).toEqual([
-      {x: 300, y},
-      {x: mark.labelRect.right, y},
-    ]);
+    expect(mark.line[0]).toEqual({x: 300, y});
+    expect(mark.line[1].y).toBe(y);
+    // The line stops at the end of the letters, inside the box.
+    expect(mark.line[1].x).toBeGreaterThan(mark.labelRect.left);
+    expect(mark.line[1].x).toBeLessThan(mark.labelRect.right);
     expect(layoutLinkMark(bounds, 'board', 1920, 2560).label).toBe('s-INK/b');
     expect(MARK_LABEL_PATTERN.test(markLabel('board'))).toBe(true);
   });
@@ -124,6 +127,7 @@ describe('linked handwriting', () => {
       2560,
     );
     expect(mark.labelRect.right).toBeLessThanOrEqual(1919);
+    expect(mark.labelRect.bottom).toBeLessThanOrEqual(2559);
     expect(mark.line[0].y).toBe(2559);
     expect(mark.line[0].x).toBeLessThanOrEqual(mark.labelRect.left);
   });

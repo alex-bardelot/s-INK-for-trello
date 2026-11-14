@@ -3,6 +3,15 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.30.1 — s-INK label rests on the line
+
+- The `s-INK/c|b` label of a linked selection is lowered by its text
+  box margin and line spacing, so its letters rest on the line instead
+  of floating above it.
+- The line now stops at the end of the label's letters. It uses a
+  narrower glyph estimate than text boxes, closer to the device font.
+- The label font grows from 28 to 32.
+
 ## 0.30.0 — Linked selections marked with a bold line and an s-INK label
 
 - The line under a linked selection is now black and twice as thick
