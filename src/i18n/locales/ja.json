@@ -183,6 +183,7 @@
   "inkLink.emptyLog": "まだ記録はありません。",
   "inkLink.bindSelection": "選択範囲をリンク",
   "inkLink.bindSelectionHint": "投げ縄の選択範囲をこのページにリンクします。ノートでタップするとここで開きます。",
-  "inkLink.bindPending": "選択範囲（{count} 個の要素）をリンクするカードまたはボードを開き、「選択範囲をリンク」を押してください。",
+  "inkLink.bindPending": "選択範囲（{count} 個の要素）をリンクするボードまたはカードの「リンク」を押してください。ボードを開くとカードが表示されます。",
+  "inkLink.bindShort": "リンク",
   "inkLink.bindCancel": "キャンセル"
 }

@@ -183,6 +183,7 @@
   "inkLink.emptyLog": "尚無記錄。",
   "inkLink.bindSelection": "連結所選內容",
   "inkLink.bindSelectionHint": "將套索所選內容連結到此頁面。在筆記中點按即可在此開啟。",
-  "inkLink.bindPending": "開啟要連結所選內容（{count} 個元素）的卡片或看板，然後按「連結所選內容」。",
+  "inkLink.bindPending": "在要連結所選內容（{count} 個元素）的看板或卡片上按「連結」。開啟看板可查看其卡片。",
+  "inkLink.bindShort": "連結",
   "inkLink.bindCancel": "取消"
 }

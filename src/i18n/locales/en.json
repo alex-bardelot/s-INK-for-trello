@@ -183,6 +183,7 @@
   "inkLink.emptyLog": "Nothing recorded yet.",
   "inkLink.bindSelection": "Link selection",
   "inkLink.bindSelectionHint": "Links the lasso selection to this page. A tap on it in the note opens it here.",
-  "inkLink.bindPending": "Open the card or board to link the selection to ({count} elements), then press Link selection.",
+  "inkLink.bindPending": "Press Link on the board or card to link the selection to ({count} elements). Open a board to see its cards.",
+  "inkLink.bindShort": "Link",
   "inkLink.bindCancel": "Cancel"
 }

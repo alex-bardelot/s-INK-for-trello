@@ -35,6 +35,7 @@ import {
 import {BoardPreferences, loadBoardPreferences} from '../board/preferences';
 import {useTwoFingerSwipe} from '../board/useTwoFingerSwipe';
 import {formatCardDate} from '../cards/detail';
+import {BindSelectionButton} from '../components/BindSelectionButton';
 import {Checkbox} from '../components/Checkbox';
 import {InsertInkLinkButton} from '../components/InsertInkLinkButton';
 import {LabelChip} from '../components/LabelChip';
@@ -826,6 +827,9 @@ function CardTile({
         <Text style={styles.cardName} numberOfLines={3}>
           {card.name}
         </Text>
+        <BindSelectionButton
+          target={{kind: 'card', shortLink: card.shortLink || card.id}}
+        />
       </View>
       {(badges.length > 0 || cardMembers.length > 0) && (
         <View style={styles.cardFooter}>

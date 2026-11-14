@@ -119,6 +119,8 @@ export interface TrelloBoardMember {
 export interface TrelloBoardCard {
   id: string;
   name: string;
+  /** Short id used in card URLs (`trello.com/c/{shortLink}/...`). */
+  shortLink?: string;
   idList: string;
   pos: number;
   /** Due date as an ISO 8601 string, or `null`. */

@@ -183,6 +183,7 @@
   "inkLink.emptyLog": "Rien d'enregistré pour l'instant.",
   "inkLink.bindSelection": "Lier la sélection",
   "inkLink.bindSelectionHint": "Lie la sélection du lasso à cette page. Un appui dessus dans la note l'ouvre ici.",
-  "inkLink.bindPending": "Ouvrez la carte ou le tableau à lier à la sélection ({count} éléments), puis appuyez sur Lier la sélection.",
+  "inkLink.bindPending": "Appuyez sur Lier sur le tableau ou la carte à lier à la sélection ({count} éléments). Ouvrez un tableau pour voir ses cartes.",
+  "inkLink.bindShort": "Lier",
   "inkLink.bindCancel": "Annuler"
 }

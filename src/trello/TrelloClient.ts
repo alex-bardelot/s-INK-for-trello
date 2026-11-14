@@ -40,7 +40,7 @@ const BOARD_FIELDS =
   'name,url,shortLink,closed,starred,idOrganization,prefs,dateLastActivity,memberships';
 const LIST_FIELDS = 'name,closed,pos,idBoard';
 const BOARD_CARD_FIELDS =
-  'name,idList,pos,due,dueComplete,badges,labels,idMembers';
+  'name,idList,pos,due,dueComplete,badges,labels,idMembers,shortLink';
 const BOARD_MEMBER_FIELDS = 'fullName,initials,username,avatarUrl';
 const CARD_DETAIL_FIELDS =
   'name,desc,idList,url,shortUrl,shortLink,start,due,dueComplete,dateLastActivity,labels,idMembers';

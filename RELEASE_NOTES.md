@@ -3,6 +3,18 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.29.0 — Link a selection straight from the board and card tiles
+
+- After the lasso **Link to Trello** button, every tile gets a **Link**
+  button:
+  - on each board tile of the boards page (the Supernote roadmap
+    included), it links the selection to that board;
+  - on each card tile of a board, it links the selection to that card.
+  A tap elsewhere on a tile still opens it.
+- The band at the top now explains this.
+- Board cards are read with their `shortLink`, so links to cards stay
+  short.
+
 ## 0.28.0 — Linked handwriting is underlined
 
 - **Link selection** now draws a dark gray line under the linked

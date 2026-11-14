@@ -22,7 +22,9 @@ import {
 } from '../boards/directory';
 import {describeLastActivity} from '../boards/activity';
 import {BoardsPreferences, PublicBoardRef} from '../boards/preferences';
+import {BindSelectionButton} from '../components/BindSelectionButton';
 import {Button} from '../components/Button';
+import {InkLinkTarget} from '../inkLink/inkLink';
 import {GearIcon} from '../components/GearIcon';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {Locale, useTranslation} from '../i18n';
@@ -529,6 +531,7 @@ function RoadmapTile({
         lastActivityLabel(board?.dateLastActivity, t, locale)
       }
       disabled={status === 'opening'}
+      linkTarget={{kind: 'board', shortLink: SUPERNOTE_ROADMAP_SHORT_LINK}}
       onPress={onPress}
       background={
         <View
@@ -634,6 +637,7 @@ function BoardTile({
       badge={
         organization ? <WorkspaceBadge organization={organization} /> : null
       }
+      linkTarget={{kind: 'board', shortLink: board.shortLink || board.id}}
       onPress={onPress}
       background={
         <View style={[styles.band, {backgroundColor: boardShade(board)}]}>
@@ -663,6 +667,7 @@ function Tile({
   disabled = false,
   background,
   badge,
+  linkTarget,
   onPress,
 }: {
   name: string;
@@ -672,6 +677,8 @@ function Tile({
   background: React.ReactNode;
   /** Drawn in the bottom right corner, like the avatars on Trello cards. */
   badge?: React.ReactNode;
+  /** Board a waiting lasso selection can be linked to, from the tile. */
+  linkTarget?: InkLinkTarget;
   onPress: () => void;
 }): React.JSX.Element {
   const {t} = useTranslation();
@@ -702,6 +709,11 @@ function Tile({
             )}
           </View>
           {badge && <View style={styles.badge}>{badge}</View>}
+          {linkTarget && (
+            <View style={styles.tileAction}>
+              <BindSelectionButton target={linkTarget} />
+            </View>
+          )}
         </>
       )}
     </Pressable>
@@ -919,6 +931,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: spacing.sm,
     bottom: spacing.sm,
+  },
+  tileAction: {
+    position: 'absolute',
+    right: spacing.sm,
+    top: spacing.sm,
   },
   workspace: {
     width: BADGE_SIZE,

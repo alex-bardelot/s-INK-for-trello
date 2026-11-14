@@ -158,7 +158,7 @@ describe('TrelloClient', () => {
     const cards = await clientWith(fetchImpl).getBoardCards('b1');
     expect(cards.map(c => c.id)).toEqual(['x', 'y']);
     expect(fetchImpl.mock.calls[0][0]).toBe(
-      'https://api.trello.com/1/boards/b1/cards?filter=open&fields=name%2CidList%2Cpos%2Cdue%2CdueComplete%2Cbadges%2Clabels%2CidMembers',
+      'https://api.trello.com/1/boards/b1/cards?filter=open&fields=name%2CidList%2Cpos%2Cdue%2CdueComplete%2Cbadges%2Clabels%2CidMembers%2CshortLink',
     );
   });
 
