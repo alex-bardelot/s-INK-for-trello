@@ -18,6 +18,7 @@ export type {
   TrelloBoard,
   TrelloBoardCard,
   TrelloBoardMember,
+  TrelloBoardMembership,
   TrelloBoardPrefs,
   TrelloCard,
   TrelloLabel,

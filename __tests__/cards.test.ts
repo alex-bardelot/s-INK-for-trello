@@ -1,14 +1,17 @@
 jest.mock('sn-plugin-lib', () => ({}));
 
 import {
+  canAddCards,
   hasHiddenBoards,
-  orderBoards,
+  isObserverOf,
+  offerBoards,
   orderLists,
   splitCardText,
 } from '../src/cards/ordering';
 import {
   CARD_PREFERENCES_KEY,
   loadCardPreferences,
+  mostUsedBoardId,
   rememberCardDestination,
 } from '../src/cards/preferences';
 import {ButtonId} from '../src/plugin/constants';
@@ -42,46 +45,164 @@ const BOARDS = [
 ];
 
 const ids = (items: Array<{id: string}>) => items.map(item => item.id);
+const offeredIds = (items: Array<{board: TrelloBoard}>) =>
+  items.map(item => item.board.id);
 
-describe('orderBoards', () => {
-  it('offers favorites by default', () => {
-    expect(ids(orderBoards(BOARDS, undefined, false))).toEqual([
-      'fav-a',
-      'fav-b',
+function withMembership(
+  base: TrelloBoard,
+  memberType: string,
+  idMember = 'me',
+): TrelloBoard {
+  return {
+    ...base,
+    memberships: [{id: `m-${base.id}`, idMember, memberType}],
+  };
+}
+
+describe('offerBoards', () => {
+  it('offers starred boards by default', () => {
+    expect(offeredIds(offerBoards({boards: BOARDS, showAll: false}))).toEqual(
+      ['fav-a', 'fav-b'],
+    );
+  });
+
+  it('puts the last used starred board first', () => {
+    expect(
+      offeredIds(
+        offerBoards({boards: BOARDS, lastUsedId: 'fav-b', showAll: false}),
+      ),
+    ).toEqual(['fav-b', 'fav-a']);
+  });
+
+  it('includes the last used board even if it is not starred', () => {
+    expect(
+      offeredIds(
+        offerBoards({boards: BOARDS, lastUsedId: 'plain-d', showAll: false}),
+      ),
+    ).toEqual(['plain-d', 'fav-a', 'fav-b']);
+  });
+
+  it('puts the most used board first, then the last used one', () => {
+    const offered = offerBoards({
+      boards: BOARDS,
+      mostUsedId: 'plain-c',
+      lastUsedId: 'fav-b',
+      showAll: false,
+    });
+    expect(offeredIds(offered)).toEqual(['plain-c', 'fav-b', 'fav-a']);
+    expect(offered.map(item => item.badges)).toEqual([
+      ['mostUsed'],
+      ['lastUsed'],
+      [],
     ]);
   });
 
-  it('puts the last used favorite first', () => {
-    expect(ids(orderBoards(BOARDS, 'fav-b', false))).toEqual([
-      'fav-b',
-      'fav-a',
-    ]);
+  it('gives both badges to a board most and last used', () => {
+    const [first] = offerBoards({
+      boards: BOARDS,
+      mostUsedId: 'plain-d',
+      lastUsedId: 'plain-d',
+      showAll: false,
+    });
+    expect(first.board.id).toBe('plain-d');
+    expect(first.badges).toEqual(['mostUsed', 'lastUsed']);
   });
 
-  it('includes the last used board even if it is not a favorite', () => {
-    expect(ids(orderBoards(BOARDS, 'plain-d', false))).toEqual([
-      'plain-d',
-      'fav-a',
-      'fav-b',
-    ]);
+  it('adds the public boards after the member boards, once', () => {
+    const pub = board('pub-x', false);
+    const offered = offerBoards({
+      boards: BOARDS,
+      publicBoards: [pub, pub, BOARDS[2]],
+      showAll: false,
+    });
+    expect(offeredIds(offered)).toEqual(['fav-a', 'fav-b', 'plain-c', 'pub-x']);
+    expect(offered[2].badges).toEqual(['public']);
+    expect(offered[3].badges).toEqual(['public']);
+  });
+
+  it('can make a public board the favorite', () => {
+    const pub = board('pub-x', false);
+    expect(
+      offeredIds(
+        offerBoards({
+          boards: BOARDS,
+          publicBoards: [pub],
+          mostUsedId: 'pub-x',
+          showAll: false,
+        }),
+      ),
+    ).toEqual(['pub-x', 'fav-a', 'fav-b']);
   });
 
   it('shows every board on demand, last used first', () => {
-    expect(ids(orderBoards(BOARDS, 'plain-c', true))).toEqual([
-      'plain-c',
-      'fav-a',
-      'fav-b',
-      'plain-d',
-    ]);
+    expect(
+      offeredIds(
+        offerBoards({boards: BOARDS, lastUsedId: 'plain-c', showAll: true}),
+      ),
+    ).toEqual(['plain-c', 'fav-a', 'fav-b', 'plain-d']);
   });
 
-  it('ignores an unknown last board', () => {
-    expect(ids(orderBoards(BOARDS, 'gone', true))).toEqual(ids(BOARDS));
+  it('ignores unknown most and last used boards', () => {
+    expect(
+      offeredIds(
+        offerBoards({
+          boards: BOARDS,
+          mostUsedId: 'gone',
+          lastUsedId: 'gone-too',
+          showAll: true,
+        }),
+      ),
+    ).toEqual(ids(BOARDS));
   });
 
   it('tells whether boards are hidden', () => {
-    expect(hasHiddenBoards(BOARDS, undefined)).toBe(true);
-    expect(hasHiddenBoards(BOARDS.slice(0, 2), undefined)).toBe(false);
+    expect(hasHiddenBoards({boards: BOARDS})).toBe(true);
+    expect(hasHiddenBoards({boards: BOARDS.slice(0, 2)})).toBe(false);
+    expect(
+      hasHiddenBoards({boards: BOARDS.slice(0, 2), publicBoards: [BOARDS[3]]}),
+    ).toBe(false);
+  });
+});
+
+describe('board permissions', () => {
+  it('lets normal and admin members add cards', () => {
+    expect(canAddCards(withMembership(BOARDS[0], 'normal'), 'me', false)).toBe(
+      true,
+    );
+    expect(canAddCards(withMembership(BOARDS[0], 'admin'), 'me', false)).toBe(
+      true,
+    );
+  });
+
+  it('refuses observers, other members and deactivated members', () => {
+    expect(
+      canAddCards(withMembership(BOARDS[0], 'observer'), 'me', true),
+    ).toBe(false);
+    expect(
+      canAddCards(withMembership(BOARDS[0], 'normal', 'other'), 'me', true),
+    ).toBe(false);
+    const deactivated: TrelloBoard = {
+      ...BOARDS[0],
+      memberships: [
+        {id: 'm', idMember: 'me', memberType: 'normal', deactivated: true},
+      ],
+    };
+    expect(canAddCards(deactivated, 'me', true)).toBe(false);
+  });
+
+  it('falls back without membership data', () => {
+    expect(canAddCards(BOARDS[0], 'me', true)).toBe(true);
+    expect(canAddCards(BOARDS[0], 'me', false)).toBe(false);
+  });
+
+  it('spots observers only', () => {
+    expect(isObserverOf(withMembership(BOARDS[0], 'observer'), 'me')).toBe(
+      true,
+    );
+    expect(isObserverOf(withMembership(BOARDS[0], 'normal'), 'me')).toBe(
+      false,
+    );
+    expect(isObserverOf(BOARDS[0], 'me')).toBe(false);
   });
 });
 
@@ -133,7 +254,38 @@ describe('card preferences', () => {
     expect(await loadCardPreferences(store)).toEqual({
       lastBoardId: 'b2',
       lastListByBoard: {b1: 'l1', b2: 'l2'},
+      useCountByBoard: {b1: 1, b2: 1},
     });
+  });
+
+  it('counts cards per board to find the most used one', async () => {
+    const store = createMemoryStore();
+    let prefs = await loadCardPreferences(store);
+    expect(mostUsedBoardId(prefs)).toBeUndefined();
+    prefs = await rememberCardDestination(store, prefs, 'b1', 'l1');
+    prefs = await rememberCardDestination(store, prefs, 'b1', 'l1');
+    prefs = await rememberCardDestination(store, prefs, 'b2', 'l2');
+    expect(mostUsedBoardId(prefs)).toBe('b1');
+    prefs = await rememberCardDestination(store, prefs, 'b2', 'l2');
+    // Tie: the board used last wins.
+    expect(mostUsedBoardId(prefs)).toBe('b2');
+    expect(mostUsedBoardId(await loadCardPreferences(store))).toBe('b2');
+  });
+
+  it('reads preferences saved before usage counts existed', async () => {
+    const store = createMemoryStore();
+    await store.setItem(
+      CARD_PREFERENCES_KEY,
+      JSON.stringify({lastBoardId: 'b1', lastListByBoard: {b1: 'l1'}}),
+    );
+    const prefs = await loadCardPreferences(store);
+    expect(prefs.useCountByBoard).toBeUndefined();
+    expect(mostUsedBoardId(prefs)).toBeUndefined();
+    await store.setItem(
+      CARD_PREFERENCES_KEY,
+      JSON.stringify({lastListByBoard: {}, useCountByBoard: {b1: 'x'}}),
+    );
+    expect((await loadCardPreferences(store)).useCountByBoard).toBeUndefined();
   });
 });
 

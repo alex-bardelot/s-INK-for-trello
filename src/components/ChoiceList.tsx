@@ -8,6 +8,8 @@ export interface Choice {
   label: string;
   /** Short tag shown under the label, e.g. "Last used". */
   tag?: string;
+  /** Framed, to stand out from the other choices (e.g. the favorite). */
+  highlighted?: boolean;
 }
 
 export interface ChoiceListProps {
@@ -39,12 +41,20 @@ export function ChoiceList({
         <Pressable
           accessibilityRole="button"
           onPress={() => onSelect(item.id)}
-          style={({pressed}) => [styles.row, pressed && styles.rowPressed]}>
+          style={({pressed}) => [
+            styles.row,
+            item.highlighted && styles.rowHighlighted,
+            pressed && styles.rowPressed,
+          ]}>
           {({pressed}) => (
             <>
               <Text
                 numberOfLines={2}
-                style={[styles.label, pressed && styles.labelPressed]}>
+                style={[
+                  styles.label,
+                  item.highlighted && styles.labelHighlighted,
+                  pressed && styles.labelPressed,
+                ]}>
                 {item.label}
               </Text>
               {item.tag && (
@@ -69,6 +79,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.md,
   },
+  rowHighlighted: {
+    borderColor: colors.foreground,
+    borderRadius: borders.radius,
+    borderWidth: borders.width,
+    marginVertical: spacing.xs,
+  },
   rowPressed: {
     backgroundColor: colors.foreground,
   },
@@ -76,6 +92,9 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     fontSize: typography.label,
     fontWeight: '600',
+  },
+  labelHighlighted: {
+    fontWeight: '700',
   },
   labelPressed: {
     color: colors.background,

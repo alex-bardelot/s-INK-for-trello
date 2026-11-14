@@ -3,6 +3,26 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.21.0 — Public boards and a favorite in the New card board picker
+
+- The board picker of **New Trello Card** now also offers the public
+  boards added in Settings on which the connected member can add cards
+  (an active `normal` or `admin` member of the board). They come after
+  the member's own boards, tagged "Public board"; a public board the
+  member already belongs to appears once. A public board that cannot be
+  read is skipped instead of failing the picker.
+- Boards where the member is only an observer are no longer offered:
+  Trello would refuse the new card.
+- sINK now counts the cards created per board. The board used most is
+  shown first, framed and tagged "Favorite · most used"; the board used
+  last follows it, tagged "Last used" (ties go to the board used last).
+  Counting starts with this version.
+- The default selection is now the starred boards, the favorite, the
+  last used board and the writable public boards; the button to go back
+  to it reads "Show suggested boards only".
+- Board requests now ask Trello for the board memberships.
+- Bumped the plugin to version 0.21.0 (`versionCode` 54).
+
 ## 0.20.2 — Connection page fits the Manta screen
 
 - Step 2 "Allow sINK on Trello": the QR code now sits at the right of the

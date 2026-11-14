@@ -30,6 +30,20 @@ export interface TrelloBoard {
   dateLastActivity?: string | null;
   /** Display preferences; only the background colors are used. */
   prefs?: TrelloBoardPrefs | null;
+  /** Who belongs to the board and with which role. */
+  memberships?: TrelloBoardMembership[] | null;
+}
+
+/**
+ * Role of a member on a board. `observer` can read and comment but not add
+ * cards; `normal` and `admin` can edit.
+ */
+export interface TrelloBoardMembership {
+  id: string;
+  idMember: string;
+  memberType: 'admin' | 'normal' | 'observer' | string;
+  deactivated?: boolean;
+  unconfirmed?: boolean;
 }
 
 /**

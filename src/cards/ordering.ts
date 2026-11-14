@@ -10,30 +10,118 @@ function lastUsedFirst<T extends {id: string}>(
 }
 
 /**
- * Boards offered for a new card.
- *
- * By default: the starred boards, plus the board used last, which comes
- * first. With `showAll`, every open board, still with the last one first.
- * Input boards are expected sorted (starred first, then by name), as returned
- * by `TrelloClient.getMyBoards`.
+ * `true` if the member can add cards to the board: an active, non-observer
+ * member of it. Without membership data (`memberships` not returned),
+ * answers `unknown`.
  */
-export function orderBoards(
-  boards: readonly TrelloBoard[],
-  lastBoardId: string | undefined,
-  showAll: boolean,
-): TrelloBoard[] {
-  const offered = showAll
-    ? boards
-    : boards.filter(board => board.starred || board.id === lastBoardId);
-  return lastUsedFirst(offered, lastBoardId);
+export function canAddCards(
+  board: Pick<TrelloBoard, 'memberships'>,
+  memberId: string,
+  unknown: boolean,
+): boolean {
+  if (!Array.isArray(board.memberships)) {
+    return unknown;
+  }
+  return board.memberships.some(
+    membership =>
+      membership.idMember === memberId &&
+      !membership.deactivated &&
+      (membership.memberType === 'normal' || membership.memberType === 'admin'),
+  );
 }
 
-/** `true` if the default board selection would hide some boards. */
-export function hasHiddenBoards(
-  boards: readonly TrelloBoard[],
-  lastBoardId: string | undefined,
+/**
+ * `true` if the member is known to be only an observer of the board, who
+ * can read it but not add cards.
+ */
+export function isObserverOf(
+  board: Pick<TrelloBoard, 'memberships'>,
+  memberId: string,
 ): boolean {
-  return orderBoards(boards, lastBoardId, false).length < boards.length;
+  const mine = board.memberships?.find(
+    membership => membership.idMember === memberId,
+  );
+  return mine?.memberType === 'observer';
+}
+
+/** Why a board is put forward in the board picker. */
+export type BoardBadge = 'mostUsed' | 'lastUsed' | 'public';
+
+export interface OfferedBoard {
+  board: TrelloBoard;
+  badges: BoardBadge[];
+}
+
+export interface OfferBoardsInput {
+  /**
+   * The member's boards, sorted starred first then by name, as returned by
+   * `TrelloClient.getMyBoards`.
+   */
+  boards: readonly TrelloBoard[];
+  /** Public boards added in Settings that the member can add cards to. */
+  publicBoards?: readonly TrelloBoard[];
+  /** Board most cards were created in. */
+  mostUsedId?: string;
+  /** Board the last card was created in. */
+  lastUsedId?: string;
+  /** Every board rather than the default selection. */
+  showAll: boolean;
+}
+
+/**
+ * Boards offered for a new card, the most used board first, then the board
+ * used last, then the others in input order, then the public boards that
+ * are not already among the member's boards.
+ *
+ * By default only the starred boards, the most and last used ones and the
+ * public boards are offered; with `showAll`, every board.
+ */
+export function offerBoards({
+  boards,
+  publicBoards = [],
+  mostUsedId,
+  lastUsedId,
+  showAll,
+}: OfferBoardsInput): OfferedBoard[] {
+  const own = new Set(boards.map(board => board.id));
+  const extra = publicBoards.filter(
+    (board, index) =>
+      !own.has(board.id) &&
+      publicBoards.findIndex(other => other.id === board.id) === index,
+  );
+  const all = [...boards, ...extra];
+  const publicIds = new Set(publicBoards.map(board => board.id));
+  const offered = showAll
+    ? all
+    : all.filter(
+        board =>
+          board.starred ||
+          publicIds.has(board.id) ||
+          board.id === mostUsedId ||
+          board.id === lastUsedId,
+      );
+  const ordered = lastUsedFirst(
+    lastUsedFirst(offered, lastUsedId),
+    mostUsedId,
+  );
+  return ordered.map(board => ({
+    board,
+    badges: [
+      ...(board.id === mostUsedId ? (['mostUsed'] as const) : []),
+      ...(board.id === lastUsedId ? (['lastUsed'] as const) : []),
+      ...(publicIds.has(board.id) ? (['public'] as const) : []),
+    ],
+  }));
+}
+
+/** `true` if the default board selection hides some boards. */
+export function hasHiddenBoards(
+  input: Omit<OfferBoardsInput, 'showAll'>,
+): boolean {
+  return (
+    offerBoards({...input, showAll: false}).length <
+    offerBoards({...input, showAll: true}).length
+  );
 }
 
 /** Lists of a board in board order, with the list used last first. */

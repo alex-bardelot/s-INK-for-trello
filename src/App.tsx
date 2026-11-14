@@ -114,6 +114,7 @@ export default function App(): React.JSX.Element {
         lasso={lasso.lasso}
         client={account.client}
         store={session.settingsStore}
+        memberId={account.member.id}
         onTokenRejected={session.retry}
       />
     );

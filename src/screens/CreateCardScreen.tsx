@@ -2,15 +2,21 @@ import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {ScrollView, StyleSheet, Text, TextInput, View} from 'react-native';
 import {PluginManager} from 'sn-plugin-lib';
 
+import {loadBoardsPreferences} from '../boards/preferences';
 import {
   CardPreferences,
   EMPTY_PREFERENCES,
   loadCardPreferences,
+  mostUsedBoardId,
   rememberCardDestination,
 } from '../cards/preferences';
 import {
+  BoardBadge,
+  canAddCards,
   hasHiddenBoards,
-  orderBoards,
+  isObserverOf,
+  OfferBoardsInput,
+  offerBoards,
   orderLists,
   splitCardText,
 } from '../cards/ordering';
@@ -62,6 +68,8 @@ export interface CreateCardScreenProps {
   lasso: Promise<LassoTextResult>;
   client: TrelloClient;
   store: KeyValueStore;
+  /** Id of the connected member, to tell which boards accept new cards. */
+  memberId: string;
   /** Called when Trello rejects the token. */
   onTokenRejected: () => void;
 }
@@ -74,11 +82,13 @@ export function CreateCardScreen({
   lasso,
   client,
   store,
+  memberId,
   onTokenRejected,
 }: CreateCardScreenProps): React.JSX.Element {
   const {t} = useTranslation();
   const [step, setStep] = useState<Step>({kind: 'loading'});
   const [boards, setBoards] = useState<TrelloBoard[]>([]);
+  const [publicBoards, setPublicBoards] = useState<TrelloBoard[]>([]);
   const [showAllBoards, setShowAllBoards] = useState(false);
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
@@ -100,14 +110,23 @@ export function CreateCardScreen({
   const loadBoards = useCallback(
     async (prefs: CardPreferences): Promise<void> => {
       try {
-        // Supernote's roadmap is read only, even for its members.
-        const allBoards = (await client.getMyBoards()).filter(
-          board => !isSupernoteRoadmap(board),
+        const [myBoards, writablePublic] = await Promise.all([
+          client.getMyBoards(),
+          loadWritablePublicBoards(client, store, memberId),
+        ]);
+        // Supernote's roadmap is read only, even for its members, and
+        // observers cannot add cards.
+        const ownBoards = myBoards.filter(
+          board => !isSupernoteRoadmap(board) && !isObserverOf(board, memberId),
         );
-        setBoards(allBoards);
-        // Without any favorite, the default selection would be empty.
+        setBoards(ownBoards);
+        setPublicBoards(writablePublic);
+        // Without any suggestion, the default selection would be empty.
         setShowAllBoards(
-          orderBoards(allBoards, prefs.lastBoardId, false).length === 0,
+          offerBoards({
+            ...boardsInput(ownBoards, writablePublic, prefs),
+            showAll: false,
+          }).length === 0,
         );
         setStep({kind: 'board'});
       } catch (error) {
@@ -117,7 +136,7 @@ export function CreateCardScreen({
         });
       }
     },
-    [client, fail],
+    [client, fail, memberId, store],
   );
 
   const start = useCallback(async () => {
@@ -192,10 +211,23 @@ export function CreateCardScreen({
     [client, desc, fail, name, store],
   );
 
-  const offeredBoards = useMemo(
-    () => orderBoards(boards, preferences.current.lastBoardId, showAllBoards),
-    [boards, showAllBoards],
+  const allBoards = useMemo(
+    () => [...boards, ...publicBoards],
+    [boards, publicBoards],
   );
+  const offeredBoards = useMemo(
+    () =>
+      offerBoards({
+        ...boardsInput(boards, publicBoards, preferences.current),
+        showAll: showAllBoards,
+      }),
+    [boards, publicBoards, showAllBoards],
+  );
+  const badgeLabels: Record<BoardBadge, string> = {
+    mostUsed: t('card.mostUsed'),
+    lastUsed: t('card.lastUsed'),
+    public: t('card.publicBoard'),
+  };
 
   const close = useCallback(() => {
     PluginManager.closePluginView().catch(error =>
@@ -259,27 +291,30 @@ export function CreateCardScreen({
             {name}
           </Text>
           <ChoiceList
-            choices={offeredBoards.map(board => ({
+            choices={offeredBoards.map(({board, badges}) => ({
               id: board.id,
               label: board.starred ? `★ ${board.name}` : board.name,
               tag:
-                board.id === preferences.current.lastBoardId
-                  ? lastUsed
+                badges.length > 0
+                  ? badges.map(badge => badgeLabels[badge]).join(' · ')
                   : undefined,
+              highlighted: badges.includes('mostUsed'),
             }))}
             emptyText={t('boards.empty')}
             onSelect={id => {
-              const board = boards.find(b => b.id === id);
+              const board = allBoards.find(b => b.id === id);
               if (board) {
                 selectBoard(board);
               }
             }}
             footer={
-              hasHiddenBoards(boards, preferences.current.lastBoardId) ? (
+              hasHiddenBoards(
+                boardsInput(boards, publicBoards, preferences.current),
+              ) ? (
                 <Button
                   label={
                     showAllBoards
-                      ? t('card.showFavoriteBoards')
+                      ? t('card.showSuggestedBoards')
                       : t('card.showAllBoards')
                   }
                   onPress={() => setShowAllBoards(value => !value)}
@@ -391,6 +426,47 @@ export function CreateCardScreen({
         </ScreenFrame>
       );
   }
+}
+
+/** Board picker input, without the "show all" switch. */
+function boardsInput(
+  boards: readonly TrelloBoard[],
+  publicBoards: readonly TrelloBoard[],
+  preferences: CardPreferences,
+): Omit<OfferBoardsInput, 'showAll'> {
+  return {
+    boards,
+    publicBoards,
+    mostUsedId: mostUsedBoardId(preferences),
+    lastUsedId: preferences.lastBoardId,
+  };
+}
+
+/**
+ * The public boards added in Settings that the member can add cards to.
+ * A board that cannot be read is skipped rather than failing the picker.
+ */
+async function loadWritablePublicBoards(
+  client: TrelloClient,
+  store: KeyValueStore,
+  memberId: string,
+): Promise<TrelloBoard[]> {
+  const {publicBoards} = await loadBoardsPreferences(store);
+  const results = await Promise.allSettled(
+    publicBoards.map(ref => client.getBoard(ref.shortLink)),
+  );
+  return results.flatMap(result => {
+    if (result.status === 'rejected') {
+      console.warn('[sINK] Failed to read a public board', result.reason);
+      return [];
+    }
+    const board = result.value;
+    return !board.closed &&
+      !isSupernoteRoadmap(board) &&
+      canAddCards(board, memberId, false)
+      ? [board]
+      : [];
+  });
 }
 
 const styles = StyleSheet.create({
