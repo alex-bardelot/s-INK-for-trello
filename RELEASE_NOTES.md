@@ -3,6 +3,12 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.32.1 — Link mode hides the "+" public board tile
+
+- While a lasso selection waits to be linked, the boards page also hides
+  the "+" tile that adds a public board. `buildDirectoryRows` has a new
+  `showAddPublic` option. An empty Public section is left out entirely.
+
 ## 0.32.0 — Link tabs with a chain icon; link mode shows only boards and cards
 
 - While a lasso selection waits to be linked, the boards page hides the

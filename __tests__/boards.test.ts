@@ -232,6 +232,25 @@ describe('buildDirectoryRows', () => {
     expect(tileIds(rows)).toEqual(['addPublic', 'a']);
   });
 
+  it('can leave the "+" card out, and an empty Public section with it', () => {
+    expect(
+      tileIds(
+        buildDirectoryRows({
+          boards: [board('a')],
+          showAddPublic: false,
+          columns: 3,
+        }),
+      ),
+    ).toEqual(['roadmap', 'a']);
+    const rows = buildDirectoryRows({
+      boards: [board('a')],
+      showRoadmap: false,
+      showAddPublic: false,
+      columns: 3,
+    });
+    expect(rows.map(row => row.key)).toEqual(['header:all', 'all:0']);
+  });
+
   it('keeps the public boards when the roadmap is hidden', () => {
     const rows = buildDirectoryRows({
       boards: [],

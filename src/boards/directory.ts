@@ -130,6 +130,8 @@ export interface DirectoryInput {
    * for someone who reads public boards only).
    */
   showConnect?: boolean;
+  /** Shows the "+" card adding a public board. */
+  showAddPublic?: boolean;
   /** Tiles per row. */
   columns: number;
 }
@@ -147,6 +149,7 @@ export function buildDirectoryRows({
   showRoadmap = true,
   signedIn = true,
   showConnect = true,
+  showAddPublic = true,
   columns,
 }: DirectoryInput): DirectoryRow[] {
   const rows: DirectoryRow[] = [];
@@ -170,9 +173,11 @@ export function buildDirectoryRows({
   const publicTiles: DirectoryTile[] = [
     ...(showRoadmap ? [{kind: 'roadmap'} as const] : []),
     ...asTiles(publicBoards),
-    {kind: 'addPublic'},
+    ...(showAddPublic ? [{kind: 'addPublic'} as const] : []),
   ];
-  addSection('public', publicTiles);
+  if (publicTiles.length > 0) {
+    addSection('public', publicTiles);
+  }
 
   if (!signedIn) {
     if (showConnect) {
