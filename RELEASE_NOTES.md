@@ -3,6 +3,16 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.30.2 — s-INK label closer to the word, shorter line
+
+- The letters of the `s-INK/c|b` label now start 6 px after the linked
+  selection. Before, the label's box started there and its inner margin
+  pushed the letters further away.
+- The label's box is fitted to its letters. A box much larger than its
+  text was easily left out of a lasso, so the label stayed behind when
+  the word moved.
+- The line is shorter: it ends at a narrower estimate of the letters.
+
 ## 0.30.1 — s-INK label rests on the line
 
 - The `s-INK/c|b` label of a linked selection is lowered by its text

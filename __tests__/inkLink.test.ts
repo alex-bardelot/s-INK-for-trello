@@ -7,6 +7,7 @@ import {
   mergeInkLinks,
   NoteElementType,
   PageElement,
+  TEXT_BOX_PADDING_PX,
   unionOf,
 } from '../src/inkLink/hitTest';
 import {formatInkLink, parseInkLink} from '../src/inkLink/inkLink';
@@ -106,7 +107,10 @@ describe('linked handwriting', () => {
     const mark = layoutLinkMark(bounds, 'card', 1920, 2560);
     const y = 900 + MARK_LINE_GAP_PX;
     expect(mark.label).toBe('s-INK/c');
-    expect(mark.labelRect.left).toBe(800 + MARK_LABEL_GAP_PX);
+    // The letters start just after the word, inside the box margin.
+    expect(mark.labelRect.left).toBe(
+      800 + MARK_LABEL_GAP_PX - TEXT_BOX_PADDING_PX,
+    );
     // The letters, not the box, rest on the line.
     expect(mark.labelRect.bottom).toBe(y + markLabelDrop());
     expect(mark.labelRect.top).toBeLessThan(y);

@@ -23,15 +23,17 @@ export interface LinkLayout {
 
 /** Space between a linked selection and the line drawn under it. */
 export const MARK_LINE_GAP_PX = 8;
-/** Space between a linked selection and its label. */
-export const MARK_LABEL_GAP_PX = 8;
+/** Space between a linked selection and the letters of its label. */
+export const MARK_LABEL_GAP_PX = 6;
 /** Font size of the `s-INK/c` or `s-INK/b` label of a linked selection. */
 export const MARK_FONT_SIZE = 32;
 /**
  * Average glyph width of the label, as a share of the font size: the
  * device font is narrower than the estimate used to size text boxes.
  */
-export const MARK_GLYPH_RATIO = 0.45;
+export const MARK_GLYPH_RATIO = 0.4;
+/** Glyph width used to size the label's box, a little above the real one. */
+export const MARK_BOX_GLYPH_RATIO = 0.52;
 
 /** Label of a linked selection: `s-INK/c` for a card, `s-INK/b` for a board. */
 export function markLabel(kind: 'card' | 'board'): string {
@@ -62,12 +64,23 @@ export function layoutLinkMark(
   pageHeight: number,
 ): LinkMarkLayout {
   const label = markLabel(kind);
-  // The box keeps the generous estimate so the label never wraps.
-  const size = estimateTextSize(label, MARK_FONT_SIZE);
+  const characters = Array.from(label).length;
+  // The box is fitted to the letters, with some room so they never wrap:
+  // a box much larger than its text is easily left out of a lasso.
+  const size = {
+    width:
+      2 * TEXT_BOX_PADDING_PX +
+      Math.ceil(characters * MARK_FONT_SIZE * MARK_BOX_GLYPH_RATIO),
+    height: estimateTextSize(label, MARK_FONT_SIZE).height,
+  };
   const y = Math.min(bounds.bottom + MARK_LINE_GAP_PX, pageHeight - 1);
+  // The letters, not the box, start right after the selection.
   const labelLeft = Math.max(
     0,
-    Math.min(bounds.right + MARK_LABEL_GAP_PX, pageWidth - 1 - size.width),
+    Math.min(
+      bounds.right + MARK_LABEL_GAP_PX - TEXT_BOX_PADDING_PX,
+      pageWidth - 1 - size.width,
+    ),
   );
   // Lowered by its inner margin and line spacing, so the letters, not the
   // box, rest on the line.
@@ -82,7 +95,7 @@ export function layoutLinkMark(
   const textEnd =
     labelLeft +
     TEXT_BOX_PADDING_PX +
-    Math.ceil(Array.from(label).length * MARK_FONT_SIZE * MARK_GLYPH_RATIO);
+    Math.ceil(characters * MARK_FONT_SIZE * MARK_GLYPH_RATIO);
   return {
     line: [
       {x: Math.max(0, Math.min(bounds.left, labelLeft)), y},
