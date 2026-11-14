@@ -1,0 +1,279 @@
+import type {Locale} from '../i18n';
+import type {
+  TrelloBoardMember,
+  TrelloCardDetail,
+  TrelloChecklist,
+} from '../trello/types';
+
+/**
+ * Content of the card detail page, as a sequence of blocks. The page is
+ * turned rather than scrolled (scrolling is slow on E Ink), so the content
+ * is cut into small blocks that are measured and spread over pages; a long
+ * description is cut paragraph by paragraph.
+ */
+export type DetailBlock =
+  | {kind: 'summary'; key: string}
+  | {kind: 'heading'; key: string; section: DetailSection; count?: string}
+  | {kind: 'paragraph'; key: string; text: string}
+  | {
+      kind: 'checklist';
+      key: string;
+      name: string;
+      done: number;
+      total: number;
+    }
+  | {kind: 'checkItem'; key: string; name: string; complete: boolean}
+  | {kind: 'attachment'; key: string; name: string; url: string}
+  | {
+      kind: 'comment';
+      key: string;
+      author: string;
+      date: string;
+      text: string;
+    };
+
+export type DetailSection =
+  | 'description'
+  | 'checklists'
+  | 'attachments'
+  | 'comments';
+
+/** Paragraphs with more lines than this are cut line by line. */
+const MAX_PARAGRAPH_LINES = 8;
+
+/** Builds the blocks of the detail page of a card, in reading order. */
+export function buildDetailBlocks(card: TrelloCardDetail): DetailBlock[] {
+  const blocks: DetailBlock[] = [{kind: 'summary', key: 'summary'}];
+
+  const paragraphs = descriptionParagraphs(card.desc ?? '');
+  if (paragraphs.length > 0) {
+    blocks.push({
+      kind: 'heading',
+      key: 'h-description',
+      section: 'description',
+    });
+    paragraphs.forEach((text, i) =>
+      blocks.push({kind: 'paragraph', key: `p-${i}`, text}),
+    );
+  }
+
+  const checklists = sortedChecklists(card.checklists ?? []);
+  if (checklists.length > 0) {
+    blocks.push({kind: 'heading', key: 'h-checklists', section: 'checklists'});
+    for (const checklist of checklists) {
+      const items = checklist.checkItems;
+      blocks.push({
+        kind: 'checklist',
+        key: `cl-${checklist.id}`,
+        name: checklist.name,
+        done: items.filter(item => item.state === 'complete').length,
+        total: items.length,
+      });
+      for (const item of items) {
+        blocks.push({
+          kind: 'checkItem',
+          key: `ci-${item.id}`,
+          name: item.name,
+          complete: item.state === 'complete',
+        });
+      }
+    }
+  }
+
+  const attachments = card.attachments ?? [];
+  if (attachments.length > 0) {
+    blocks.push({
+      kind: 'heading',
+      key: 'h-attachments',
+      section: 'attachments',
+      count: String(attachments.length),
+    });
+    for (const attachment of attachments) {
+      blocks.push({
+        kind: 'attachment',
+        key: `a-${attachment.id}`,
+        name: attachment.name || attachment.url,
+        url: attachment.url,
+      });
+    }
+  }
+
+  const comments = [...(card.actions ?? [])]
+    .filter(action => typeof action.data?.text === 'string')
+    .sort((a, b) => b.date.localeCompare(a.date));
+  if (comments.length > 0) {
+    blocks.push({
+      kind: 'heading',
+      key: 'h-comments',
+      section: 'comments',
+      count: String(comments.length),
+    });
+    for (const comment of comments) {
+      blocks.push({
+        kind: 'comment',
+        key: `c-${comment.id}`,
+        author: comment.memberCreator?.fullName ?? '',
+        date: comment.date,
+        text: plainMarkdown(comment.data.text).trim(),
+      });
+    }
+  }
+  return blocks;
+}
+
+/** Checklists and their items in board order (Trello does not sort them). */
+function sortedChecklists(
+  checklists: readonly TrelloChecklist[],
+): TrelloChecklist[] {
+  return [...checklists]
+    .sort((a, b) => a.pos - b.pos)
+    .map(checklist => ({
+      ...checklist,
+      checkItems: [...(checklist.checkItems ?? [])].sort(
+        (a, b) => a.pos - b.pos,
+      ),
+    }));
+}
+
+/** Members of the card, from the nested members or the board's. */
+export function cardMembers(
+  card: TrelloCardDetail,
+  boardMembers: ReadonlyMap<string, TrelloBoardMember>,
+): TrelloBoardMember[] {
+  if (card.members && card.members.length > 0) {
+    return card.members;
+  }
+  return (card.idMembers ?? [])
+    .map(id => boardMembers.get(id))
+    .filter((member): member is TrelloBoardMember => member !== undefined);
+}
+
+/**
+ * Splits a card description into paragraphs of plain text. Blank lines
+ * separate paragraphs; very long paragraphs are cut line by line so that
+ * each block fits on a page.
+ */
+export function descriptionParagraphs(desc: string): string[] {
+  const text = plainMarkdown(desc.replace(/\r\n?/g, '\n'));
+  const paragraphs: string[] = [];
+  for (const raw of text.split(/\n\s*\n/)) {
+    const lines = raw
+      .split('\n')
+      .map(line => line.trimEnd())
+      .filter(line => line.trim().length > 0);
+    if (lines.length === 0) {
+      continue;
+    }
+    if (lines.length > MAX_PARAGRAPH_LINES) {
+      paragraphs.push(...lines);
+    } else {
+      paragraphs.push(lines.join('\n'));
+    }
+  }
+  return paragraphs;
+}
+
+/**
+ * Turns the Markdown Trello stores in descriptions and comments into plain
+ * text: emphasis marks, heading marks, link targets and escapes are
+ * removed, and list bullets become "•".
+ */
+export function plainMarkdown(markdown: string): string {
+  return markdown
+    .split('\n')
+    .map(line => {
+      if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) {
+        return ''; // Horizontal rule.
+      }
+      return line
+        .replace(/^\s{0,3}#{1,6}\s+/, '')
+        .replace(/^\s{0,3}>\s?/, '')
+        .replace(
+          /^(\s*)[-*+]\s+\[( |x|X)\]\s+/,
+          (_m, indent, mark) => `${indent}${mark === ' ' ? '☐' : '☑'} `,
+        )
+        .replace(/^(\s*)[-*+]\s+/, '$1• ')
+        .replace(
+          /!?\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g,
+          (_m, label, url) => (label.trim() ? label : url),
+        )
+        .replace(/(\*\*|__)(\S(?:.*?\S)?)\1/g, '$2')
+        .replace(/~~(\S(?:.*?\S)?)~~/g, '$1')
+        .replace(/`([^`]+)`/g, '$1')
+        .replace(/\\([\\`*_{}[\]()#+\-.!>|~])/g, '$1');
+    })
+    .join('\n');
+}
+
+/** A page of blocks: indexes `[start, end)`. */
+export interface BlockPage {
+  start: number;
+  end: number;
+}
+
+/**
+ * Spreads blocks of measured heights over pages of `available` pixels.
+ * Headings (`keepWithNext`) are never left alone at the bottom of a page:
+ * they move to the next page with the block they introduce. A block taller
+ * than a page gets a page of its own.
+ */
+export function paginateBlocks(
+  heights: readonly number[],
+  keepWithNext: readonly boolean[],
+  available: number,
+  gap: number,
+): BlockPage[] {
+  const pages: BlockPage[] = [];
+  let start = 0;
+  let used = 0;
+  for (let index = 0; index < heights.length; index++) {
+    const height = heights[index];
+    const needed = index === start ? height : used + gap + height;
+    if (index > start && needed > available) {
+      // Do not leave the headings that end the page without their content.
+      let cut = index;
+      while (cut - 1 > start && keepWithNext[cut - 1]) {
+        cut--;
+      }
+      pages.push({start, end: cut});
+      start = cut;
+      used = 0;
+      for (let i = cut; i <= index; i++) {
+        used = i === cut ? heights[i] : used + gap + heights[i];
+      }
+    } else {
+      used = needed;
+    }
+  }
+  pages.push({start, end: heights.length});
+  return pages;
+}
+
+/**
+ * Formats a Trello date for display, with the time when `withTime` is set.
+ * Falls back to the ISO form where the JavaScript engine lacks locale data.
+ */
+export function formatCardDate(
+  iso: string,
+  locale: Locale,
+  withTime = false,
+): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return iso;
+  }
+  try {
+    return date.toLocaleString(locale.replace('_', '-'), {
+      day: 'numeric',
+      month: 'short',
+      ...(withTime
+        ? {year: 'numeric', hour: '2-digit', minute: '2-digit'}
+        : {}),
+    });
+  } catch {
+    const text = date.toISOString();
+    return withTime
+      ? `${text.slice(0, 10)} ${text.slice(11, 16)}`
+      : text.slice(0, 10);
+  }
+}

@@ -6,6 +6,7 @@ import {
   TrelloBoardCard,
   TrelloBoardMember,
   TrelloCard,
+  TrelloCardDetail,
   TrelloList,
   TrelloMember,
   TrelloOrganization,
@@ -40,6 +41,10 @@ const LIST_FIELDS = 'name,closed,pos,idBoard';
 const BOARD_CARD_FIELDS =
   'name,idList,pos,due,dueComplete,badges,labels,idMembers';
 const BOARD_MEMBER_FIELDS = 'fullName,initials,username,avatarUrl';
+const CARD_DETAIL_FIELDS =
+  'name,desc,idList,url,shortUrl,start,due,dueComplete,dateLastActivity,labels,idMembers';
+/** Comments shown on the card detail page, newest first. */
+export const CARD_COMMENTS_LIMIT = 20;
 const ORGANIZATION_FIELDS = 'displayName,name,logoUrl,logoHash';
 
 /**
@@ -171,6 +176,37 @@ export class TrelloClient {
       throw new TrelloApiError('invalidResponse', 'Expected a list of members');
     }
     return members;
+  }
+
+  /**
+   * Returns a card with what its detail page shows, in one request: its
+   * checklists, attachments, members, list and latest comments.
+   */
+  async getCardDetail(cardId: string): Promise<TrelloCardDetail> {
+    const card = await this.request<TrelloCardDetail>(
+      `/cards/${encodeURIComponent(cardId)}`,
+      {
+        query: {
+          fields: CARD_DETAIL_FIELDS,
+          members: true,
+          member_fields: BOARD_MEMBER_FIELDS,
+          checklists: 'all',
+          checklist_fields: 'name,pos',
+          attachments: true,
+          attachment_fields: 'name,url,date',
+          actions: 'commentCard',
+          actions_limit: CARD_COMMENTS_LIMIT,
+          action_fields: 'data,date',
+          action_memberCreator_fields: 'fullName,initials,avatarUrl',
+          list: true,
+          list_fields: 'name',
+        },
+      },
+    );
+    if (!card || typeof card !== 'object' || typeof card.id !== 'string') {
+      throw new TrelloApiError('invalidResponse', 'Expected a card');
+    }
+    return card;
   }
 
   /** Creates a card at the bottom of a list. */

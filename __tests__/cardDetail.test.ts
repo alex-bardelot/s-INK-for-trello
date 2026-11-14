@@ -1,0 +1,225 @@
+import {
+  buildDetailBlocks,
+  cardMembers,
+  descriptionParagraphs,
+  formatCardDate,
+  paginateBlocks,
+  plainMarkdown,
+} from '../src/cards/detail';
+import {TrelloClient} from '../src/trello/TrelloClient';
+import {TrelloBoardMember, TrelloCardDetail} from '../src/trello/types';
+
+function card(overrides: Partial<TrelloCardDetail> = {}): TrelloCardDetail {
+  return {
+    id: 'card',
+    name: 'Write the report',
+    desc: '',
+    idList: 'list',
+    url: '',
+    shortUrl: '',
+    start: null,
+    due: null,
+    dueComplete: false,
+    dateLastActivity: null,
+    labels: [],
+    idMembers: [],
+    ...overrides,
+  };
+}
+
+function member(id: string): TrelloBoardMember {
+  return {id, fullName: id, initials: id, username: id, avatarUrl: null};
+}
+
+const kinds = (blocks: {kind: string}[]) => blocks.map(block => block.kind);
+
+describe('buildDetailBlocks', () => {
+  it('shows only the summary for a bare card', () => {
+    expect(kinds(buildDetailBlocks(card()))).toEqual(['summary']);
+  });
+
+  it('lays out every section in reading order', () => {
+    const blocks = buildDetailBlocks(
+      card({
+        desc: 'First\n\nSecond',
+        checklists: [
+          {
+            id: 'late',
+            name: 'Later',
+            pos: 2,
+            checkItems: [{id: 'z', name: 'Z', state: 'incomplete', pos: 1}],
+          },
+          {
+            id: 'early',
+            name: 'Now',
+            pos: 1,
+            checkItems: [
+              {id: 'b', name: 'B', state: 'incomplete', pos: 2},
+              {id: 'a', name: 'A', state: 'complete', pos: 1},
+            ],
+          },
+        ],
+        attachments: [{id: 'f', name: '', url: 'https://x.test/f', date: ''}],
+        actions: [
+          {id: 'old', date: '2026-01-01T00:00:00Z', data: {text: 'old'}},
+          {
+            id: 'new',
+            date: '2026-02-01T00:00:00Z',
+            data: {text: '**new**'},
+            memberCreator: {id: 'm', fullName: 'Ann', initials: 'A'},
+          },
+        ],
+      }),
+    );
+    expect(blocks.map(block => block.key)).toEqual([
+      'summary',
+      'h-description',
+      'p-0',
+      'p-1',
+      'h-checklists',
+      'cl-early',
+      'ci-a',
+      'ci-b',
+      'cl-late',
+      'ci-z',
+      'h-attachments',
+      'a-f',
+      'h-comments',
+      'c-new',
+      'c-old',
+    ]);
+    expect(blocks[5]).toMatchObject({done: 1, total: 2});
+    expect(blocks[11]).toMatchObject({name: 'https://x.test/f'});
+    expect(blocks[13]).toMatchObject({author: 'Ann', text: 'new'});
+  });
+});
+
+describe('cardMembers', () => {
+  const board = new Map([
+    ['a', member('a')],
+    ['b', member('b')],
+  ]);
+
+  it('prefers the members returned with the card', () => {
+    expect(cardMembers(card({members: [member('c')]}), board)).toEqual([
+      member('c'),
+    ]);
+  });
+
+  it('falls back to the board members', () => {
+    expect(cardMembers(card({idMembers: ['b', 'gone']}), board)).toEqual([
+      member('b'),
+    ]);
+  });
+});
+
+describe('plainMarkdown', () => {
+  it.each([
+    ['# Title', 'Title'],
+    ['**bold** and __strong__', 'bold and strong'],
+    ['~~old~~', 'old'],
+    ['- item', '• item'],
+    ['- [x] done', '☑ done'],
+    ['* [ ] todo', '☐ todo'],
+    ['[Trello](https://trello.com)', 'Trello'],
+    ['[](https://trello.com)', 'https://trello.com'],
+    ['`code`', 'code'],
+    ['1\\. Step', '1. Step'],
+    ['> quoted', 'quoted'],
+    ['---', ''],
+    ['2 * 3 * 4', '2 * 3 * 4'],
+  ])('turns %p into %p', (markdown, plain) => {
+    expect(plainMarkdown(markdown)).toBe(plain);
+  });
+});
+
+describe('descriptionParagraphs', () => {
+  it('splits on blank lines and drops empty ones', () => {
+    expect(descriptionParagraphs('One\r\ntwo\r\n\r\n\r\n  \nThree\n')).toEqual([
+      'One\ntwo',
+      'Three',
+    ]);
+  });
+
+  it('cuts very long paragraphs line by line', () => {
+    const lines = Array.from({length: 10}, (_, i) => `line ${i}`);
+    expect(descriptionParagraphs(lines.join('\n'))).toEqual(lines);
+  });
+});
+
+describe('paginateBlocks', () => {
+  it('fills pages with whole blocks', () => {
+    expect(
+      paginateBlocks([40, 40, 40], [false, false, false], 100, 10),
+    ).toEqual([
+      {start: 0, end: 2},
+      {start: 2, end: 3},
+    ]);
+  });
+
+  it('moves a heading ending a page to the next one', () => {
+    expect(
+      paginateBlocks([50, 20, 40, 20], [false, true, false, false], 100, 10),
+    ).toEqual([
+      {start: 0, end: 1},
+      {start: 1, end: 4},
+    ]);
+  });
+
+  it('keeps a heading starting the page with its content', () => {
+    expect(paginateBlocks([20, 200], [true, false], 100, 10)).toEqual([
+      {start: 0, end: 1},
+      {start: 1, end: 2},
+    ]);
+  });
+});
+
+describe('formatCardDate', () => {
+  it('returns unparsable dates unchanged', () => {
+    expect(formatCardDate('soon', 'en')).toBe('soon');
+  });
+
+  it('formats valid dates', () => {
+    expect(formatCardDate('2026-03-05T10:00:00.000Z', 'en')).toMatch(/5|Mar/);
+  });
+});
+
+describe('TrelloClient.getCardDetail', () => {
+  it('fetches the card with its nested resources in one request', async () => {
+    const fetchImpl = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => card(),
+      text: async () => '',
+    } as Response);
+    const client = new TrelloClient({apiKey: 'k', token: 't', fetchImpl});
+
+    await expect(client.getCardDetail('abc/1')).resolves.toMatchObject({
+      id: 'card',
+    });
+    const url: string = fetchImpl.mock.calls[0][0];
+    expect(url).toContain('/cards/abc%2F1?');
+    for (const part of [
+      'checklists=all',
+      'attachments=true',
+      'actions=commentCard',
+      'members=true',
+      'list=true',
+    ]) {
+      expect(url).toContain(part);
+    }
+  });
+
+  it('rejects a response that is not a card', async () => {
+    const fetchImpl = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => [],
+      text: async () => '',
+    } as Response);
+    const client = new TrelloClient({apiKey: 'k', token: 't', fetchImpl});
+    await expect(client.getCardDetail('x')).rejects.toMatchObject({
+      kind: 'invalidResponse',
+    });
+  });
+});

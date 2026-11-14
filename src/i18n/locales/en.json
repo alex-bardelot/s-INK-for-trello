@@ -141,5 +141,16 @@
   "board.reviewEmpty": "No card is marked complete on this board.",
   "board.focusPages": "Page {page}/{total}",
   "board.previousPage": "Previous page",
-  "board.nextPage": "Next page"
+  "board.nextPage": "Next page",
+  "board.openCardHint": "Opens the card detail",
+  "cardDetail.loading": "Loading the card detail…",
+  "cardDetail.loadFailed": "The card detail could not be loaded.",
+  "cardDetail.inList": "In list {list}",
+  "cardDetail.start": "Start: {date}",
+  "cardDetail.due": "Due: {date}",
+  "cardDetail.dueComplete": "Due: {date} (complete)",
+  "cardDetail.description": "Description",
+  "cardDetail.checklists": "Checklists",
+  "cardDetail.attachments": "Attachments",
+  "cardDetail.comments": "Comments"
 }

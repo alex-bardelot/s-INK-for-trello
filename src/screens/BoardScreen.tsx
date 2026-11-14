@@ -1,6 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
-  Image,
   LayoutChangeEvent,
   Pressable,
   StyleSheet,
@@ -24,7 +23,6 @@ import {
   stackLists,
   toggleFocusLabel,
 } from '../board/focus';
-import {labelShade} from '../board/labels';
 import {
   clampPage,
   DEFAULT_COLUMNS,
@@ -34,15 +32,16 @@ import {
   paginate,
   SwipeDirection,
 } from '../board/layout';
-import {
-  BoardPreferences,
-  loadBoardPreferences,
-} from '../board/preferences';
+import {BoardPreferences, loadBoardPreferences} from '../board/preferences';
 import {useTwoFingerSwipe} from '../board/useTwoFingerSwipe';
+import {formatCardDate} from '../cards/detail';
 import {Checkbox} from '../components/Checkbox';
+import {LabelChip} from '../components/LabelChip';
+import {MemberAvatar} from '../components/MemberAvatar';
 import {RefreshIcon} from '../components/RefreshIcon';
 import {Segment, SegmentGroup} from '../components/SegmentedControl';
 import {HEADER_ICON_SIZE, ScreenFrame} from '../components/ScreenFrame';
+import {SmallButton} from '../components/SmallButton';
 import {Locale, useTranslation} from '../i18n';
 import {toSessionError} from '../session/trelloSession';
 import {KeyValueStore} from '../storage/keyValueStore';
@@ -52,10 +51,10 @@ import {
   TrelloBoardCard,
   TrelloBoardMember,
   TrelloClient,
-  TrelloLabel,
   TrelloList,
 } from '../trello';
 import {borders, colors, spacing, typography} from '../theme';
+import {CardDetailScreen} from './CardDetailScreen';
 
 const CARD_GAP = spacing.sm;
 const COLUMN_GAP = spacing.lg;
@@ -65,6 +64,7 @@ const AVATAR_SIZE = 36;
 const MAX_AVATARS = 3;
 
 type MembersById = ReadonlyMap<string, TrelloBoardMember>;
+type OpenCard = (card: TrelloBoardCard) => void;
 
 type BoardState =
   | {status: 'loading'}
@@ -110,6 +110,7 @@ export function BoardScreen({
   const [firstList, setFirstList] = useState(0);
   const [focus, setFocus] = useState<FocusSettings>(DEFAULT_FOCUS_SETTINGS);
   const [tagsOpen, setTagsOpen] = useState(false);
+  const [openCard, setOpenCard] = useState<TrelloBoardCard | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -230,128 +231,151 @@ export function BoardScreen({
     [columns, listPage, lists.length],
   );
 
+  const closeCard = useCallback(() => setOpenCard(null), []);
+
+  // The card detail is drawn over the board, which stays mounted: going
+  // back finds the same lists and card pages, without reloading them.
+  const detail = openCard && state.status === 'loaded' && (
+    <View style={styles.overlay}>
+      <CardDetailScreen
+        card={openCard}
+        boardName={board.name}
+        listName={lists.find(list => list.id === openCard.idList)?.name ?? ''}
+        members={state.members}
+        client={client}
+        onBack={closeCard}
+        onTokenRejected={onTokenRejected}
+      />
+    </View>
+  );
+
   return (
-    <ScreenFrame
-      title={board.starred ? `★ ${board.name}` : board.name}
-      onBack={onBack}
-      actions={
-        <>
-          {focusOn && (
+    <View style={styles.screen}>
+      <ScreenFrame
+        title={board.starred ? `★ ${board.name}` : board.name}
+        onBack={onBack}
+        actions={
+          <>
+            {focusOn && (
+              <SmallButton
+                label={t('board.focusTags')}
+                accessibilityLabel={t('board.focusTagsHint')}
+                active={tagsOpen}
+                onPress={() => setTagsOpen(open => !open)}
+              />
+            )}
+            {modesAvailable && (
+              <SegmentGroup
+                label={t('settings.boardMode')}
+                segments={modeChoices}
+                value={mode ?? 'all'}
+                onChange={changeMode}
+              />
+            )}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('board.refresh')}
+              hitSlop={spacing.md}
+              onPress={load}
+              style={styles.iconButton}>
+              <RefreshIcon size={HEADER_ICON_SIZE} color={colors.foreground} />
+            </Pressable>
+          </>
+        }>
+        {state.status === 'loading' && (
+          <Text style={styles.message}>{t('board.loading')}</Text>
+        )}
+
+        {state.status === 'failed' && (
+          <View style={styles.failure}>
+            <Text style={styles.message}>{t('board.loadFailed')}</Text>
             <SmallButton
-              label={t('board.focusTags')}
-              accessibilityLabel={t('board.focusTagsHint')}
-              active={tagsOpen}
-              onPress={() => setTagsOpen(open => !open)}
+              label={t('common.retry')}
+              accessibilityLabel={t('common.retry')}
+              onPress={load}
             />
-          )}
-          {modesAvailable && (
-            <SegmentGroup
-              label={t('settings.boardMode')}
-              segments={modeChoices}
-              value={mode ?? 'all'}
-              onChange={changeMode}
-            />
-          )}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t('board.refresh')}
-            hitSlop={spacing.md}
-            onPress={load}
-            style={styles.iconButton}>
-            <RefreshIcon size={HEADER_ICON_SIZE} color={colors.foreground} />
-          </Pressable>
-        </>
-      }>
-      {state.status === 'loading' && (
-        <Text style={styles.message}>{t('board.loading')}</Text>
-      )}
-
-      {state.status === 'failed' && (
-        <View style={styles.failure}>
-          <Text style={styles.message}>{t('board.loadFailed')}</Text>
-          <SmallButton
-            label={t('common.retry')}
-            accessibilityLabel={t('common.retry')}
-            onPress={load}
-          />
-        </View>
-      )}
-
-      {state.status === 'loaded' && tagsOpen && focusOn && (
-        <FocusTagsPanel
-          choices={tagChoices}
-          selected={focus.labels}
-          onToggle={name =>
-            updateFocus({
-              ...focus,
-              labels: toggleFocusLabel(focus.labels, name),
-            })
-          }
-          onClose={() => setTagsOpen(false)}
-        />
-      )}
-
-      {state.status === 'loaded' && !tagsOpen && focused && (
-        <StackedBoard
-          // Measured heights depend on the column width and on the mode.
-          key={`${mode}-${columns}-${width}`}
-          lists={focused.lists}
-          cardsByList={focused.cardsByList}
-          members={state.members}
-          columns={columns}
-          emptyMessage={t(
-            mode === 'review' ? 'board.reviewEmpty' : 'board.focusEmpty',
-          )}
-        />
-      )}
-
-      {state.status === 'loaded' && !focused && lists.length === 0 && (
-        <Text style={styles.message}>{t('board.noLists')}</Text>
-      )}
-
-      {state.status === 'loaded' && !focused && lists.length > 0 && (
-        <>
-          <View style={styles.columns}>
-            {visibleLists.map(list => (
-              <BoardColumn
-                key={list.id}
-                list={list}
-                cards={state.cardsByList.get(list.id) ?? []}
-                members={state.members}
-                onTurnLists={turnListPage}
-              />
-            ))}
-            {Array.from({length: columns - visibleLists.length}, (_, i) => (
-              <View key={`empty-${i}`} style={styles.emptyColumn} />
-            ))}
           </View>
+        )}
 
-          {listPages > 1 && (
-            <View style={styles.footer}>
-              <SmallButton
-                label="◀"
-                accessibilityLabel={t('board.previousLists')}
-                disabled={listPage === 0}
-                onPress={() => turnListPage(-1)}
-              />
-              <Text style={styles.footerText}>
-                {t('board.listsRange', {
-                  from: start + 1,
-                  to: start + visibleLists.length,
-                  total: lists.length,
-                })}
-              </Text>
-              <SmallButton
-                label="▶"
-                accessibilityLabel={t('board.nextLists')}
-                disabled={listPage >= listPages - 1}
-                onPress={() => turnListPage(1)}
-              />
+        {state.status === 'loaded' && tagsOpen && focusOn && (
+          <FocusTagsPanel
+            choices={tagChoices}
+            selected={focus.labels}
+            onToggle={name =>
+              updateFocus({
+                ...focus,
+                labels: toggleFocusLabel(focus.labels, name),
+              })
+            }
+            onClose={() => setTagsOpen(false)}
+          />
+        )}
+
+        {state.status === 'loaded' && !tagsOpen && focused && (
+          <StackedBoard
+            // Measured heights depend on the column width and on the mode.
+            key={`${mode}-${columns}-${width}`}
+            lists={focused.lists}
+            cardsByList={focused.cardsByList}
+            members={state.members}
+            columns={columns}
+            onOpenCard={setOpenCard}
+            emptyMessage={t(
+              mode === 'review' ? 'board.reviewEmpty' : 'board.focusEmpty',
+            )}
+          />
+        )}
+
+        {state.status === 'loaded' && !focused && lists.length === 0 && (
+          <Text style={styles.message}>{t('board.noLists')}</Text>
+        )}
+
+        {state.status === 'loaded' && !focused && lists.length > 0 && (
+          <>
+            <View style={styles.columns}>
+              {visibleLists.map(list => (
+                <BoardColumn
+                  key={list.id}
+                  list={list}
+                  cards={state.cardsByList.get(list.id) ?? []}
+                  members={state.members}
+                  onTurnLists={turnListPage}
+                  onOpenCard={setOpenCard}
+                />
+              ))}
+              {Array.from({length: columns - visibleLists.length}, (_, i) => (
+                <View key={`empty-${i}`} style={styles.emptyColumn} />
+              ))}
             </View>
-          )}
-        </>
-      )}
-    </ScreenFrame>
+
+            {listPages > 1 && (
+              <View style={styles.footer}>
+                <SmallButton
+                  label="◀"
+                  accessibilityLabel={t('board.previousLists')}
+                  disabled={listPage === 0}
+                  onPress={() => turnListPage(-1)}
+                />
+                <Text style={styles.footerText}>
+                  {t('board.listsRange', {
+                    from: start + 1,
+                    to: start + visibleLists.length,
+                    total: lists.length,
+                  })}
+                </Text>
+                <SmallButton
+                  label="▶"
+                  accessibilityLabel={t('board.nextLists')}
+                  disabled={listPage >= listPages - 1}
+                  onPress={() => turnListPage(1)}
+                />
+              </View>
+            )}
+          </>
+        )}
+      </ScreenFrame>
+      {detail}
+    </View>
   );
 }
 
@@ -360,6 +384,7 @@ interface BoardColumnProps {
   cards: readonly TrelloBoardCard[];
   members: MembersById;
   onTurnLists: (delta: number) => void;
+  onOpenCard: OpenCard;
 }
 
 /**
@@ -372,6 +397,7 @@ function BoardColumn({
   cards,
   members,
   onTurnLists,
+  onOpenCard,
 }: BoardColumnProps): React.JSX.Element {
   const {t, locale} = useTranslation();
   const [bodyHeight, setBodyHeight] = useState(0);
@@ -444,6 +470,7 @@ function BoardColumn({
             card={card}
             members={members}
             locale={locale}
+            onPress={onOpenCard}
           />
         ))}
       </View>
@@ -501,6 +528,7 @@ interface StackedBoardProps {
   columns: number;
   /** Shown when no list is left. */
   emptyMessage: string;
+  onOpenCard: OpenCard;
 }
 
 /**
@@ -515,6 +543,7 @@ function StackedBoard({
   members,
   columns,
   emptyMessage,
+  onOpenCard,
 }: StackedBoardProps): React.JSX.Element {
   const {t, locale} = useTranslation();
   const [area, setArea] = useState({width: 0, height: 0});
@@ -638,6 +667,7 @@ function StackedBoard({
                         card={card}
                         members={members}
                         locale={locale}
+                        onPress={onOpenCard}
                       />
                     ) : null;
                   })}
@@ -718,20 +748,26 @@ function FocusTagsPanel({
   );
 }
 
+/**
+ * A card of the board. With `onPress`, tapping it opens its detail; the
+ * copies laid out only to be measured have none.
+ */
 function CardTile({
   card,
   members,
   locale,
+  onPress,
 }: {
   card: TrelloBoardCard;
   members: MembersById;
   locale: Locale;
+  onPress?: OpenCard;
 }): React.JSX.Element {
   const {t} = useTranslation();
   const {checkItems, checkItemsChecked, description} = card.badges ?? {};
   const badges: string[] = [];
   if (card.due) {
-    const date = formatDueDate(card.due, locale);
+    const date = formatCardDate(card.due, locale);
     badges.push(card.dueComplete ? `✓ ${date}` : t('board.due', {date}));
   }
   if (checkItems) {
@@ -745,8 +781,8 @@ function CardTile({
     .filter((member): member is TrelloBoardMember => member !== undefined);
   const labels = card.labels ?? [];
 
-  return (
-    <View style={styles.card}>
+  const content = (
+    <>
       {labels.length > 0 && (
         <View style={styles.labels}>
           {labels.map(label => (
@@ -774,7 +810,16 @@ function CardTile({
           </Text>
           <View style={styles.avatars}>
             {cardMembers.slice(0, MAX_AVATARS).map(member => (
-              <Avatar key={member.id} member={member} />
+              <View
+                key={member.id}
+                accessible
+                accessibilityLabel={member.fullName}>
+                <MemberAvatar
+                  initials={member.initials}
+                  avatarUrl={member.avatarUrl}
+                  size={AVATAR_SIZE}
+                />
+              </View>
             ))}
             {cardMembers.length > MAX_AVATARS && (
               <Text style={styles.cardBadges}>
@@ -784,97 +829,20 @@ function CardTile({
           </View>
         </View>
       )}
-    </View>
+    </>
   );
-}
 
-function LabelChip({label}: {label: TrelloLabel}): React.JSX.Element {
-  const shade = labelShade(label.color);
-  return (
-    <View
-      style={[
-        styles.label,
-        !label.name && styles.labelUnnamed,
-        {backgroundColor: shade.background},
-      ]}>
-      {!!label.name && (
-        <Text style={[styles.labelText, {color: shade.text}]} numberOfLines={1}>
-          {label.name}
-        </Text>
-      )}
-    </View>
-  );
-}
-
-function Avatar({member}: {member: TrelloBoardMember}): React.JSX.Element {
-  const [imageFailed, setImageFailed] = useState(false);
-  return (
-    <View style={styles.avatar} accessible accessibilityLabel={member.fullName}>
-      <Text style={styles.avatarInitials}>{member.initials}</Text>
-      {member.avatarUrl && !imageFailed && (
-        <Image
-          source={{uri: `${member.avatarUrl}/50.png`}}
-          style={styles.avatarImage}
-          onError={() => setImageFailed(true)}
-        />
-      )}
-    </View>
-  );
-}
-
-function formatDueDate(iso: string, locale: Locale): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) {
-    return iso;
+  if (!onPress) {
+    return <View style={styles.card}>{content}</View>;
   }
-  try {
-    return date.toLocaleDateString(locale.replace('_', '-'), {
-      day: 'numeric',
-      month: 'short',
-    });
-  } catch {
-    return date.toISOString().slice(0, 10);
-  }
-}
-
-interface SmallButtonProps {
-  label: string;
-  accessibilityLabel: string;
-  onPress: () => void;
-  disabled?: boolean;
-  /** Shown inverted, for a switch that is on. */
-  active?: boolean;
-}
-
-function SmallButton({
-  label,
-  accessibilityLabel,
-  onPress,
-  disabled = false,
-  active = false,
-}: SmallButtonProps): React.JSX.Element {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      accessibilityState={{disabled, selected: active}}
-      disabled={disabled}
-      hitSlop={spacing.sm}
-      onPress={onPress}
-      style={({pressed}) => [
-        styles.smallButton,
-        disabled && styles.disabled,
-        (pressed || active) && styles.pressed,
-      ]}>
-      {({pressed}) => (
-        <Text
-          style={[
-            styles.smallButtonLabel,
-            (pressed || active) && styles.pressedLabel,
-          ]}>
-          {label}
-        </Text>
-      )}
+      accessibilityHint={t('board.openCardHint')}
+      onPress={() => onPress(card)}
+      // No inverted look: the whole card would flash on E Ink.
+      style={({pressed}) => [styles.card, pressed && styles.cardPressed]}>
+      {content}
     </Pressable>
   );
 }
@@ -948,27 +916,15 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     backgroundColor: colors.background,
   },
+  cardPressed: {
+    borderWidth: borders.width * 2,
+    paddingHorizontal: spacing.sm - borders.width,
+    paddingVertical: spacing.sm - borders.width,
+  },
   labels: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.xs,
-  },
-  label: {
-    minHeight: 26,
-    maxWidth: '100%',
-    justifyContent: 'center',
-    borderRadius: 4,
-    borderWidth: 1.5,
-    borderColor: colors.labelBorder,
-    paddingHorizontal: spacing.sm,
-  },
-  labelUnnamed: {
-    minHeight: 12,
-    width: 48,
-  },
-  labelText: {
-    fontSize: 16,
-    fontWeight: '700',
   },
   cardTitle: {
     flexDirection: 'row',
@@ -1010,23 +966,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-  },
-  avatar: {
-    width: AVATAR_SIZE,
-    height: AVATAR_SIZE,
-    borderRadius: AVATAR_SIZE / 2,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.avatar,
-  },
-  avatarInitials: {
-    color: colors.foreground,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  avatarImage: {
-    ...StyleSheet.absoluteFillObject,
   },
   focusBoard: {
     flex: 1,
@@ -1081,26 +1020,11 @@ const styles = StyleSheet.create({
   iconButton: {
     padding: spacing.sm,
   },
-  smallButton: {
-    borderColor: colors.foreground,
-    borderWidth: borders.width,
-    borderRadius: borders.radius,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+  screen: {
+    flex: 1,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.background,
-  },
-  disabled: {
-    borderStyle: 'dashed',
-  },
-  pressed: {
-    backgroundColor: colors.foreground,
-  },
-  smallButtonLabel: {
-    color: colors.foreground,
-    fontSize: typography.label,
-    fontWeight: '600',
-  },
-  pressedLabel: {
-    color: colors.background,
   },
 });

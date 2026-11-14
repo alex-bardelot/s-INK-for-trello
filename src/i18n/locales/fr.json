@@ -141,5 +141,16 @@
   "board.reviewEmpty": "Aucune carte de ce tableau n’est terminée.",
   "board.focusPages": "Page {page}/{total}",
   "board.previousPage": "Page précédente",
-  "board.nextPage": "Page suivante"
+  "board.nextPage": "Page suivante",
+  "board.openCardHint": "Ouvre le détail de la carte",
+  "cardDetail.loading": "Chargement du détail de la carte…",
+  "cardDetail.loadFailed": "Le détail de la carte n’a pas pu être chargé.",
+  "cardDetail.inList": "Dans la liste {list}",
+  "cardDetail.start": "Début : {date}",
+  "cardDetail.due": "Échéance : {date}",
+  "cardDetail.dueComplete": "Échéance : {date} (terminée)",
+  "cardDetail.description": "Description",
+  "cardDetail.checklists": "Checklists",
+  "cardDetail.attachments": "Pièces jointes",
+  "cardDetail.comments": "Commentaires"
 }

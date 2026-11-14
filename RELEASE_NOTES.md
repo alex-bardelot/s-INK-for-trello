@@ -3,6 +3,28 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.19.0 — Card detail page
+
+- Tapping a card on the board page (all cards, Focus or Review mode)
+  opens its detail: name, list, labels, members with their avatars, start
+  and due dates, description, checklists with their items, attachments
+  and the 20 latest comments, newest first.
+- What the board already knows (name, labels, members, due date) shows at
+  once; the rest comes from a single Trello request
+  (`GET /1/cards/{id}` with nested checklists, attachments, members,
+  comments and list). **Refresh** reloads it.
+- Like the board, the page is turned, not scrolled: content is cut into
+  blocks (the description paragraph by paragraph), measured and spread
+  over pages, turned with ◀ ▶ or a two-finger swipe. A section heading is
+  never left alone at the bottom of a page.
+- Descriptions and comments are shown as plain text: Trello's Markdown
+  marks (emphasis, headings, links, escapes) are removed and list bullets
+  become "•". Tapping an attachment opens it in the browser.
+- The detail is drawn over the board, which stays loaded: going back finds
+  the same lists and card pages.
+- The label chip and the small page button are now shared components.
+- Bumped the plugin to version 0.19.0 (`versionCode` 47).
+
 ## 0.18.1 — No QR code without a relay
 
 - When no relay is configured (`TRELLO_RELAY_URL` empty), the connection

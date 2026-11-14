@@ -141,5 +141,16 @@
   "board.reviewEmpty": "このボードには完了済みのカードがありません。",
   "board.focusPages": "ページ {page}/{total}",
   "board.previousPage": "前のページ",
-  "board.nextPage": "次のページ"
+  "board.nextPage": "次のページ",
+  "board.openCardHint": "カードの詳細を開きます",
+  "cardDetail.loading": "カードの詳細を読み込んでいます…",
+  "cardDetail.loadFailed": "カードの詳細を読み込めませんでした。",
+  "cardDetail.inList": "リスト: {list}",
+  "cardDetail.start": "開始: {date}",
+  "cardDetail.due": "期限: {date}",
+  "cardDetail.dueComplete": "期限: {date}（完了）",
+  "cardDetail.description": "説明",
+  "cardDetail.checklists": "チェックリスト",
+  "cardDetail.attachments": "添付ファイル",
+  "cardDetail.comments": "コメント"
 }

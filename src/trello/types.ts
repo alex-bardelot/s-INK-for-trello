@@ -115,6 +115,73 @@ export interface TrelloBoardCard {
   idMembers: string[];
 }
 
+/** An item of a checklist. `state` is `complete` or `incomplete`. */
+export interface TrelloCheckItem {
+  id: string;
+  name: string;
+  state: 'complete' | 'incomplete';
+  pos: number;
+}
+
+/** A checklist of a card, with its items. */
+export interface TrelloChecklist {
+  id: string;
+  name: string;
+  pos: number;
+  checkItems: TrelloCheckItem[];
+}
+
+/** A file or link attached to a card. */
+export interface TrelloAttachment {
+  id: string;
+  name: string;
+  url: string;
+  /** ISO date the attachment was added. */
+  date: string;
+}
+
+/** A comment on a card (a `commentCard` action). */
+export interface TrelloComment {
+  id: string;
+  /** ISO date the comment was written. */
+  date: string;
+  data: {text: string};
+  memberCreator?: {
+    id: string;
+    fullName: string;
+    initials: string;
+    avatarUrl?: string | null;
+  } | null;
+}
+
+/**
+ * A card with everything its detail page shows
+ * (`GET /1/cards/{id}` with nested checklists, attachments, members,
+ * comments and list).
+ */
+export interface TrelloCardDetail {
+  id: string;
+  name: string;
+  desc: string;
+  idList: string;
+  url: string;
+  shortUrl: string;
+  /** Start date as an ISO 8601 string, or `null`. */
+  start: string | null;
+  /** Due date as an ISO 8601 string, or `null`. */
+  due: string | null;
+  dueComplete: boolean;
+  dateLastActivity: string | null;
+  labels: TrelloLabel[];
+  idMembers: string[];
+  members?: TrelloBoardMember[];
+  checklists?: TrelloChecklist[];
+  attachments?: TrelloAttachment[];
+  /** Latest comments, newest first. */
+  actions?: TrelloComment[];
+  list?: Pick<TrelloList, 'id' | 'name'> | null;
+}
+
 /** A card, as returned by `POST /1/cards`. */
 export interface TrelloCard {
   id: string;

@@ -141,5 +141,16 @@
   "board.reviewEmpty": "此看板上没有已完成的卡片。",
   "board.focusPages": "第 {page}/{total} 页",
   "board.previousPage": "上一页",
-  "board.nextPage": "下一页"
+  "board.nextPage": "下一页",
+  "board.openCardHint": "打开卡片详情",
+  "cardDetail.loading": "正在加载卡片详情…",
+  "cardDetail.loadFailed": "无法加载卡片详情。",
+  "cardDetail.inList": "所在列表：{list}",
+  "cardDetail.start": "开始：{date}",
+  "cardDetail.due": "截止：{date}",
+  "cardDetail.dueComplete": "截止：{date}（已完成）",
+  "cardDetail.description": "描述",
+  "cardDetail.checklists": "清单",
+  "cardDetail.attachments": "附件",
+  "cardDetail.comments": "评论"
 }
