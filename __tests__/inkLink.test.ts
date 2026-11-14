@@ -1,4 +1,5 @@
 import {
+  estimateTextSize,
   findInkLinks,
   HIT_SLOP_PX,
   inkLinkAt,
@@ -6,6 +7,13 @@ import {
   PageElement,
 } from '../src/inkLink/hitTest';
 import {formatInkLink, parseInkLink} from '../src/inkLink/inkLink';
+import {
+  layoutLink,
+  LINK_FONT_SIZE,
+  LINK_ICON_SIZE,
+  LINK_NAME_MAX_LENGTH,
+  shortName,
+} from '../src/inkLink/linkLayout';
 import {
   MotionAction,
   normalizeTouch,
@@ -126,12 +134,82 @@ describe('hit testing', () => {
     expect(inkLinkAt(links, 300, 400)).toBeNull();
   });
 
+  it('narrows a wide text box to its text', () => {
+    const [link] = findInkLinks([
+      {
+        type: NoteElementType.Text,
+        textBox: {
+          textContentFull: 'Slides\ns-INK/c/abc',
+          textRect: {left: 100, top: 100, right: 1100, bottom: 400},
+          fontSize: 36,
+        },
+      },
+    ]);
+    const size = estimateTextSize('Slides\ns-INK/c/abc', 36);
+    expect(link.rect).toEqual({
+      left: 100,
+      top: 100,
+      right: 100 + size.width,
+      bottom: 100 + size.height,
+    });
+    expect(inkLinkAt([link], 900, 150)).toBeNull();
+  });
+
+  it('places pictures with the given converter only', () => {
+    const picture: PageElement = {
+      type: NoteElementType.Picture,
+      userData: 's-INK/b/pic',
+      picture: {rect: {left: 1000, top: 1000, right: 2000, bottom: 2000}},
+    };
+    expect(findInkLinks([picture])).toEqual([]);
+    const [link] = findInkLinks([picture], emr => ({
+      left: emr.left / 10,
+      top: emr.top / 10,
+      right: emr.right / 10,
+      bottom: emr.bottom / 10,
+    }));
+    expect(link.rect).toEqual({left: 100, top: 100, right: 200, bottom: 200});
+  });
+
   it('picks the topmost of overlapping links', () => {
     const links = findInkLinks([
       textElement('s-INK/c/below', 'Below'),
       textElement('s-INK/c/above', 'Above'),
     ]);
     expect(inkLinkAt(links, 300, 150)?.target.shortLink).toBe('above');
+  });
+});
+
+describe('text size and link layout', () => {
+  it('counts wide characters as a full font size', () => {
+    const latin = estimateTextSize('abcd', 40);
+    const wide = estimateTextSize('看板看板', 40);
+    expect(wide.width).toBeGreaterThan(latin.width);
+    expect(estimateTextSize('a\nb\nc', 40).height).toBeGreaterThan(
+      estimateTextSize('a', 40).height,
+    );
+  });
+
+  it('cuts long names', () => {
+    expect(shortName('  Short   name ')).toBe('Short name');
+    const long = shortName('x'.repeat(100));
+    expect(Array.from(long)).toHaveLength(LINK_NAME_MAX_LENGTH);
+    expect(long.endsWith('…')).toBe(true);
+  });
+
+  it('puts the icon before a text box fitted to the text', () => {
+    const layout = layoutLink('Slides', 's-INK/c/abc', {x: 160, y: 160});
+    expect(layout.text).toBe('Slides\ns-INK/c/abc');
+    expect(layout.iconRect.left).toBe(160);
+    expect(layout.iconRect.right - layout.iconRect.left).toBe(LINK_ICON_SIZE);
+    expect(layout.textRect.left).toBeGreaterThan(layout.iconRect.right);
+    const size = estimateTextSize(layout.text, LINK_FONT_SIZE);
+    expect(layout.textRect.right - layout.textRect.left).toBe(size.width);
+    // Both are centered on the same line.
+    expect(layout.iconRect.top + layout.iconRect.bottom).toBeCloseTo(
+      layout.textRect.top + layout.textRect.bottom,
+      -1,
+    );
   });
 });
 

@@ -3,12 +3,22 @@ import {
   PluginFileAPI,
   PluginManager,
   PluginNoteAPI,
+  type Point,
+  PointUtils,
 } from 'sn-plugin-lib';
 
+import {FALLBACK_PAGE_SIZE} from '../plugin/lassoText';
 import {openInkLinkIntent} from '../plugin/launchIntent';
 import {Permission} from '../plugin/permissions';
 import {logInkLink} from './diagnostics';
-import {findInkLinks, inkLinkAt, NoteElementType, PageElement} from './hitTest';
+import {
+  findInkLinks,
+  inkLinkAt,
+  NoteElementType,
+  PageElement,
+  Rect,
+} from './hitTest';
+import {layoutLink, LINK_FONT_SIZE} from './linkLayout';
 import {getDeviceStore} from '../storage/stores';
 import {formatInkLink, InkLinkTarget} from './inkLink';
 import {
@@ -43,12 +53,13 @@ function errorOf(response: unknown): string {
   return `error ${value.error?.code ?? '?'}: ${value.error?.message ?? ''}`;
 }
 
-/** Glyph shown before the name: ≡ for a card, ▥ for a board. */
-const KIND_GLYPH = {card: '≡', board: '▥'} as const;
+/** Top left corner of a new link on the page, in screen pixels. */
+const NEW_LINK_ORIGIN = {x: 160, y: 160};
 
-/** Where a new link goes on the page, in page pixels (Manta page 1920 wide). */
-const NEW_LINK_RECT = {left: 160, top: 160, right: 1160, bottom: 300};
-const NEW_LINK_FONT_SIZE = 36;
+/** The app icon, copied next to the bundle by the build. */
+const ICON_FILE_NAME = 'icon.png';
+
+type Size = {width: number; height: number};
 
 async function currentPage(): Promise<{path: string; page: number} | null> {
   const path = unwrap<string>(await PluginCommAPI.getCurrentFilePath());
@@ -58,12 +69,90 @@ async function currentPage(): Promise<{path: string; page: number} | null> {
     : null;
 }
 
+/** Page size used to convert between screen and EMR coordinates. */
+async function pageSize(location: {path: string; page: number}): Promise<Size> {
+  try {
+    const size = unwrap<Size>(
+      await PluginFileAPI.getPageSize(location.path, location.page),
+    );
+    if (size && size.width > 0 && size.height > 0) {
+      return size;
+    }
+  } catch (error) {
+    console.warn('[sINK] Failed to read the page size', error);
+  }
+  return FALLBACK_PAGE_SIZE;
+}
+
+/** Converts a rectangle between coordinate systems, whatever the rotation. */
+function convertRect(rect: Rect, convert: (point: Point) => Point): Rect {
+  const a = convert({x: rect.left, y: rect.top});
+  const b = convert({x: rect.right, y: rect.bottom});
+  return {
+    left: Math.min(a.x, b.x),
+    top: Math.min(a.y, b.y),
+    right: Math.max(a.x, b.x),
+    bottom: Math.max(a.y, b.y),
+  };
+}
+
+async function createElement(
+  type: number,
+): Promise<Record<string, any> | null> {
+  const created = await PluginCommAPI.createElement(type);
+  const element = unwrap<Record<string, any>>(created);
+  if (!element) {
+    logInkLink(`insert: createElement(${type}) ${errorOf(created)}`);
+  }
+  return element;
+}
+
+async function insertElement(
+  element: Record<string, any>,
+  page: number,
+  what: string,
+): Promise<boolean> {
+  const inserted = await PluginCommAPI.insertPageElements([element], page);
+  const ok = (inserted as SdkResponse<unknown> | null)?.success === true;
+  if (!ok) {
+    logInkLink(`insert ${what}: ${errorOf(inserted)}`);
+  }
+  return ok;
+}
+
+/** Places the app icon before the text; the link works without it. */
+async function insertIcon(
+  link: string,
+  rect: Rect,
+  location: {path: string; page: number},
+): Promise<string> {
+  const dir = await PluginManager.getPluginDirPath();
+  if (!dir) {
+    return 'no plugin dir';
+  }
+  const element = await createElement(NoteElementType.Picture);
+  if (!element) {
+    return 'not created';
+  }
+  const size = await pageSize(location);
+  element.userData = link;
+  element.pageNum = location.page;
+  element.picture = {
+    ...(element.picture ?? {}),
+    picturePath: `${dir.replace(/\/+$/, '')}/${ICON_FILE_NAME}`,
+    rect: convertRect(rect, point => PointUtils.androidPoint2Emr(point, size)),
+  };
+  return (await insertElement(element, location.page, 'icon'))
+    ? 'ok'
+    : 'failed';
+}
+
 /**
  * Inserts an s-INK link to a card or board on the current page of the
- * open note: a text box showing the name and the link, with the link also
- * stored in its `userData`.
+ * open note: the app icon, then a text box sized to the name and the link.
+ * Both elements also hold the link in their `userData`.
  *
- * @returns `true` if the host accepted the element.
+ * @returns `true` if the host accepted the text box.
  */
 export async function insertInkLink(
   target: InkLinkTarget,
@@ -76,31 +165,26 @@ export async function insertInkLink(
       logInkLink('insert: no open note page');
       return false;
     }
-    const created = await PluginCommAPI.createElement(NoteElementType.Text);
-    const element = unwrap<Record<string, any>>(created);
+    const layout = layoutLink(name, link, NEW_LINK_ORIGIN);
+    const element = await createElement(NoteElementType.Text);
     if (!element) {
-      logInkLink(`insert: createElement ${errorOf(created)}`);
       return false;
     }
     element.userData = link;
     element.pageNum = location.page;
     element.textBox = {
       ...(element.textBox ?? {}),
-      textContentFull: `${KIND_GLYPH[target.kind]} ${name}\n${link}`,
-      textRect: NEW_LINK_RECT,
-      fontSize: NEW_LINK_FONT_SIZE,
+      textContentFull: layout.text,
+      textRect: layout.textRect,
+      fontSize: LINK_FONT_SIZE,
     };
-    const inserted = await PluginCommAPI.insertPageElements(
-      [element],
-      location.page,
-    );
-    if (!(inserted as SdkResponse<unknown> | null)?.success) {
-      logInkLink(`insert: insertPageElements ${errorOf(inserted)}`);
+    if (!(await insertElement(element, location.page, 'text'))) {
       return false;
     }
+    const icon = await insertIcon(link, layout.iconRect, location);
     const saved = await PluginNoteAPI.saveCurrentNote();
     logInkLink(
-      `insert: ${link} on page ${location.page}, save ${
+      `insert: ${link} on page ${location.page}, icon ${icon}, save ${
         (saved as SdkResponse<unknown>)?.success ? 'ok' : errorOf(saved)
       }`,
     );
@@ -111,7 +195,10 @@ export async function insertInkLink(
   }
 }
 
-async function readPageElements(): Promise<PageElement[] | null> {
+async function readPageElements(): Promise<{
+  elements: PageElement[];
+  location: {path: string; page: number};
+} | null> {
   const location = await currentPage();
   if (!location) {
     return null;
@@ -125,7 +212,7 @@ async function readPageElements(): Promise<PageElement[] | null> {
     logInkLink(`tap: getElements ${errorOf(response)}`);
     return null;
   }
-  return elements;
+  return {elements, location};
 }
 
 function recycle(elements: readonly PageElement[]): void {
@@ -162,11 +249,22 @@ async function handleTap(x: number, y: number): Promise<void> {
       );
       return;
     }
-    const elements = await readPageElements();
-    if (!elements) {
+    const page = await readPageElements();
+    if (!page) {
       return;
     }
-    const links = findInkLinks(elements);
+    const {elements, location} = page;
+    // Picture bounds are in EMR coordinates: the page size converts them.
+    const size = elements.some(element => element.picture?.rect)
+      ? await pageSize(location)
+      : null;
+    const links = findInkLinks(
+      elements,
+      size
+        ? rect =>
+            convertRect(rect, point => PointUtils.emrPoint2Android(point, size))
+        : undefined,
+    );
     recycle(elements);
     const hit = inkLinkAt(links, x, y);
     logInkLink(

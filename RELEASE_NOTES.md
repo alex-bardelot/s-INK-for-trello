@@ -3,6 +3,22 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.25.0 — s-INK links: app icon and a hit zone fitted to the text
+
+- A new link now starts with the **app icon** (a picture element, twice
+  the 48 px icon), followed by a text box holding the name and the link;
+  the `≡`/`▥` glyphs are gone. The icon also holds the link in its
+  `userData` and opens it when tapped; its bounds, stored in EMR
+  coordinates, are converted to screen pixels with the page size. If the
+  host refuses the picture, the text link is kept and the log says so.
+- The text box is **sized to its text** (estimated from the font size:
+  average Latin glyph width, full width for CJK) instead of a fixed
+  1000 px frame, and names longer than 40 characters are cut with an
+  ellipsis.
+- The **hit zone** follows the visible text: a text box frame is narrowed
+  to the estimated size of its text, which also fixes links inserted
+  before, and the margin around it drops from 16 to 8 px.
+
 ## 0.24.0 — Open s-INK links with the finger, the pen or both
 
 - New **Settings > General > Links in notes** setting: s-INK links open
