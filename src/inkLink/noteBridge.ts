@@ -201,6 +201,7 @@ async function readPageElements(): Promise<{
 } | null> {
   const location = await currentPage();
   if (!location) {
+    logInkLink('tap: no open note page');
     return null;
   }
   const response = await PluginFileAPI.getElements(
@@ -233,13 +234,28 @@ function rawText(event: unknown): string {
   }
 }
 
-let busy = false;
+/** A tap still handled after this long no longer blocks the next ones. */
+const TAP_TIMEOUT_MS = 5000;
+
+/** Start time of the tap being handled, or 0. */
+let busySince = 0;
 
 async function handleTap(x: number, y: number): Promise<void> {
-  if (busy) {
-    return;
+  const now = Date.now();
+  if (busySince) {
+    if (now - busySince < TAP_TIMEOUT_MS) {
+      logInkLink(`tap ${Math.round(x)},${Math.round(y)}: previous tap busy`);
+      return;
+    }
+    logInkLink(
+      `tap ${Math.round(x)},${Math.round(y)}: previous tap stuck for ${
+        now - busySince
+      } ms, ignored`,
+    );
   }
-  busy = true;
+  const started = now;
+  busySince = started;
+  logInkLink(`tap ${Math.round(x)},${Math.round(y)}: reading the page`);
   try {
     // Never prompt from a tap: the permission is asked when the view opens.
     const permission = await PluginManager.hasPermission(Permission.FileRead);
@@ -290,7 +306,10 @@ async function handleTap(x: number, y: number): Promise<void> {
   } catch (error) {
     logInkLink(`tap: ${String(error)}`);
   } finally {
-    busy = false;
+    // A stuck tap that ends late must not release a newer one.
+    if (busySince === started) {
+      busySince = 0;
+    }
   }
 }
 

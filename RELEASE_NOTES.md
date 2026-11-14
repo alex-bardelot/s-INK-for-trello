@@ -3,6 +3,15 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.26.1 — s-INK link taps: log every outcome and never stay blocked
+
+- On the device, accepted taps wrote no outcome line in the s-INK log.
+- Each tap now logs `reading the page` when it starts.
+- A tap now logs when it finds no open note page, or when it is skipped
+  because the previous tap is still running.
+- A tap that hangs for more than 5 seconds no longer blocks the
+  following taps.
+
 ## 0.26.0 — Lasso diagnostic for keeping s-INK links on moved elements
 
 - New design note `docs/ink-link-tracking.md`. It covers what the SDK
