@@ -16,7 +16,7 @@ export const SUPERNOTE_ROADMAP_NAME = 'Supernote Roadmap';
 
 /**
  * `true` for Supernote's roadmap board. That board is read only for
- * sINK users: it is not offered for new cards, and the Focus and
+ * s-INK users: it is not offered for new cards, and the Focus and
  * Review modes, which are about the user's own work, are not available on it.
  */
 export function isSupernoteRoadmap(

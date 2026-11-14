@@ -1,4 +1,4 @@
-# Cloudflare Worker of the sINK relay. See README.md.
+# Cloudflare Worker of the s-INK relay. See README.md.
 name = "sink-relay"
 main = "src/index.ts"
 compatibility_date = "2025-10-01"

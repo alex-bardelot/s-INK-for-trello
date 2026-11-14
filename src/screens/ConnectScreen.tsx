@@ -77,7 +77,7 @@ function newRelaySession(): RelaySession | null {
 /**
  * Shown when no Trello account is linked, in two framed steps:
  *
- * 1. Allow sINK on Trello. With the relay, the QR code and the browser
+ * 1. Allow s-INK on Trello. With the relay, the QR code and the browser
  *    button open the relay's page, and the token comes back by itself.
  * 2. Paste the token, as a fallback (or the only way without a relay); the
  *    clipboard is watched too.

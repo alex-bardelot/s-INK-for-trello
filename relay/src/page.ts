@@ -10,14 +10,14 @@ export interface PageConfig {
 /** Texts of the page, picked from the browser language. */
 export const PAGE_MESSAGES: Record<string, Record<string, string>> = {
   en: {
-    title: 'Connect sINK to Trello',
+    title: 'Connect s-INK to Trello',
     redirecting: 'Opening Trello…',
     sending: 'Sending the authorization to your tablet…',
-    done: 'Done! Go back to your tablet: sINK connects by itself. You can close this page.',
+    done: 'Done! Go back to your tablet: s-INK connects by itself. You can close this page.',
     denied:
       'Trello did not give access. Scan the code on the tablet again to retry.',
     badLink:
-      'This link is incomplete. Scan the code shown by sINK on the tablet again.',
+      'This link is incomplete. Scan the code shown by s-INK on the tablet again.',
     noStorage:
       'This browser blocks the storage the page needs. Open the link in another browser.',
     expired: 'This page lost its link with the tablet.',
@@ -28,14 +28,14 @@ export const PAGE_MESSAGES: Record<string, Record<string, string>> = {
     copied: 'Copied',
   },
   fr: {
-    title: 'Connecter sINK à Trello',
+    title: 'Connecter s-INK à Trello',
     redirecting: 'Ouverture de Trello…',
     sending: 'Envoi de l’autorisation à votre tablette…',
-    done: 'C’est fait ! Revenez sur votre tablette : sINK se connecte tout seul. Vous pouvez fermer cette page.',
+    done: 'C’est fait ! Revenez sur votre tablette : s-INK se connecte tout seul. Vous pouvez fermer cette page.',
     denied:
       'Trello n’a pas donné l’accès. Scannez à nouveau le code sur la tablette pour réessayer.',
     badLink:
-      'Ce lien est incomplet. Scannez à nouveau le code affiché par sINK sur la tablette.',
+      'Ce lien est incomplet. Scannez à nouveau le code affiché par s-INK sur la tablette.',
     noStorage:
       'Ce navigateur bloque le stockage dont la page a besoin. Ouvrez le lien dans un autre navigateur.',
     expired: 'Cette page a perdu son lien avec la tablette.',
@@ -46,14 +46,14 @@ export const PAGE_MESSAGES: Record<string, Record<string, string>> = {
     copied: 'Copié',
   },
   ja: {
-    title: 'sINK を Trello に接続',
+    title: 's-INK を Trello に接続',
     redirecting: 'Trello を開いています…',
     sending: 'タブレットに認証を送信しています…',
-    done: '完了しました。タブレットに戻ってください。sINK が自動的に接続します。このページは閉じてかまいません。',
+    done: '完了しました。タブレットに戻ってください。s-INK が自動的に接続します。このページは閉じてかまいません。',
     denied:
       'Trello がアクセスを許可しませんでした。タブレットのコードをもう一度スキャンしてください。',
     badLink:
-      'このリンクは不完全です。タブレットの sINK に表示されたコードをもう一度スキャンしてください。',
+      'このリンクは不完全です。タブレットの s-INK に表示されたコードをもう一度スキャンしてください。',
     noStorage:
       'このブラウザはページに必要なストレージをブロックしています。別のブラウザでリンクを開いてください。',
     expired: 'このページはタブレットとの接続を失いました。',
@@ -64,12 +64,12 @@ export const PAGE_MESSAGES: Record<string, Record<string, string>> = {
     copied: 'コピーしました',
   },
   'zh-CN': {
-    title: '将 sINK 连接到 Trello',
+    title: '将 s-INK 连接到 Trello',
     redirecting: '正在打开 Trello…',
     sending: '正在将授权发送到您的平板…',
-    done: '完成！请回到平板：sINK 会自动连接。您可以关闭此页面。',
+    done: '完成！请回到平板：s-INK 会自动连接。您可以关闭此页面。',
     denied: 'Trello 未授予访问权限。请再次扫描平板上的二维码重试。',
-    badLink: '此链接不完整。请再次扫描平板上 sINK 显示的二维码。',
+    badLink: '此链接不完整。请再次扫描平板上 s-INK 显示的二维码。',
     noStorage: '此浏览器阻止了页面所需的存储。请在其他浏览器中打开链接。',
     expired: '此页面已与平板失去关联。',
     alreadyUsed: '此二维码已被使用。',
@@ -79,12 +79,12 @@ export const PAGE_MESSAGES: Record<string, Record<string, string>> = {
     copied: '已复制',
   },
   'zh-TW': {
-    title: '將 sINK 連接到 Trello',
+    title: '將 s-INK 連接到 Trello',
     redirecting: '正在開啟 Trello…',
     sending: '正在將授權傳送到您的平板…',
-    done: '完成！請回到平板：sINK 會自動連接。您可以關閉此頁面。',
+    done: '完成！請回到平板：s-INK 會自動連接。您可以關閉此頁面。',
     denied: 'Trello 未授予存取權限。請再次掃描平板上的 QR 碼重試。',
-    badLink: '此連結不完整。請再次掃描平板上 sINK 顯示的 QR 碼。',
+    badLink: '此連結不完整。請再次掃描平板上 s-INK 顯示的 QR 碼。',
     noStorage: '此瀏覽器封鎖了頁面所需的儲存空間。請在其他瀏覽器中開啟連結。',
     expired: '此頁面已與平板失去關聯。',
     alreadyUsed: '此 QR 碼已被使用。',

@@ -3,6 +3,17 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.21.2 — Short name spelled s-INK in every text
+
+- The short name is now spelled **s-INK** in the texts too (all
+  locales): connection steps, token storage choices, permission requests
+  and error messages, as well as the relay page, the READMEs,
+  CONTRIBUTING, LICENSE and code comments.
+- Unchanged identifiers: the `pluginKey` `sINK`, the React Native
+  component and package names, the `[sINK]` log prefix and the relay
+  protocol labels (`sINK-enc`, `sINK-mac`, `sINK-v1`), which must stay
+  identical on both sides of the encryption.
+
 ## 0.21.1 — Display name spelled s-INK for Trello
 
 - The display name is now spelled **s-INK for Trello®** everywhere it is

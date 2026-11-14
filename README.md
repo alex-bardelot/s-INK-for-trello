@@ -59,7 +59,7 @@ npm test
 
 ### Configure the Trello API key
 
-sINK talks to the [Trello REST API](https://developer.atlassian.com/cloud/trello/rest/)
+s-INK talks to the [Trello REST API](https://developer.atlassian.com/cloud/trello/rest/)
 directly with `fetch`; there is no official Trello SDK for JavaScript.
 Each build needs a Trello API key:
 
@@ -88,7 +88,7 @@ The package is written to `build/outputs/sINKforTrello.snplg`.
    - by copying it over USB.
 2. On the tablet, sync if needed, then open **Settings → Apps → Plugins → Add Plugin** and pick
    `sINKforTrello.snplg`.
-3. Open a note or a document: the sINK button appears in the toolbar.
+3. Open a note or a document: the s-INK button appears in the toolbar.
 
 ### Connect a Trello account
 
@@ -99,12 +99,12 @@ that opens the connection screen. The same button is in **Settings**, whose
 switch "Show “Connect your Trello account” on the boards page" hides the My
 boards section for those who only read public boards.
 
-1. Press the sINK button, then **Connect your Trello account**, and allow
+1. Press the s-INK button, then **Connect your Trello account**, and allow
    Internet access when asked.
 2. In step 1, press **Open in browser** (or scan the QR code with a phone),
    sign in to Trello and press **Allow**.
 3. Come back to the plugin: the token travels back through the
-   [sINK relay](relay/README.md), end-to-end encrypted, and the plugin
+   [s-INK relay](relay/README.md), end-to-end encrypted, and the plugin
    connects by itself.
 4. As a fallback (relay unreachable, or no relay configured), open Trello's
    page directly (under **Show the address**), copy the token it displays

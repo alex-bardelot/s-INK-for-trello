@@ -13,7 +13,7 @@ import {
 const ICON_URI = Image.resolveAssetSource(require('../../assets/icon.png')).uri;
 
 /**
- * Registers the sINK buttons with labels in the active locale:
+ * Registers the s-INK buttons with labels in the active locale:
  * - the toolbar button of NOTE and DOC, which opens the boards view;
  * - the lasso toolbar button of NOTE, shown when the selection contains
  *   handwriting or text, which turns the selection into a Trello card.

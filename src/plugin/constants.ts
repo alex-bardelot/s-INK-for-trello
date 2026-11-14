@@ -29,7 +29,7 @@ export const AppType = {
 } as const;
 
 /**
- * Stable identifiers of the buttons registered by sINK.
+ * Stable identifiers of the buttons registered by s-INK.
  * Never reuse or renumber an id once released.
  */
 export const ButtonId = {

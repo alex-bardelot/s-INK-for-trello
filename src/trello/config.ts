@@ -1,7 +1,7 @@
 /**
  * Trello application settings.
  *
- * The API key identifies sINK to Trello. Per the Trello documentation
+ * The API key identifies s-INK to Trello. Per the Trello documentation
  * it is meant to be public: on its own it grants no access to any user data
  * (only a user-issued token does), so it is safe to ship in the bundle.
  *
@@ -22,7 +22,7 @@ export const TRELLO_APP_NAME = 's-INK for Trello';
 export const TRELLO_SCOPES = ['read', 'write'] as const;
 
 /**
- * sINK relay (see relay/README.md) that brings the token back from the
+ * s-INK relay (see relay/README.md) that brings the token back from the
  * browser without copy and paste. Its origin must be listed in the
  * Power-Up's "Allowed origins". Leave empty to use the manual flow only.
  */

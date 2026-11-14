@@ -1,7 +1,7 @@
 import {PluginManager} from 'sn-plugin-lib';
 
 /**
- * Plugin permissions used by sINK. Each one must also be declared in
+ * Plugin permissions used by s-INK. Each one must also be declared in
  * the `uses-permissions` array of PluginConfig.json, otherwise the request
  * fails (error 1500).
  *

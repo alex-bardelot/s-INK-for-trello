@@ -1,6 +1,6 @@
 /**
- * sINK relay: hands a Trello token from the browser where the user signed
- * in (a phone, or the tablet's own browser) to the sINK plugin, without
+ * s-INK relay: hands a Trello token from the browser where the user signed
+ * in (a phone, or the tablet's own browser) to the s-INK plugin, without
  * ever seeing it in clear. See README.md.
  */
 import {pageHeaders, renderConnectPage} from './page';
@@ -114,7 +114,7 @@ export async function handleRequest(
 
   if (url.pathname === '/') {
     return new Response(
-      'sINK relay: hands a Trello token to the s-INK for Trello plugin, end-to-end encrypted.\n',
+      's-INK relay: hands a Trello token to the s-INK for Trello plugin, end-to-end encrypted.\n',
       {headers: {'Content-Type': 'text/plain; charset=utf-8', ...API_HEADERS}},
     );
   }

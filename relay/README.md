@@ -1,4 +1,4 @@
-# sINK relay
+# s-INK relay
 
 A tiny [Cloudflare Worker](https://developers.cloudflare.com/workers/) that
 lets the s-INK for Trello plugin get a Trello token **without copying and
@@ -21,7 +21,7 @@ receive a redirect and no local server. Trello, for its part, can only hand a
 token to a web page (`return_url`). So something reachable on the Internet
 has to receive the token from that web page and keep it until the plugin
 comes to fetch it. Trello does not offer the OAuth "device flow" (where the
-provider runs this mailbox itself, as Google or GitHub do), so sINK brings
+provider runs this mailbox itself, as Google or GitHub do), so s-INK brings
 its own.
 
 ## How it works

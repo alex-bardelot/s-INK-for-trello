@@ -1,6 +1,6 @@
-# Contributing to sINK
+# Contributing to s-INK
 
-Thanks for your interest in improving sINK!
+Thanks for your interest in improving s-INK!
 
 ## Workflow
 

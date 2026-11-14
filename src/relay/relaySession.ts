@@ -1,5 +1,5 @@
 /**
- * Plugin side of the sINK relay (see relay/README.md): starts a session,
+ * Plugin side of the s-INK relay (see relay/README.md): starts a session,
  * waits for the encrypted token the browser deposits, and decrypts it.
  */
 import {randomBytes} from '../platform/random';
