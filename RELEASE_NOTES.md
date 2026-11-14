@@ -3,6 +3,18 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.23.1 — s-INK link taps: robust touch reading, detailed log
+
+- On the device, touch events reached the plugin but no tap was ever
+  detected. Touch events are now read defensively: the position and tool
+  fall back on the first pointer, the time on the reception time, an
+  unknown tool is accepted (only the pen is ruled out), and an event
+  without an action or position is skipped instead of breaking the
+  detection.
+- The diagnostics log now shows the first raw events as received, any
+  unreadable event, and every finger release with its duration, distance,
+  verdict (tap or not) and the event counts per action.
+
 ## 0.23.0 — s-INK links in notes (prototype)
 
 - **Link in note**, a new title bar button on a board and on a card

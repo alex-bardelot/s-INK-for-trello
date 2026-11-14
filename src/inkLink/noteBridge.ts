@@ -10,7 +10,12 @@ import {Permission} from '../plugin/permissions';
 import {logInkLink} from './diagnostics';
 import {findInkLinks, inkLinkAt, NoteElementType, PageElement} from './hitTest';
 import {formatInkLink, InkLinkTarget} from './inkLink';
-import {TapDetector, TouchSample} from './tapDetector';
+import {
+  MotionAction,
+  normalizeTouch,
+  TapDetector,
+  TouchSample,
+} from './tapDetector';
 
 interface SdkResponse<T> {
   success: boolean;
@@ -123,6 +128,17 @@ function recycle(elements: readonly PageElement[]): void {
   }
 }
 
+/** Raw touch events written to the diagnostics log. */
+const RAW_EVENTS_LOGGED = 3;
+
+function rawText(event: unknown): string {
+  try {
+    return JSON.stringify(event).slice(0, 300);
+  } catch {
+    return String(event);
+  }
+}
+
 let busy = false;
 
 async function handleTap(x: number, y: number): Promise<void> {
@@ -179,17 +195,43 @@ async function handleTap(x: number, y: number): Promise<void> {
  */
 export function startInkLinkTaps(): void {
   const detector = new TapDetector();
-  let first = true;
+  let received = 0;
+  let unreadable = 0;
+  const actions = new Map<number, number>();
   try {
     PluginManager.registerMotionListener(1, {
       onMsg: (event: TouchSample) => {
-        if (first) {
-          first = false;
+        received += 1;
+        // The first raw events show what the host really sends.
+        if (received <= RAW_EVENTS_LOGGED) {
+          logInkLink(`raw event ${received}: ${rawText(event)}`);
+        }
+        const touch = normalizeTouch(event);
+        if (!touch) {
+          unreadable += 1;
+          if (unreadable <= RAW_EVENTS_LOGGED) {
+            logInkLink(`unreadable event: ${rawText(event)}`);
+          }
+          return;
+        }
+        actions.set(touch.action, (actions.get(touch.action) ?? 0) + 1);
+        const tap = detector.feed(touch);
+        if (touch.action === MotionAction.Up) {
+          const release = detector.lastRelease;
           logInkLink(
-            `first touch event: action ${event.action}, tool ${event.toolType}`,
+            `release ${Math.round(touch.x)},${Math.round(touch.y)} tool ${
+              touch.toolType
+            }: ${
+              release
+                ? `${Math.round(release.durationMs)} ms, ${Math.round(
+                    release.distancePx,
+                  )} px, ${release.tap ? 'tap' : 'not a tap'}`
+                : 'no press seen'
+            } (events ${received}, by action ${Array.from(actions)
+              .map(([action, count]) => `${action}:${count}`)
+              .join(' ')})`,
           );
         }
-        const tap = detector.feed(event);
         if (tap) {
           handleTap(tap.x, tap.y);
         }

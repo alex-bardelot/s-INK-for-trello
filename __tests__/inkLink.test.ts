@@ -8,10 +8,12 @@ import {
 import {formatInkLink, parseInkLink} from '../src/inkLink/inkLink';
 import {
   MotionAction,
+  normalizeTouch,
   TapDetector,
   TAP_MAX_DISTANCE_PX,
   TAP_MAX_DURATION_MS,
   ToolType,
+  Touch,
   TouchSample,
 } from '../src/inkLink/tapDetector';
 
@@ -104,6 +106,27 @@ describe('hit testing', () => {
   });
 });
 
+describe('normalizeTouch', () => {
+  it('falls back on the first pointer and the reception time', () => {
+    expect(
+      normalizeTouch({action: 0, pointers: [{x: 12, y: 34, toolType: 1}]}, 999),
+    ).toEqual({
+      action: 0,
+      x: 12,
+      y: 34,
+      time: 999,
+      pointerCount: 1,
+      toolType: 1,
+    });
+  });
+
+  it('rejects events without an action or a position', () => {
+    expect(normalizeTouch({x: 1, y: 2})).toBeNull();
+    expect(normalizeTouch({action: 0})).toBeNull();
+    expect(normalizeTouch({action: 0, x: Number.NaN, y: 2})).toBeNull();
+  });
+});
+
 describe('TapDetector', () => {
   const sample = (
     action: number,
@@ -111,14 +134,34 @@ describe('TapDetector', () => {
     y: number,
     eventTime: number,
     overrides: Partial<TouchSample> = {},
-  ): TouchSample => ({
-    action,
-    x,
-    y,
-    eventTime,
-    pointerCount: 1,
-    toolType: ToolType.Finger,
-    ...overrides,
+  ): Touch =>
+    normalizeTouch({
+      action,
+      x,
+      y,
+      eventTime,
+      pointerCount: 1,
+      toolType: ToolType.Finger,
+      ...overrides,
+    })!;
+
+  it('records why a release was or was not a tap', () => {
+    const detector = new TapDetector();
+    detector.feed(sample(MotionAction.Down, 100, 100, 0));
+    detector.feed(sample(MotionAction.Up, 100, 130, 500));
+    expect(detector.lastRelease).toEqual({
+      durationMs: 500,
+      distancePx: 30,
+      tap: false,
+    });
+  });
+
+  it('accepts an unknown tool', () => {
+    const detector = new TapDetector();
+    detector.feed(sample(MotionAction.Down, 10, 10, 0, {toolType: 0}));
+    expect(
+      detector.feed(sample(MotionAction.Up, 10, 10, 50, {toolType: 0})),
+    ).toEqual({x: 10, y: 10});
   });
 
   it('reports a short, still finger press as a tap', () => {
