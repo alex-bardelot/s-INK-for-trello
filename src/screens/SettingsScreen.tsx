@@ -91,7 +91,7 @@ export interface SettingsScreenProps {
  * the Supernote system settings: categories in a left column, separated by
  * dotted lines, and the selected one's sections on the right. "General"
  * holds the main page shortcuts, the public boards, the Trello account (and
- * where its token is kept) and the language; "Boards" the settings of an open board (layout and mode); "Links"
+ * where its token is kept) and the language; "Board page" the settings of an open board (layout and mode); "Links"
  * the tool opening s-INK links; "About" the version and the
  * non-affiliation notice.
  */

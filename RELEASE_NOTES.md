@@ -3,6 +3,13 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.41.2 — Board page category
+
+- The **Boards** category of Settings is renamed **Board page**: it only
+  holds the settings of an open board (Layout and Mode), next to the
+  Main page settings of General. Only the displayed text of
+  `settings.boards` changes, in all locales.
+
 ## 0.41.1 — Language last in General, choices only
 
 - The **Language** section moves to the end of Settings > General.
