@@ -50,7 +50,11 @@ import {CloseIcon} from '../components/CloseIcon';
 import {MemberAvatar} from '../components/MemberAvatar';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {SmallButton} from '../components/SmallButton';
-import {ToggleChip} from '../components/ToggleChip';
+import {
+  CHIP_BORDER_WIDTH,
+  CHIP_HEIGHT,
+  ToggleChip,
+} from '../components/ToggleChip';
 import {TranslationKey, useTranslation} from '../i18n';
 import {logInkLink} from '../inkLink/diagnostics';
 import {bindSelection} from '../inkLink/lassoBinding';
@@ -132,6 +136,8 @@ const SESSION_ERRORS: Record<SessionErrorCode, TranslationKey> = {
 };
 
 const AVATAR_SIZE = 28;
+/** The "+" that opens the full list: a short pill, easy to hit. */
+const PICKER_BUTTON_WIDTH = 64;
 
 export interface CreateCardScreenProps {
   /** Text of the lasso selection, read when the button was pressed. */
@@ -943,7 +949,10 @@ function Section({
   );
 }
 
-/** The chip after the suggestions that opens the list of all of them. */
+/**
+ * The dashed "+" after the suggestions that opens the list of all of them,
+ * as high as the chips. `label` is read by accessibility services.
+ */
 function PickerButton({
   buttonRef,
   label,
@@ -970,7 +979,7 @@ function PickerButton({
               styles.pickerButtonText,
               pressed && styles.pickerButtonTextPressed,
             ]}>
-            {`+ ${label}`}
+            +
           </Text>
         )}
       </Pressable>
@@ -1129,11 +1138,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   pickerButton: {
+    width: PICKER_BUTTON_WIDTH,
+    height: CHIP_HEIGHT,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderColor: colors.foreground,
     borderRadius: 999,
-    borderWidth: borders.width,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    borderStyle: 'dashed',
+    borderWidth: CHIP_BORDER_WIDTH,
     backgroundColor: colors.background,
   },
   pickerButtonPressed: {
@@ -1141,7 +1153,7 @@ const styles = StyleSheet.create({
   },
   pickerButtonText: {
     color: colors.foreground,
-    fontSize: typography.body,
+    fontSize: typography.label,
     fontWeight: '700',
   },
   pickerButtonTextPressed: {

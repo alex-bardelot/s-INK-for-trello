@@ -3,6 +3,16 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.50.2 — Steady chips on the New Trello Card page
+
+- Label and member chips keep the same size whether added (solid frame,
+  ×) or not (dashed frame, +): same height, same frame thickness, and
+  the same room for the + and the ×. Adding or removing one no longer
+  moves the others.
+- The buttons that open the list of all labels or members are now a
+  dashed **+**, as high as the chips, instead of **+ Label…** and
+  **+ Member…**.
+
 ## 0.50.1 — Lasso buttons that always answer
 
 - Reported on the tablet: **New Trello Card** and **Insert Trello Link**

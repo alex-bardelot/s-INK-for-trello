@@ -39,25 +39,35 @@ export function ToggleChip({
   );
 }
 
+/**
+ * Height of every chip, added or not, and of the "+" button next to them:
+ * adding or removing one must not move the others.
+ */
+export const CHIP_HEIGHT = 44;
+/** Same frame thickness whether solid or dashed, for the same reason. */
+export const CHIP_BORDER_WIDTH = borders.width * 1.5;
+/** Width kept for the + or ×, which are not equally wide. */
+const SIGN_WIDTH = 18;
+
 const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     maxWidth: '100%',
+    height: CHIP_HEIGHT,
     borderColor: colors.foreground,
     borderRadius: 999,
+    borderWidth: CHIP_BORDER_WIDTH,
     paddingLeft: spacing.sm,
     paddingRight: spacing.md,
-    paddingVertical: spacing.xs,
     backgroundColor: colors.background,
   },
   selected: {
-    borderWidth: borders.width * 1.5,
+    borderStyle: 'solid',
   },
   available: {
     borderStyle: 'dashed',
-    borderWidth: borders.width,
   },
   pressed: {
     backgroundColor: colors.avatar,
@@ -69,6 +79,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   sign: {
+    width: SIGN_WIDTH,
+    textAlign: 'center',
     color: colors.foreground,
     fontSize: typography.label,
     fontWeight: '700',
