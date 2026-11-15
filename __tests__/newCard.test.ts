@@ -115,10 +115,27 @@ describe('new card settings', () => {
       assignMe: false,
       linkSelection: true,
     });
-    await store.setItem(
-      NEW_CARD_SETTINGS_KEY,
-      JSON.stringify({suggestionCount: 4, assignMe: 'yes'}),
-    );
-    expect(await loadNewCardSettings(store)).toEqual(DEFAULT_NEW_CARD_SETTINGS);
+    for (const suggestionCount of [11, -1, 2.5, '4']) {
+      await store.setItem(
+        NEW_CARD_SETTINGS_KEY,
+        JSON.stringify({suggestionCount, assignMe: 'yes'}),
+      );
+      expect(await loadNewCardSettings(store)).toEqual(
+        DEFAULT_NEW_CARD_SETTINGS,
+      );
+    }
+  });
+
+  it('keeps any whole number of suggestions from 0 to 10', async () => {
+    const store = createMemoryStore();
+    for (const suggestionCount of [0, 4, 10]) {
+      await store.setItem(
+        NEW_CARD_SETTINGS_KEY,
+        JSON.stringify({suggestionCount}),
+      );
+      expect((await loadNewCardSettings(store)).suggestionCount).toBe(
+        suggestionCount,
+      );
+    }
   });
 });

@@ -3,12 +3,13 @@ import React, {useCallback, useEffect, useState} from 'react';
 import {
   DEFAULT_NEW_CARD_SETTINGS,
   loadNewCardSettings,
+  MAX_SUGGESTIONS,
+  MIN_SUGGESTIONS,
   NewCardSettings,
   saveNewCardSettings,
-  SUGGESTION_COUNTS,
 } from '../cards/newCardSettings';
-import {SegmentedControl} from '../components/SegmentedControl';
 import {SettingsSection} from '../components/SettingsSection';
+import {Stepper} from '../components/Stepper';
 import {Switch} from '../components/Switch';
 import {useTranslation} from '../i18n';
 import {KeyValueStore} from '../storage/keyValueStore';
@@ -52,14 +53,12 @@ export function NewCardSettingsPanel({
 
   return (
     <SettingsSection title={t('card.title')}>
-      <SegmentedControl
+      <Stepper
         label={t('newCard.suggestions')}
         help={t('newCard.suggestionsHelp')}
-        segments={SUGGESTION_COUNTS.map(count => ({
-          value: count,
-          label: count === 0 ? t('newCard.none') : String(count),
-        }))}
         value={settings.suggestionCount}
+        min={MIN_SUGGESTIONS}
+        max={MAX_SUGGESTIONS}
         onChange={suggestionCount => update({suggestionCount})}
       />
       <Switch

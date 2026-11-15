@@ -4,8 +4,18 @@ import {KeyValueStore} from '../storage/keyValueStore';
 export const NEW_CARD_SETTINGS_KEY = 'supertrello.newCard.settings';
 
 /** How many of the most used labels and members are offered at once. */
-export const SUGGESTION_COUNTS = [0, 3, 5] as const;
-export type SuggestionCount = (typeof SUGGESTION_COUNTS)[number];
+export const MIN_SUGGESTIONS = 0;
+export const MAX_SUGGESTIONS = 10;
+
+/** `true` for a whole number of suggestions within the range offered. */
+export function isSuggestionCount(value: unknown): value is number {
+  return (
+    typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value >= MIN_SUGGESTIONS &&
+    value <= MAX_SUGGESTIONS
+  );
+}
 
 /** What the New Trello Card page does by itself. */
 export interface NewCardSettings {
@@ -13,7 +23,7 @@ export interface NewCardSettings {
    * Labels and members of the board shown as chips, the most used first;
    * the others are in the list of the + button.
    */
-  suggestionCount: SuggestionCount;
+  suggestionCount: number;
   /** Adds the connected member to the members of each new card. */
   assignMe: boolean;
   /**
@@ -42,11 +52,10 @@ export async function loadNewCardSettings(
     const raw = await store.getItem(NEW_CARD_SETTINGS_KEY);
     const parsed: Partial<Record<keyof NewCardSettings, unknown>> =
       (raw ? JSON.parse(raw) : null) ?? {};
-    const count = SUGGESTION_COUNTS.find(
-      value => value === parsed.suggestionCount,
-    );
     return {
-      suggestionCount: count ?? defaults.suggestionCount,
+      suggestionCount: isSuggestionCount(parsed.suggestionCount)
+        ? parsed.suggestionCount
+        : defaults.suggestionCount,
       assignMe: readBoolean(parsed.assignMe, defaults.assignMe),
       linkSelection: readBoolean(parsed.linkSelection, defaults.linkSelection),
     };

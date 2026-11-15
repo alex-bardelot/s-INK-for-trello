@@ -3,6 +3,14 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.56.1 — Suggestions counted with − and +
+
+- **Settings › New card › Labels and members suggested** now shows the
+  number between a round **−** and a round **+**, instead of the None,
+  3 and 5 choice: any number from 0 to 10. A button that cannot go
+  further is dashed.
+- Its help now names the **+** button that lists the others.
+
 ## 0.56.0 — Card buttons with icons, shown when useful
 
 - The card page's buttons get an icon: a play triangle for **Start**, a
