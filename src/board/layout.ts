@@ -1,11 +1,17 @@
 import {TrelloBoardCard} from '../trello';
 
 /** Number of lists shown side by side on the board view. */
-export type ColumnCount = 1 | 2 | 3;
-
-export const COLUMN_COUNTS: readonly ColumnCount[] = [1, 2, 3];
+export type ColumnCount = 1 | 2 | 3 | 4;
 
 export type Orientation = 'portrait' | 'landscape';
+
+/** Column counts offered per orientation: four only fit in landscape. */
+export const COLUMN_COUNTS: Readonly<
+  Record<Orientation, readonly ColumnCount[]>
+> = {
+  portrait: [1, 2, 3],
+  landscape: [1, 2, 3, 4],
+};
 
 /** Column count used until the user picks one, per orientation. */
 export const DEFAULT_COLUMNS: Readonly<Record<Orientation, ColumnCount>> = {

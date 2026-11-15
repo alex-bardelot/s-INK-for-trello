@@ -104,6 +104,20 @@ describe('board preferences', () => {
       portrait: 2,
       landscape: 3,
     });
+    // Four lists fit in landscape only.
+    await saveBoardPreferences(store, {portrait: 3, landscape: 4});
+    expect(await loadBoardPreferences(store)).toEqual({
+      portrait: 3,
+      landscape: 4,
+    });
+    await store.setItem(
+      BOARD_PREFERENCES_KEY,
+      '{"portrait":4,"landscape":4}',
+    );
+    expect(await loadBoardPreferences(store)).toEqual({
+      portrait: 2,
+      landscape: 4,
+    });
     await store.setItem(BOARD_PREFERENCES_KEY, 'not json');
     expect(await loadBoardPreferences(store)).toEqual({
       portrait: 2,

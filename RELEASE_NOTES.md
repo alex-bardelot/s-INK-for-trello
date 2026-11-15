@@ -3,6 +3,17 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.36.0 — Four lists in landscape, with a tablet preview
+
+- In landscape, the board view can now show **4 lists** side by side.
+  Portrait stays at 1 to 3. The counts offered and the stored values
+  are checked per orientation, so a saved 4 in portrait falls back to
+  the default.
+- In Settings > Boards, each column setting shows a small drawing of the
+  tablet held that way (`TabletPreview`). Inside, the board view shows
+  the chosen number of lists, each with a dark header and a few cards.
+  It follows the setting as it changes.
+
 ## 0.35.0 — Links category in Settings
 
 - The setting for which tool opens s-INK links in notes (finger, pen or

@@ -12,8 +12,10 @@ export const BOARD_PREFERENCES_KEY = 'supertrello.board.preferences';
 /** Column count chosen by the user, per screen orientation. */
 export type BoardPreferences = Readonly<Record<Orientation, ColumnCount>>;
 
-function isColumnCount(value: unknown): value is ColumnCount {
-  return COLUMN_COUNTS.includes(value as ColumnCount);
+function columnCountFor(orientation: Orientation, value: unknown): ColumnCount {
+  return COLUMN_COUNTS[orientation].includes(value as ColumnCount)
+    ? (value as ColumnCount)
+    : DEFAULT_COLUMNS[orientation];
 }
 
 /** Reads the preferences; any missing or corrupted value yields the defaults. */
@@ -25,12 +27,8 @@ export async function loadBoardPreferences(
     const parsed: Partial<Record<Orientation, unknown>> =
       (raw ? JSON.parse(raw) : null) ?? {};
     return {
-      portrait: isColumnCount(parsed.portrait)
-        ? parsed.portrait
-        : DEFAULT_COLUMNS.portrait,
-      landscape: isColumnCount(parsed.landscape)
-        ? parsed.landscape
-        : DEFAULT_COLUMNS.landscape,
+      portrait: columnCountFor('portrait', parsed.portrait),
+      landscape: columnCountFor('landscape', parsed.landscape),
     };
   } catch (error) {
     console.warn('[sINK] Failed to read board preferences', error);

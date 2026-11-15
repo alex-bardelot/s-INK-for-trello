@@ -97,7 +97,7 @@ export interface BoardScreenProps {
 }
 
 /**
- * Shows the lists of a board side by side (1 to 3 columns, chosen per
+ * Shows the lists of a board side by side (1 to 3 columns in portrait, 1 to 4 in landscape, chosen per
  * orientation). Lists and cards are browsed page by page, with buttons or a
  * two-finger swipe, rather than by scrolling, which is slow on E Ink.
  */

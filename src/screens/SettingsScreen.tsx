@@ -9,7 +9,13 @@ import {
   ModeChoice,
   saveFocusSettings,
 } from '../board/focus';
-import {COLUMN_COUNTS, ColumnCount, DEFAULT_COLUMNS} from '../board/layout';
+import {
+  COLUMN_COUNTS,
+  ColumnCount,
+  DEFAULT_COLUMNS,
+  Orientation,
+} from '../board/layout';
+import {TabletPreview} from '../components/TabletPreview';
 import {
   BoardPreferences,
   loadBoardPreferences,
@@ -335,10 +341,11 @@ function BoardViewSettings({store}: {store: KeyValueStore}): React.JSX.Element {
     [focus, store],
   );
 
-  const counts = COLUMN_COUNTS.map(count => ({
-    value: count,
-    label: String(count),
-  }));
+  const countsFor = (orientation: Orientation) =>
+    COLUMN_COUNTS[orientation].map(count => ({
+      value: count,
+      label: String(count),
+    }));
   const modes: {value: ModeChoice; label: string}[] = [
     {value: 'all', label: t('settings.modeAll')},
     {value: 'focus', label: t('board.focus')},
@@ -347,18 +354,26 @@ function BoardViewSettings({store}: {store: KeyValueStore}): React.JSX.Element {
 
   return (
     <Section title={t('settings.boardView')}>
-      <SegmentedControl
-        label={t('settings.columnsPortrait')}
-        segments={counts}
-        value={columns.portrait}
-        onChange={count => changeColumns('portrait', count)}
-      />
-      <SegmentedControl
-        label={t('settings.columnsLandscape')}
-        segments={counts}
-        value={columns.landscape}
-        onChange={count => changeColumns('landscape', count)}
-      />
+      {(['portrait', 'landscape'] as const).map(orientation => (
+        <View key={orientation} style={styles.columnsRow}>
+          <TabletPreview
+            orientation={orientation}
+            columns={columns[orientation]}
+          />
+          <View style={styles.columnsControl}>
+            <SegmentedControl
+              label={t(
+                orientation === 'portrait'
+                  ? 'settings.columnsPortrait'
+                  : 'settings.columnsLandscape',
+              )}
+              segments={countsFor(orientation)}
+              value={columns[orientation]}
+              onChange={count => changeColumns(orientation, count)}
+            />
+          </View>
+        </View>
+      ))}
       <SegmentedControl
         label={t('settings.boardMode')}
         help={t('settings.boardModeHelp')}
@@ -657,6 +672,14 @@ const styles = StyleSheet.create({
     borderTopColor: colors.foreground,
     borderTopWidth: borders.width / 2,
     paddingTop: spacing.md,
+  },
+  columnsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+  },
+  columnsControl: {
+    flex: 1,
   },
   diagnostics: {
     gap: spacing.sm,
