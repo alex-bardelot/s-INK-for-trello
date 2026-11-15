@@ -28,7 +28,7 @@ export interface TrelloClientOptions {
   baseUrl?: string;
   timeoutMs?: number;
   /** Told whether each request got an answer; defaults to the plugin's. */
-  connectivity?: Pick<ConnectivityMonitor, 'reportOnline' | 'reportOffline'>;
+  connectivity?: Pick<ConnectivityMonitor, 'reportOnline' | 'reportNoAnswer'>;
 }
 
 interface RequestOptions {
@@ -285,7 +285,7 @@ export class TrelloClient {
         signal: controller.signal,
       });
     } catch (error) {
-      this.connectivity.reportOffline();
+      this.connectivity.reportNoAnswer();
       throw new TrelloApiError(
         'network',
         `${method} ${path} failed: ${describe(error)}`,

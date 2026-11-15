@@ -9,9 +9,12 @@ import {
 import {PendingBindingBanner} from './components/PendingBindingBanner';
 import {language, loadLanguageChoice, useTranslation} from './i18n';
 import {loadLinkTrigger, setLinkTrigger} from './inkLink/trigger';
-import {useConnectivity} from './network/connectivity';
+import {connectivity, useConnectivity} from './network/connectivity';
 import {useLaunchIntent} from './plugin/launchIntent';
-import {ensureFileReadPermission} from './plugin/permissions';
+import {
+  ensureFileReadPermission,
+  hasInternetPermission,
+} from './plugin/permissions';
 import {BoardScreen} from './screens/BoardScreen';
 import {BoardsScreen} from './screens/BoardsScreen';
 import {ConnectScreen} from './screens/ConnectScreen';
@@ -106,6 +109,17 @@ export default function App(): React.JSX.Element {
       setConnectOpen(true);
     }
   }, [signedOutError]);
+  // The tablet's internet access is checked on every opening, signed in or
+  // not, so the offline strip shows at once. Not before network access is
+  // granted: the check must not prompt for it.
+  useEffect(() => {
+    hasInternetPermission().then(granted => {
+      if (granted) {
+        connectivity.probe();
+      }
+    });
+  }, []);
+
   // Opened without internet: the account is checked again as soon as the
   // connection is back.
   const online = useConnectivity() === 'online';

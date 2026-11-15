@@ -1,6 +1,7 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 
 import {i18n} from '../i18n';
+import {connectivity} from '../network/connectivity';
 import {ensureInternetPermission} from '../plugin/permissions';
 import {KeyValueStore} from '../storage/keyValueStore';
 import {getDeviceStore, getSessionStore} from '../storage/stores';
@@ -38,6 +39,7 @@ function createDefaultDeps(): SessionDeps {
     deviceStore: getDeviceStore(),
     ensureNetwork: () =>
       ensureInternetPermission(i18n.t('error.permissionDenied')),
+    isInternetReachable: connectivity.probe,
     createClient: token => new TrelloClient({apiKey: TRELLO_API_KEY, token}),
   };
 }

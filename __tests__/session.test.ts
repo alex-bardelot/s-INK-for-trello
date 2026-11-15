@@ -29,6 +29,7 @@ function makeDeps(
     sessionStore: createMemoryStore(),
     deviceStore: createMemoryStore(),
     ensureNetwork: async () => true,
+    isInternetReachable: async () => true,
     createClient: jest.fn(() => client),
     ...overrides,
   };
@@ -100,12 +101,27 @@ describe('restoreSession', () => {
     expect(await deps.deviceStore.getItem(TOKEN_STORAGE_KEY)).toBeNull();
   });
 
-  it('is offline, keeping the token, when Trello cannot be reached', async () => {
-    const {deps} = makeDeps(async () => {
-      throw new TrelloApiError('network', 'offline');
-    });
+  it('is offline, keeping the token, when the tablet has no internet', async () => {
+    const {deps} = makeDeps(
+      async () => {
+        throw new TrelloApiError('network', 'offline');
+      },
+      {isInternetReachable: async () => false},
+    );
     await deps.deviceStore.setItem(TOKEN_STORAGE_KEY, TOKEN);
     expect(await restoreSession(deps)).toEqual({status: 'offline'});
+    expect(await deps.deviceStore.getItem(TOKEN_STORAGE_KEY)).toBe(TOKEN);
+  });
+
+  it('reports Trello unreachable, keeping the token, with internet', async () => {
+    const {deps} = makeDeps(async () => {
+      throw new TrelloApiError('network', 'Trello down');
+    });
+    await deps.deviceStore.setItem(TOKEN_STORAGE_KEY, TOKEN);
+    expect(await restoreSession(deps)).toEqual({
+      status: 'signedOut',
+      error: 'network',
+    });
     expect(await deps.deviceStore.getItem(TOKEN_STORAGE_KEY)).toBe(TOKEN);
   });
 

@@ -3,6 +3,21 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.43.1 — Offline means the tablet has no internet
+
+- Offline now means that the tablet itself has no internet, not that
+  Trello does not answer. The check uses a neutral address (Cloudflare's
+  small trace page, which carries no user data) instead of the Trello API.
+  When a Trello request gets no answer, s-INK checks the tablet's
+  internet; if it works, only Trello is unreachable and the usual
+  "Trello could not be reached" errors are shown.
+- The tablet's internet is checked each time s-INK opens, signed in or
+  not, so the strip shows at once (only once network access is granted:
+  the check never asks for it).
+- The strip and the page now say **No internet**: "The tablet is not
+  connected to the internet. Check its Wi-Fi", in all locales.
+- Tests never reach the internet (`jest/noNetwork.js`).
+
 ## 0.43.0 — Offline mode
 
 - Opening s-INK without internet no longer looks like a lost account:

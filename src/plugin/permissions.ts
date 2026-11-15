@@ -55,6 +55,21 @@ export function ensureInternetPermission(rationale?: string): Promise<boolean> {
   return ensurePermission(Permission.Internet, rationale);
 }
 
+/**
+ * Whether network access is already granted, without asking. Firmware
+ * without the permission system counts as granted.
+ */
+export async function hasInternetPermission(): Promise<boolean> {
+  try {
+    return GRANTED_STATES.has(
+      await PluginManager.hasPermission(Permission.Internet),
+    );
+  } catch (error) {
+    console.warn('[sINK] Permission API unavailable', error);
+    return true;
+  }
+}
+
 /** Makes sure the plugin may create and delete its storage directories. */
 export async function ensureStorageWritePermission(
   rationale?: string,

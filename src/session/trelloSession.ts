@@ -52,6 +52,8 @@ export interface SessionDeps {
   deviceStore: KeyValueStore;
   /** Resolves `false` if the user refused network access. */
   ensureNetwork: () => Promise<boolean>;
+  /** Whether the tablet has internet access (Trello aside). */
+  isInternetReachable: () => Promise<boolean>;
   createClient: (token: string) => TrelloClient;
 }
 
@@ -139,8 +141,8 @@ async function signIn(
  * view opens: first in memory, then on the tablet. The token is validated
  * against Trello; a token rejected by Trello is forgotten everywhere, while
  * transient failures (network, rate limit) keep it so the user can retry.
- * Without internet, the account is kept and the state is `offline`: the
- * user is not signed out, only waiting for the connection.
+ * When the tablet has no internet, the account is kept and the state is
+ * `offline`: the user is not signed out, only waiting for the connection.
  */
 export async function restoreSession(deps: SessionDeps): Promise<SessionState> {
   if (!hasApiKey(deps.apiKey)) {
@@ -164,7 +166,9 @@ export async function restoreSession(deps: SessionDeps): Promise<SessionState> {
     return {...state, tokenStorage};
   } catch (error) {
     const code = toSessionError(error);
-    if (code === 'network') {
+    // No answer from Trello: offline only if the tablet itself has no
+    // internet; otherwise Trello alone is unreachable, said as an error.
+    if (code === 'network' && !(await deps.isInternetReachable())) {
       return {status: 'offline'};
     }
     if (code === 'invalidToken') {

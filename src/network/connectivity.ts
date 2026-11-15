@@ -1,22 +1,27 @@
 import {useSyncExternalStore} from 'react';
 
 /**
- * Whether the tablet can reach the internet, as seen by s-INK.
+ * Whether the tablet itself has internet access, whatever Trello does.
  *
- * There is no network-state API in a plugin: every Trello request reports
- * its outcome here (no answer at all = offline, any HTTP answer = online).
- * While offline and shown on screen, a light request is sent every few
- * seconds, so the plugin notices by itself when the Wi-Fi is back.
+ * There is no network-state API in a plugin, so the tablet's access is
+ * checked with a light request to a neutral address (not Trello): when the
+ * view opens, and whenever a Trello request gets no answer at all. Trello
+ * being down while the internet works is not "offline": its own errors say
+ * so. While offline and shown on screen, the check runs every few seconds,
+ * so the plugin notices by itself when the Wi-Fi is back.
  */
 export type Connectivity = 'online' | 'offline';
 
 /** Delay between two checks while offline, in milliseconds. */
 export const OFFLINE_PROBE_INTERVAL_MS = 5000;
 
-/** Address checked while offline: any answer, even an error, will do. */
-export const PROBE_URL = 'https://api.trello.com/1/';
+/**
+ * Neutral address checked: Cloudflare's tiny trace page, which carries no
+ * data about the user. Any answer, even an error, proves the access.
+ */
+export const PROBE_URL = 'https://cloudflare.com/cdn-cgi/trace';
 
-/** Gives up on a check after this long, like a Trello request. */
+/** Gives up on a check after this long. */
 const PROBE_TIMEOUT_MS = 10000;
 
 export interface ConnectivityOptions {
@@ -28,7 +33,7 @@ export class ConnectivityMonitor {
   private status: Connectivity = 'online';
   private readonly listeners = new Set<() => void>();
   private timer: ReturnType<typeof setInterval> | null = null;
-  private probing = false;
+  private pendingProbe: Promise<boolean> | null = null;
   private readonly fetchImpl: typeof fetch;
   private readonly intervalMs: number;
 
@@ -45,34 +50,26 @@ export class ConnectivityMonitor {
   /** A request got an answer: the internet is reachable. */
   reportOnline = (): void => this.set('online');
 
-  /** A request got no answer at all (no Wi-Fi, DNS, timeout). */
-  reportOffline = (): void => this.set('offline');
+  /**
+   * A request got no answer at all: checks whether the tablet still has
+   * internet, or only that server failed.
+   */
+  reportNoAnswer = (): void => {
+    this.probe();
+  };
 
   /**
-   * Checks the internet now.
+   * Checks the tablet's internet access now. Concurrent calls share one
+   * request.
    * @returns Whether it is reachable.
    */
-  probe = async (): Promise<boolean> => {
-    if (this.probing) {
-      return this.status === 'online';
-    }
-    this.probing = true;
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
-    try {
-      await this.fetchImpl(PROBE_URL, {
-        method: 'HEAD',
-        signal: controller.signal,
+  probe = (): Promise<boolean> => {
+    if (!this.pendingProbe) {
+      this.pendingProbe = this.runProbe().finally(() => {
+        this.pendingProbe = null;
       });
-      this.reportOnline();
-      return true;
-    } catch {
-      this.reportOffline();
-      return false;
-    } finally {
-      clearTimeout(timeout);
-      this.probing = false;
     }
+    return this.pendingProbe;
   };
 
   subscribe = (listener: () => void): (() => void) => {
@@ -83,6 +80,24 @@ export class ConnectivityMonitor {
       this.updateTimer();
     };
   };
+
+  private async runProbe(): Promise<boolean> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
+    try {
+      await this.fetchImpl(PROBE_URL, {
+        method: 'HEAD',
+        signal: controller.signal,
+      });
+      this.set('online');
+      return true;
+    } catch {
+      this.set('offline');
+      return false;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
 
   private set(next: Connectivity): void {
     if (next === this.status) {
