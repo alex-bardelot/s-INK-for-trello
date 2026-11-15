@@ -281,8 +281,6 @@
   "startWork.noteOpenFailed": "無法開啟筆記。",
   "startWork.failureDetail": "（詳情：{reason}）",
   "startWork.templateSection": "筆記範本",
-  "startWork.templateShortHelp": "為卡片建立的筆記的頁面背景。",
-  "startWork.templateBrowse": "選擇其他範本…",
   "startWork.templateChoose": "使用此範本",
   "startWork.templateHelp": "為卡片建立的筆記的頁面背景。你自己的範本是裝置 {folder} 資料夾中的 PNG 圖片。",
   "startWork.templateBlank": "空白頁",

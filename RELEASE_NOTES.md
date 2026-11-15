@@ -3,6 +3,14 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.54.1 — Template preview in the Create a note row
+
+- In **Settings › Start work**, the preview of the note template now
+  stands in the **Create a note** row, between its text and its switch,
+  while the switch is on. A tap on it opens the list of templates.
+- The **Note template** block and its **Choose another template…** button
+  are gone.
+
 ## 0.54.0 — Note template on a page of its own
 
 - **Settings › Start work › Note template** no longer loads every

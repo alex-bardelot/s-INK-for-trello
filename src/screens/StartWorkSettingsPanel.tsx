@@ -148,24 +148,17 @@ export function StartWorkSettingsPanel({
           help={t('startWork.createNoteHelp', {folder: CARD_NOTES_FOLDER})}
           value={settings.createNote}
           onChange={createNote => change({createNote})}
+          // The note's template, which a tap changes on a page of its own.
+          accessory={
+            settings.createNote ? (
+              <CurrentTemplate
+                value={settings.noteTemplate}
+                onPress={onBrowseTemplates}
+              />
+            ) : null
+          }
         />
       </SettingsSection>
-
-      {settings.createNote && (
-        <SettingsSection title={t('startWork.templateSection')}>
-          <Text style={styles.small}>{t('startWork.templateShortHelp')}</Text>
-          <View style={styles.current}>
-            <CurrentTemplate
-              value={settings.noteTemplate}
-              onPress={onBrowseTemplates}
-            />
-            <Button
-              label={t('startWork.templateBrowse')}
-              onPress={onBrowseTemplates}
-            />
-          </View>
-        </SettingsSection>
-      )}
     </>
   );
 }
@@ -649,11 +642,6 @@ const styles = StyleSheet.create({
   },
   templates: {
     gap: spacing.md,
-  },
-  current: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.lg,
   },
   templatePage: {
     gap: spacing.md,

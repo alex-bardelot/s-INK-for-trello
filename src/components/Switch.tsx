@@ -10,6 +10,8 @@ export interface SwitchProps {
   help?: string;
   value: boolean;
   onChange: (value: boolean) => void;
+  /** Shown between the texts and the switch, such as a preview. */
+  accessory?: React.ReactNode;
 }
 
 /**
@@ -23,6 +25,7 @@ export function Switch({
   help,
   value,
   onChange,
+  accessory,
 }: SwitchProps): React.JSX.Element {
   const {t} = useTranslation();
   return (
@@ -36,6 +39,7 @@ export function Switch({
         <Text style={styles.label}>{label}</Text>
         {help && <Text style={styles.help}>{help}</Text>}
       </View>
+      {accessory}
       {/* ON / OFF before the track, like the Supernote system settings. */}
       <Text style={styles.state}>{t(value ? 'common.on' : 'common.off')}</Text>
       <View style={[styles.track, value && styles.trackOn]}>
