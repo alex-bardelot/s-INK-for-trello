@@ -3,6 +3,13 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.39.1 — Board layout and mode string keys kept
+
+- The `settings.boardLayouts` and `settings.boardMode` string keys are
+  back in place of `settings.layout` and `settings.mode`. Only their
+  displayed text is short ("Layout", "Mode"), so as not to repeat
+  "Boards" inside the Boards category.
+
 ## 0.39.0 — General category in Settings
 
 - Settings get a **General** category, first in the list and selected

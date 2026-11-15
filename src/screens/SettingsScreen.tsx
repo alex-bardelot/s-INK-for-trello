@@ -356,7 +356,7 @@ function BoardLayoutSettings({
     }));
 
   return (
-    <Section title={t('settings.layout')}>
+    <Section title={t('settings.boardLayouts')}>
       {(['portrait', 'landscape'] as const).map(orientation => (
         <View key={orientation} style={styles.columnsRow}>
           <TabletPreview
@@ -413,7 +413,7 @@ function BoardModeSettings({store}: {store: KeyValueStore}): React.JSX.Element {
   ];
 
   return (
-    <Section title={t('settings.mode')}>
+    <Section title={t('settings.boardMode')}>
       <SegmentedControl
         label={t('settings.boardModeDefault')}
         help={t('settings.boardModeHelp')}
