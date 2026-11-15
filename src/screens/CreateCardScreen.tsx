@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import {PluginManager} from 'sn-plugin-lib';
 
-import {labelDisplayName} from '../board/labelNames';
 import {labelShade} from '../board/labels';
 import {loadBoardsPreferences} from '../boards/preferences';
 import {addCardChecklist} from '../cards/checklist';
@@ -188,7 +187,8 @@ export function CreateCardScreen({
         setDetails({
           status: 'ready',
           lists: orderLists(lists, lastListId),
-          labels,
+          // Labels without a name are only a color: not offered.
+          labels: labels.filter(label => label.name.trim().length > 0),
           members: membersMeFirst(members, memberId),
         });
         setList(defaultChoice(lists, lastListId));
@@ -592,14 +592,13 @@ export function CreateCardScreen({
                 <View style={styles.chips}>
                   {ready.labels.map(label => {
                     const selected = labelIds.includes(label.id);
-                    const labelName = labelDisplayName(label, t);
                     return (
                       <ToggleChip
                         key={label.id}
                         selected={selected}
                         accessibilityLabel={t(
                           selected ? 'card.remove' : 'card.add',
-                          {name: labelName},
+                          {name: label.name},
                         )}
                         onPress={() =>
                           setLabelIds(ids => toggleId(ids, label.id))
@@ -613,13 +612,8 @@ export function CreateCardScreen({
                             },
                           ]}
                         />
-                        <Text
-                          style={[
-                            styles.chipText,
-                            !label.name.trim() && styles.chipTextColor,
-                          ]}
-                          numberOfLines={1}>
-                          {labelName}
+                        <Text style={styles.chipText} numberOfLines={1}>
+                          {label.name}
                         </Text>
                       </ToggleChip>
                     );
@@ -920,9 +914,6 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     borderColor: colors.labelBorder,
     borderWidth: 1.5,
-  },
-  chipTextColor: {
-    fontStyle: 'italic',
   },
   inlineError: {
     flexDirection: 'row',

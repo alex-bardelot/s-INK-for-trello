@@ -3,6 +3,13 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.49.4 — Only named labels on a new card
+
+- The New Trello Card page no longer offers labels without a name (a
+  color alone): only named labels are listed. The color names added in
+  0.49.3 for them are gone. A board whose labels have no name shows "This
+  board has no labels."
+
 ## 0.49.3 — Readable labels, and the list hangs from the board
 
 - On the New Trello Card page, label chips drew unnamed labels as dark
