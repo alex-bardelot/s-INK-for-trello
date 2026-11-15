@@ -31,6 +31,8 @@ export type TokenStorage = 'session' | 'device';
 export type SessionState =
   | {status: 'checking'}
   | {status: 'signedOut'; error?: SessionErrorCode}
+  /** A stored account could not be checked: the internet is unreachable. */
+  | {status: 'offline'}
   | {status: 'connecting'}
   | {
       status: 'signedIn';
@@ -137,6 +139,8 @@ async function signIn(
  * view opens: first in memory, then on the tablet. The token is validated
  * against Trello; a token rejected by Trello is forgotten everywhere, while
  * transient failures (network, rate limit) keep it so the user can retry.
+ * Without internet, the account is kept and the state is `offline`: the
+ * user is not signed out, only waiting for the connection.
  */
 export async function restoreSession(deps: SessionDeps): Promise<SessionState> {
   if (!hasApiKey(deps.apiKey)) {
@@ -160,6 +164,9 @@ export async function restoreSession(deps: SessionDeps): Promise<SessionState> {
     return {...state, tokenStorage};
   } catch (error) {
     const code = toSessionError(error);
+    if (code === 'network') {
+      return {status: 'offline'};
+    }
     if (code === 'invalidToken') {
       await removeToken(deps.sessionStore);
       await removeToken(deps.deviceStore);

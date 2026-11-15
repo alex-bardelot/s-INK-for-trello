@@ -9,12 +9,14 @@ import {
 import {PendingBindingBanner} from './components/PendingBindingBanner';
 import {language, loadLanguageChoice, useTranslation} from './i18n';
 import {loadLinkTrigger, setLinkTrigger} from './inkLink/trigger';
+import {useConnectivity} from './network/connectivity';
 import {useLaunchIntent} from './plugin/launchIntent';
 import {ensureFileReadPermission} from './plugin/permissions';
 import {BoardScreen} from './screens/BoardScreen';
 import {BoardsScreen} from './screens/BoardsScreen';
 import {ConnectScreen} from './screens/ConnectScreen';
 import {CreateCardScreen} from './screens/CreateCardScreen';
+import {OfflineScreen} from './screens/OfflineScreen';
 import {SettingsCategory, SettingsScreen} from './screens/SettingsScreen';
 import {StatusScreen} from './screens/StatusScreen';
 import {useTrelloSession} from './session/useTrelloSession';
@@ -29,6 +31,8 @@ import {TrelloBoard} from './trello';
  * button, card creation from the lasso button). Without an account, the
  * boards page still opens, with Supernote's public roadmap and a card
  * leading to the connection screen; card creation asks to connect first.
+ * Without internet, a linked account is kept: an offline page says so and
+ * the plugin goes on by itself once the connection is back.
  */
 export default function App(): React.JSX.Element {
   const {t} = useTranslation();
@@ -102,6 +106,17 @@ export default function App(): React.JSX.Element {
       setConnectOpen(true);
     }
   }, [signedOutError]);
+  // Opened without internet: the account is checked again as soon as the
+  // connection is back.
+  const online = useConnectivity() === 'online';
+  const offline = state.status === 'offline';
+  const {retry} = session;
+  useEffect(() => {
+    if (offline && online) {
+      retry();
+    }
+  }, [offline, online, retry]);
+
   const signedIn = state.status === 'signedIn';
   useEffect(() => {
     if (signedIn) {
@@ -175,6 +190,9 @@ export default function App(): React.JSX.Element {
         onBack={() => setLinkStatus('idle')}
       />
     );
+  }
+  if (offline) {
+    return <OfflineScreen onRetry={retry} />;
   }
   const account = state.status === 'signedIn' ? state : null;
   const lasso = intent.kind === 'lassoCreateCard' ? intent : null;

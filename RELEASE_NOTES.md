@@ -3,6 +3,22 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.43.0 — Offline mode
+
+- Opening s-INK without internet no longer looks like a lost account:
+  instead of the connection page, a **No internet connection** page says
+  that the tablet cannot reach Trello and that the Trello account stays
+  linked. It has a **Retry** button, and s-INK checks the connection every
+  5 seconds and opens the boards by itself once it is back.
+- On every other screen, a black **Offline** strip under the title bar
+  explains why Trello does not answer, and goes away by itself once the
+  connection is back.
+- There is no network-state API in a plugin: every Trello request now
+  tells a shared monitor (`src/network/connectivity.ts`) whether it got an
+  answer, and while offline the monitor sends a light `HEAD` request to
+  the Trello API to notice the return of the connection.
+- New `offline.*` strings in all locales.
+
 ## 0.42.4 — The plugin stays open when the browser opens
 
 - Back to the behaviour of 0.42.2: **Open in browser** and **Open Trello

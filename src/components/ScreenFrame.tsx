@@ -5,6 +5,7 @@ import {PluginManager} from 'sn-plugin-lib';
 import {useTranslation} from '../i18n';
 import {borders, colors, spacing, typography} from '../theme';
 import {CloseIcon} from './CloseIcon';
+import {OfflineBanner} from './OfflineBanner';
 
 /**
  * Size of the icons of the title bar (close, refresh). Icon buttons put
@@ -21,6 +22,8 @@ export interface ScreenFrameProps {
   actions?: React.ReactNode;
   /** Content without the frame's padding, for screens drawing to its edges. */
   flush?: boolean;
+  /** Hides the offline banner, on a screen that explains it already. */
+  hideOfflineBanner?: boolean;
 }
 
 /** Common layout of the plugin screens: title bar with a close button. */
@@ -30,6 +33,7 @@ export function ScreenFrame({
   onBack,
   actions,
   flush,
+  hideOfflineBanner,
 }: ScreenFrameProps): React.JSX.Element {
   const {t} = useTranslation();
 
@@ -65,6 +69,7 @@ export function ScreenFrame({
           <CloseIcon size={HEADER_ICON_SIZE} color={colors.foreground} />
         </Pressable>
       </View>
+      {!hideOfflineBanner && <OfflineBanner />}
       <View style={[styles.content, flush && styles.flush]}>{children}</View>
     </View>
   );

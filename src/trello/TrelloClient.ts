@@ -1,3 +1,4 @@
+import {connectivity, ConnectivityMonitor} from '../network/connectivity';
 import {TRELLO_API_BASE_URL, TRELLO_REQUEST_TIMEOUT_MS} from './config';
 import {TrelloApiError} from './errors';
 import {
@@ -26,6 +27,8 @@ export interface TrelloClientOptions {
   fetchImpl?: typeof fetch;
   baseUrl?: string;
   timeoutMs?: number;
+  /** Told whether each request got an answer; defaults to the plugin's. */
+  connectivity?: Pick<ConnectivityMonitor, 'reportOnline' | 'reportOffline'>;
 }
 
 interface RequestOptions {
@@ -87,6 +90,9 @@ export class TrelloClient {
   private readonly fetchImpl: typeof fetch;
   private readonly baseUrl: string;
   private readonly timeoutMs: number;
+  private readonly connectivity: NonNullable<
+    TrelloClientOptions['connectivity']
+  >;
 
   constructor({
     apiKey,
@@ -94,12 +100,14 @@ export class TrelloClient {
     fetchImpl = fetch,
     baseUrl = TRELLO_API_BASE_URL,
     timeoutMs = TRELLO_REQUEST_TIMEOUT_MS,
+    connectivity: monitor = connectivity,
   }: TrelloClientOptions) {
     this.apiKey = apiKey;
     this.token = token;
     this.fetchImpl = fetchImpl;
     this.baseUrl = baseUrl;
     this.timeoutMs = timeoutMs;
+    this.connectivity = monitor;
   }
 
   /** Returns the member who owns the token. Fails with `unauthorized` if the token is not valid. */
@@ -277,6 +285,7 @@ export class TrelloClient {
         signal: controller.signal,
       });
     } catch (error) {
+      this.connectivity.reportOffline();
       throw new TrelloApiError(
         'network',
         `${method} ${path} failed: ${describe(error)}`,
@@ -284,6 +293,7 @@ export class TrelloClient {
     } finally {
       clearTimeout(timeout);
     }
+    this.connectivity.reportOnline();
 
     if (!response.ok) {
       const kind =

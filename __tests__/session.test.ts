@@ -100,16 +100,23 @@ describe('restoreSession', () => {
     expect(await deps.deviceStore.getItem(TOKEN_STORAGE_KEY)).toBeNull();
   });
 
-  it('keeps the token on network failures', async () => {
+  it('is offline, keeping the token, when Trello cannot be reached', async () => {
     const {deps} = makeDeps(async () => {
       throw new TrelloApiError('network', 'offline');
     });
     await deps.deviceStore.setItem(TOKEN_STORAGE_KEY, TOKEN);
-    expect(await restoreSession(deps)).toEqual({
+    expect(await restoreSession(deps)).toEqual({status: 'offline'});
+    expect(await deps.deviceStore.getItem(TOKEN_STORAGE_KEY)).toBe(TOKEN);
+  });
+
+  it('reports a network failure while connecting as an error', async () => {
+    const {deps} = makeDeps(async () => {
+      throw new TrelloApiError('network', 'offline');
+    });
+    expect(await connectWithToken(deps, TOKEN, false)).toEqual({
       status: 'signedOut',
       error: 'network',
     });
-    expect(await deps.deviceStore.getItem(TOKEN_STORAGE_KEY)).toBe(TOKEN);
   });
 
   it('stops when network access is refused', async () => {
