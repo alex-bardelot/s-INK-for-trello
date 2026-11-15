@@ -8,15 +8,10 @@ import {Button} from './Button';
 import {WifiOffIcon} from './WifiOffIcon';
 
 /**
- * Size of the Wi-Fi sign: a little more than the Settings gear (24),
- * since its thin grey arcs weigh less than the solid gear.
+ * Size of the Wi-Fi sign in the title bar: that of the other header icons
+ * (`HEADER_ICON_SIZE`, not imported to keep ScreenFrame free of a cycle).
  */
-const ICON_SIZE = 30;
-
-/** Always the light grey sign, pressed or not, like the tablet's. */
-function wifiOffIcon(): React.ReactNode {
-  return <WifiOffIcon size={ICON_SIZE} />;
-}
+const ICON_SIZE = 32;
 
 /**
  * Checks the tablet's internet again on demand.
@@ -57,7 +52,11 @@ export function useOfflineRetry(onOnline?: () => void): {
   return {checking, failed, retry, dismiss};
 }
 
-/** Header button shown while the tablet has no internet. */
+/**
+ * Header button shown while the tablet has no internet: the Wi-Fi sign
+ * alone, borderless like the refresh arrow it stands in for. Its name is
+ * only read out by accessibility services.
+ */
 export function OfflineButton({
   checking,
   onPress,
@@ -67,12 +66,16 @@ export function OfflineButton({
 }): React.JSX.Element {
   const {t} = useTranslation();
   return (
-    <Button
-      label={checking ? t('offline.checking') : t('offline.button')}
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={checking ? t('offline.checking') : t('offline.button')}
+      accessibilityState={{busy: checking, disabled: checking}}
       disabled={checking}
-      icon={wifiOffIcon}
+      hitSlop={spacing.md}
       onPress={onPress}
-    />
+      style={styles.iconButton}>
+      <WifiOffIcon size={ICON_SIZE} />
+    </Pressable>
   );
 }
 
@@ -112,6 +115,9 @@ export function OfflinePopup({
 }
 
 const styles = StyleSheet.create({
+  iconButton: {
+    padding: spacing.sm,
+  },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',

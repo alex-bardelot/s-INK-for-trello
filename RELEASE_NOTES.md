@@ -3,6 +3,13 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.44.2 — Offline button: the icon alone
+
+- The **Offline** button of the title bar is now the light Wi-Fi sign
+  alone, borderless and as large as the other header icons (like the
+  refresh arrow it stands in for). "Offline" is only read out by
+  accessibility services.
+
 ## 0.44.1 — Light Wi-Fi sign
 
 - The **Offline** button, the offline popup and the offline page show the
