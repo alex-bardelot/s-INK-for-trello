@@ -255,5 +255,6 @@
   "startWork.noteCreated": "ノートを作成しました：{file}",
   "startWork.noteFound": "このカードにはすでにノートがあります：{file}",
   "startWork.noteFailed": "ノートを作成できませんでした。",
-  "startWork.noteOpenFailed": "ノートを開けませんでした。"
+  "startWork.noteOpenFailed": "ノートを開けませんでした。",
+  "startWork.failureDetail": "（詳細：{reason}）"
 }

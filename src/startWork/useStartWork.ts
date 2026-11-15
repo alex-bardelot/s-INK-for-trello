@@ -12,7 +12,9 @@ import {applyStartWork, StartWorkStep} from './startWork';
 /** What happened to the card's note when Start ran. */
 export type NoteOutcome =
   | {kind: 'created' | 'found'; fileName: string}
-  | {kind: 'failed' | 'openFailed'};
+  /** `reason`: the step that failed and the host's answer. */
+  | {kind: 'failed'; reason: string}
+  | {kind: 'openFailed'};
 
 /** Report shown on the card after Start, unless the note opened. */
 export interface StartWorkReport {
@@ -128,7 +130,7 @@ export function useStartWork({
             note = {kind: 'openFailed'};
           }
         } else {
-          note = {kind: 'failed'};
+          note = {kind: 'failed', reason: made.reason};
         }
       }
       setReport({

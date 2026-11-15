@@ -3,6 +3,25 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.45.1 — Card notes get a blank page template
+
+- Creating a card's note failed on the tablet with error 802 "Background
+  template file does not exist!": `createNote` needs a template file, not
+  the `android.resource://` URI the host lists for its templates. Blank
+  page templates at the Manta's screen size (`assets/blank-page-portrait.png`,
+  1920 × 2560, and `blank-page-landscape.png`) now ship with the plugin and
+  are tried first; the host's URI and the bare template name stay as
+  fallbacks.
+- When the note cannot be created, the card's report gives the reason
+  (the failing step and the host's answer), as "(Detail: …)".
+- More `note:` lines in the Diagnostics log: the note permissions (read
+  and write), the folder and whether it could be made, each packaged
+  template and whether it is found, each `createNote` attempt with its
+  answer and whether the file exists afterwards.
+- Looking for a card's note before the `Note/s-INK` folder exists is no
+  longer logged as a failure.
+- New `startWork.failureDetail` string in all locales.
+
 ## 0.45.0 — Start work on a card
 
 - A **Start** button in the title bar of a card begins work on it. It is

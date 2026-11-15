@@ -278,7 +278,9 @@ function describeNote(
     case 'found':
       return t('startWork.noteFound', {file: note.fileName});
     case 'failed':
-      return t('startWork.noteFailed');
+      return `${t('startWork.noteFailed')} ${t('startWork.failureDetail', {
+        reason: note.reason,
+      })}`;
     case 'openFailed':
       return t('startWork.noteOpenFailed');
   }

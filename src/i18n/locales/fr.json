@@ -255,5 +255,6 @@
   "startWork.noteCreated": "Note créée : {file}",
   "startWork.noteFound": "La carte a déjà une note : {file}",
   "startWork.noteFailed": "La note n'a pas pu être créée.",
-  "startWork.noteOpenFailed": "La note n'a pas pu être ouverte."
+  "startWork.noteOpenFailed": "La note n'a pas pu être ouverte.",
+  "startWork.failureDetail": "(Détail : {reason})"
 }

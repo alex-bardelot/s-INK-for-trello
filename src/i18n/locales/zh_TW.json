@@ -255,5 +255,6 @@
   "startWork.noteCreated": "已建立筆記：{file}",
   "startWork.noteFound": "此卡片已有筆記：{file}",
   "startWork.noteFailed": "無法建立筆記。",
-  "startWork.noteOpenFailed": "無法開啟筆記。"
+  "startWork.noteOpenFailed": "無法開啟筆記。",
+  "startWork.failureDetail": "（詳情：{reason}）"
 }
