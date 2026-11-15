@@ -274,7 +274,11 @@ function describeNote(
 ): string {
   switch (note.kind) {
     case 'created':
-      return t('startWork.noteCreated', {file: note.fileName});
+      return note.templateWarning
+        ? `${t('startWork.noteCreated', {file: note.fileName})} ${t(
+            'startWork.templateNotUsed',
+          )} ${t('startWork.failureDetail', {reason: note.templateWarning})}`
+        : t('startWork.noteCreated', {file: note.fileName});
     case 'found':
       return t('startWork.noteFound', {file: note.fileName});
     case 'failed':

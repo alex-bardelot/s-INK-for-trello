@@ -256,5 +256,14 @@
   "startWork.noteFound": "此卡片已有筆記：{file}",
   "startWork.noteFailed": "無法建立筆記。",
   "startWork.noteOpenFailed": "無法開啟筆記。",
-  "startWork.failureDetail": "（詳情：{reason}）"
+  "startWork.failureDetail": "（詳情：{reason}）",
+  "startWork.templateSection": "筆記範本",
+  "startWork.templateHelp": "為卡片建立的筆記的頁面背景。你自己的範本是裝置 {folder} 資料夾中的 PNG 圖片。",
+  "startWork.templateBlank": "空白頁",
+  "startWork.templateLoading": "正在載入範本…",
+  "startWork.templateCustom": "我的範本",
+  "startWork.templateNoCustom": "{folder} 中沒有 PNG 圖片。",
+  "startWork.templateMissing": "所選範本 {name} 已不在裝置上：筆記將使用空白頁。",
+  "startWork.templateSystem": "Supernote 範本",
+  "startWork.templateNotUsed": "無法使用所選範本：筆記為空白頁。"
 }

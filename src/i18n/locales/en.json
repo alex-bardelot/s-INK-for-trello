@@ -256,5 +256,14 @@
   "startWork.noteFound": "The card already has a note: {file}",
   "startWork.noteFailed": "The note could not be created.",
   "startWork.noteOpenFailed": "The note could not be opened.",
-  "startWork.failureDetail": "(Detail: {reason})"
+  "startWork.failureDetail": "(Detail: {reason})",
+  "startWork.templateSection": "Note template",
+  "startWork.templateHelp": "Page background of the notes created for cards. Your own templates are the PNG images of the {folder} folder of the tablet.",
+  "startWork.templateBlank": "Blank page",
+  "startWork.templateLoading": "Loading the templates…",
+  "startWork.templateCustom": "My templates",
+  "startWork.templateNoCustom": "No PNG image in {folder}.",
+  "startWork.templateMissing": "The chosen template {name} is no longer on the tablet: notes get a blank page.",
+  "startWork.templateSystem": "Supernote templates",
+  "startWork.templateNotUsed": "The chosen template could not be used: the note has a blank page."
 }

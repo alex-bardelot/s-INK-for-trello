@@ -11,7 +11,12 @@ import {applyStartWork, StartWorkStep} from './startWork';
 
 /** What happened to the card's note when Start ran. */
 export type NoteOutcome =
-  | {kind: 'created' | 'found'; fileName: string}
+  | {
+      kind: 'created' | 'found';
+      fileName: string;
+      /** Why the chosen template was not used: the note has a blank page. */
+      templateWarning?: string | null;
+    }
   /** `reason`: the step that failed and the host's answer. */
   | {kind: 'failed'; reason: string}
   | {kind: 'openFailed'};
@@ -109,15 +114,19 @@ export function useStartWork({
       let note: NoteOutcome | null = null;
       const link = card.shortLink ?? shortLink;
       if (settings.createNote && link) {
-        const made = await createCardNote({name: card.name, shortLink: link});
+        const made = await createCardNote(
+          {name: card.name, shortLink: link},
+          settings.noteTemplate,
+        );
         if (made.ok) {
           setNotePath(made.path);
           note = {
             kind: made.created ? 'created' : 'found',
             fileName: fileNameOf(made.path),
+            templateWarning: made.templateWarning,
           };
           // All went well: show the note at once.
-          if (!result.failed) {
+          if (!result.failed && !made.templateWarning) {
             const opened = await openCardNote(
               made.path,
               made.titled
@@ -140,7 +149,8 @@ export function useStartWork({
         failed:
           result.failed ||
           note?.kind === 'failed' ||
-          note?.kind === 'openFailed',
+          note?.kind === 'openFailed' ||
+          (note?.kind === 'created' && !!note.templateWarning),
       });
     } catch (error) {
       console.warn('[sINK] Start failed', error);

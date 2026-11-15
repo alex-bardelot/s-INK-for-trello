@@ -1,5 +1,14 @@
 import React, {useCallback, useEffect, useState} from 'react';
-import {Pressable, StyleSheet, Text, TextInput, View} from 'react-native';
+import {
+  Image,
+  ImageSourcePropType,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 
 import {Button} from '../components/Button';
 import {CloseIcon} from '../components/CloseIcon';
@@ -7,16 +16,29 @@ import {SettingsSection} from '../components/SettingsSection';
 import {Switch} from '../components/Switch';
 import {useTranslation} from '../i18n';
 import {
+  listCustomTemplates,
+  listSystemTemplates,
+  PACKAGED_TEMPLATES,
+} from '../startWork/cardNote';
+import {
   addLabelName,
+  BLANK_TEMPLATE_CHOICE,
   cleanName,
   DEFAULT_START_WORK_SETTINGS,
   loadStartWorkSettings,
+  NoteTemplateChoice,
   removeLabelName,
   saveStartWorkSettings,
   START_WORK_NAME_MAX_LENGTH,
   StartWorkSettings,
+  templateChoiceKey,
 } from '../startWork/settings';
-import {CARD_NOTES_FOLDER} from '../startWork/noteFiles';
+import {
+  CARD_NOTES_FOLDER,
+  systemTemplateLabel,
+  templateFileLabel,
+  TEMPLATES_FOLDER,
+} from '../startWork/noteFiles';
 import {KeyValueStore} from '../storage/keyValueStore';
 import {borders, colors, spacing, typography} from '../theme';
 
@@ -117,7 +139,185 @@ export function StartWorkSettingsPanel({
           onChange={createNote => change({createNote})}
         />
       </SettingsSection>
+
+      {settings.createNote && (
+        <SettingsSection title={t('startWork.templateSection')}>
+          <Text style={styles.small}>
+            {t('startWork.templateHelp', {folder: TEMPLATES_FOLDER})}
+          </Text>
+          <TemplatePicker
+            value={settings.noteTemplate}
+            onChange={noteTemplate => change({noteTemplate})}
+          />
+        </SettingsSection>
+      )}
     </>
+  );
+}
+
+interface TemplateOption {
+  choice: NoteTemplateChoice;
+  label: string;
+  preview: ImageSourcePropType | null;
+}
+
+type TemplateList =
+  | {status: 'loading'}
+  | {
+      status: 'loaded';
+      custom: TemplateOption[];
+      system: TemplateOption[];
+      customDir: string;
+    };
+
+/**
+ * Templates as tiles with a small preview: the blank page of s-INK, the
+ * user's own templates (PNG files of `MyStyle`), then the tablet's.
+ */
+function TemplatePicker({
+  value,
+  onChange,
+}: {
+  value: NoteTemplateChoice;
+  onChange: (choice: NoteTemplateChoice) => void;
+}): React.JSX.Element {
+  const {t} = useTranslation();
+  const {width, height} = useWindowDimensions();
+  const portrait = height >= width;
+  const [list, setList] = useState<TemplateList>({status: 'loading'});
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([listCustomTemplates(), listSystemTemplates()]).then(
+      ([custom, system]) => {
+        if (!active) {
+          return;
+        }
+        setList({
+          status: 'loaded',
+          customDir: custom.dir,
+          custom: custom.paths.map(path => {
+            const name = templateFileLabel(path);
+            return {
+              choice: {kind: 'file', path, name},
+              label: name,
+              preview: {uri: `file://${path}`},
+            };
+          }),
+          system: system
+            .filter(template => template.name !== 'style_white')
+            .map(template => {
+              const uri = portrait ? template.vUri : template.hUri;
+              return {
+                choice: {kind: 'system', name: template.name},
+                label: systemTemplateLabel(template.name),
+                preview: uri ? {uri} : null,
+              };
+            }),
+        });
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, [portrait]);
+
+  const blank: TemplateOption = {
+    choice: BLANK_TEMPLATE_CHOICE,
+    label: t('startWork.templateBlank'),
+    preview: PACKAGED_TEMPLATES[portrait ? 'portrait' : 'landscape'].asset,
+  };
+  const selected = templateChoiceKey(value);
+
+  const tiles = (options: TemplateOption[]) => (
+    <View style={styles.tiles}>
+      {options.map(option => (
+        <TemplateTile
+          key={templateChoiceKey(option.choice)}
+          option={option}
+          portrait={portrait}
+          selected={templateChoiceKey(option.choice) === selected}
+          onPress={() => onChange(option.choice)}
+        />
+      ))}
+    </View>
+  );
+
+  return (
+    <View style={styles.templates}>
+      {tiles([blank])}
+      {list.status === 'loading' ? (
+        <Text style={styles.small}>{t('startWork.templateLoading')}</Text>
+      ) : (
+        <>
+          <Text style={styles.groupTitle}>{t('startWork.templateCustom')}</Text>
+          {list.custom.length > 0 ? (
+            tiles(list.custom)
+          ) : (
+            <Text style={styles.small}>
+              {t('startWork.templateNoCustom', {folder: list.customDir})}
+            </Text>
+          )}
+          {/* A choice whose file was removed stays shown, to change it. */}
+          {value.kind === 'file' &&
+            !list.custom.some(
+              option => templateChoiceKey(option.choice) === selected,
+            ) && (
+              <Text style={styles.small}>
+                {t('startWork.templateMissing', {name: value.name})}
+              </Text>
+            )}
+          {list.system.length > 0 && (
+            <>
+              <Text style={styles.groupTitle}>
+                {t('startWork.templateSystem')}
+              </Text>
+              {tiles(list.system)}
+            </>
+          )}
+        </>
+      )}
+    </View>
+  );
+}
+
+/** A template: its preview over its name, framed thickly when chosen. */
+function TemplateTile({
+  option,
+  portrait,
+  selected,
+  onPress,
+}: {
+  option: TemplateOption;
+  portrait: boolean;
+  selected: boolean;
+  onPress: () => void;
+}): React.JSX.Element {
+  const size = portrait
+    ? {width: TILE_SHORT_SIDE, height: TILE_LONG_SIDE}
+    : {width: TILE_LONG_SIDE, height: TILE_SHORT_SIDE};
+  return (
+    <Pressable
+      accessibilityRole="radio"
+      accessibilityState={{selected}}
+      accessibilityLabel={option.label}
+      onPress={onPress}
+      style={[styles.tile, {width: size.width + spacing.sm * 2}]}>
+      <View style={[styles.preview, size, selected && styles.previewSelected]}>
+        {option.preview && (
+          <Image
+            source={option.preview}
+            resizeMode="contain"
+            style={styles.previewImage}
+          />
+        )}
+      </View>
+      <Text
+        style={[styles.tileLabel, selected && styles.tileLabelSelected]}
+        numberOfLines={2}>
+        {selected ? `✓ ${option.label}` : option.label}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -233,6 +433,9 @@ function ListNameInput({
 }
 
 const CHIP_ICON_SIZE = 20;
+/** Preview size of a template, about a twentieth of the page. */
+const TILE_SHORT_SIDE = 96;
+const TILE_LONG_SIDE = 128;
 
 const styles = StyleSheet.create({
   text: {
@@ -291,5 +494,46 @@ const styles = StyleSheet.create({
   },
   addInput: {
     flex: 1,
+  },
+  templates: {
+    gap: spacing.md,
+  },
+  groupTitle: {
+    color: colors.foreground,
+    fontSize: typography.body,
+    fontWeight: '700',
+    marginTop: spacing.sm,
+  },
+  tiles: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+  },
+  tile: {
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+  },
+  preview: {
+    borderColor: colors.labelBorder,
+    borderWidth: borders.width / 2,
+    backgroundColor: colors.background,
+    overflow: 'hidden',
+  },
+  previewSelected: {
+    borderColor: colors.foreground,
+    borderWidth: borders.width * 2,
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  tileLabel: {
+    color: colors.foreground,
+    fontSize: typography.small,
+    textAlign: 'center',
+  },
+  tileLabelSelected: {
+    fontWeight: '700',
   },
 });

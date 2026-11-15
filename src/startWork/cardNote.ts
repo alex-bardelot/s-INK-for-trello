@@ -20,9 +20,12 @@ import {listedPath} from '../storage/directoryStore';
 import {
   cardNoteFileName,
   cardNotesDir,
+  customTemplatesDir,
   fileNameOf,
   isCardNoteFile,
+  isTemplateFile,
 } from './noteFiles';
+import {NoteTemplateChoice} from './settings';
 
 /** A card a note is made for. */
 export interface NoteCard {
@@ -55,14 +58,18 @@ function describe(response: unknown): string {
   }
 }
 
-async function notesDir(): Promise<string> {
-  let exportPath: string | null = null;
+/** The host's export folder, which lies at the storage root. */
+async function exportPath(): Promise<string | null> {
   try {
-    exportPath = await FileUtils.getExportPath();
+    return await FileUtils.getExportPath();
   } catch (error) {
     logInkLink(`note: no export path (${String(error)})`);
+    return null;
   }
-  return cardNotesDir(exportPath);
+}
+
+async function notesDir(): Promise<string> {
+  return cardNotesDir(await exportPath());
 }
 
 /**
@@ -101,7 +108,6 @@ export async function findCardNote(
   return null;
 }
 
-/** Template of a blank page in the orientation the tablet is held in. */
 /**
  * Blank page templates packaged with the plugin, at the Manta's screen
  * size: `createNote` needs a template file on the tablet (error 802
@@ -109,7 +115,7 @@ export async function findCardNote(
  * `android.resource://` URIs). Metro copies them next to the bundle, in
  * `drawable-mdpi/` under names made from their path.
  */
-const PACKAGED_TEMPLATES = {
+export const PACKAGED_TEMPLATES = {
   portrait: {
     asset: require('../../assets/blank-page-portrait.png'),
     file: 'drawable-mdpi/assets_blankpageportrait.png',
@@ -156,28 +162,78 @@ async function packagedTemplates(portrait: boolean): Promise<string[]> {
  */
 async function blankTemplates(portrait: boolean): Promise<string[]> {
   const candidates: string[] = await packagedTemplates(portrait);
+  const blank = (await listSystemTemplates()).find(
+    template => template.name === BLANK_TEMPLATE,
+  );
+  const uri = portrait ? blank?.vUri : blank?.hUri;
+  if (uri) {
+    candidates.push(uri);
+  }
+  candidates.push(BLANK_TEMPLATE);
+  return candidates;
+}
+
+/** One of the tablet's own templates, as the host lists them. */
+export interface SystemTemplate {
+  /** Identifier, e.g. `style_8mm_ruled_line`. */
+  name: string;
+  /** Image of the portrait page (`android.resource://…`). */
+  vUri?: string;
+  /** Image of the landscape page. */
+  hUri?: string;
+}
+
+/** The tablet's own templates (ruled, grid, dots…), in the host's order. */
+export async function listSystemTemplates(): Promise<SystemTemplate[]> {
   try {
     const response: unknown = await PluginCommAPI.getNoteSystemTemplates();
     const list = Array.isArray(response)
       ? response
       : (response as {result?: unknown} | null)?.result;
-    logInkLink(
-      `note: ${Array.isArray(list) ? list.length : 'no'} templates listed`,
-    );
-    if (Array.isArray(list)) {
-      const blank = list.find(
-        (template: {name?: string}) => template?.name === BLANK_TEMPLATE,
-      ) as {vUri?: string; hUri?: string} | undefined;
-      const uri = portrait ? blank?.vUri : blank?.hUri;
-      if (uri) {
-        candidates.push(uri);
-      }
+    if (!Array.isArray(list)) {
+      logInkLink(`note: no templates listed (${describe(response)})`);
+      return [];
     }
+    return list.filter(
+      (template): template is SystemTemplate =>
+        typeof template?.name === 'string' && template.name !== '',
+    );
   } catch (error) {
     logInkLink(`note: templates failed (${String(error)})`);
+    return [];
   }
-  candidates.push(BLANK_TEMPLATE);
-  return candidates;
+}
+
+/**
+ * The user's own templates: the PNG files of the tablet's `MyStyle`
+ * folder, sorted by name. Asks for note access if needed.
+ */
+export async function listCustomTemplates(): Promise<{
+  dir: string;
+  paths: string[];
+}> {
+  const dir = customTemplatesDir(await exportPath());
+  try {
+    if (
+      !(await ensureFileReadPermission(i18n.t('startWork.notePermission'))) ||
+      (await fileExists(dir)) === 'false'
+    ) {
+      return {dir, paths: []};
+    }
+    const paths = ((await FileUtils.listFiles(dir)) ?? [])
+      .map(listedPath)
+      .filter((path): path is string => !!path && isTemplateFile(path))
+      .map(path => (path.includes('/') ? path : `${dir}/${path}`))
+      .sort((a, b) =>
+        fileNameOf(a).localeCompare(fileNameOf(b), undefined, {
+          sensitivity: 'base',
+        }),
+      );
+    return {dir, paths};
+  } catch (error) {
+    logInkLink(`note: listing ${dir} failed (${String(error)})`);
+    return {dir, paths: []};
+  }
 }
 
 /** Raw state of a permission (0 refused, 1 this time, 2 always), for the log. */
@@ -199,8 +255,156 @@ async function fileExists(path: string): Promise<string> {
   }
 }
 
+/** Tries each template in turn until `createNote` makes the note. */
+async function createNoteFile(
+  path: string,
+  portrait: boolean,
+  templates: readonly string[],
+): Promise<{created: boolean; answer: string}> {
+  let answer = 'no template to try';
+  for (const template of templates) {
+    const response = await PluginFileAPI.createNote({
+      notePath: path,
+      template,
+      mode: 0,
+      isPortrait: portrait,
+    });
+    const exists = await fileExists(path);
+    answer = `${describe(response)}, file exists ${exists}`;
+    logInkLink(
+      `note: createNote ${path} portrait ${portrait} template ${template}: ${answer}`,
+    );
+    // A file written despite a failed answer is used all the same.
+    if (succeeded(response) || exists === 'true') {
+      return {created: true, answer};
+    }
+  }
+  return {created: false, answer};
+}
+
+function unwrapResult<T>(response: unknown): T | null {
+  const value = response as {success?: boolean; result?: T} | null;
+  return value?.success ? value.result ?? null : null;
+}
+
+/**
+ * Gives a note made from the blank page one of the tablet's templates:
+ * inserts a page with that template, then removes the blank one.
+ *
+ * @returns `null` when done, or what failed.
+ */
+async function applySystemTemplate(
+  path: string,
+  name: string,
+): Promise<string | null> {
+  let inserted: unknown = null;
+  for (const page of [0, 1]) {
+    inserted = await PluginFileAPI.insertNotePage({
+      notePath: path,
+      page,
+      template: name,
+    });
+    logInkLink(
+      `note: insertNotePage ${name} at ${page}: ${describe(inserted)}`,
+    );
+    if (succeeded(inserted)) {
+      break;
+    }
+  }
+  if (!succeeded(inserted)) {
+    return `insertNotePage: ${describe(inserted)}`;
+  }
+  const total =
+    unwrapResult<number>(await PluginFileAPI.getNoteTotalPageNum(path)) ?? 0;
+  const pageTemplates: string[] = [];
+  for (let page = 0; page < total; page++) {
+    const info = unwrapResult<{name?: string}>(
+      await PluginFileAPI.getNotePageTemplate(path, page),
+    );
+    pageTemplates.push(info?.name ?? '?');
+  }
+  logInkLink(`note: ${total} pages, templates ${pageTemplates.join(', ')}`);
+  if (total < 2) {
+    return `${total} page(s) after inserting the template page`;
+  }
+  // The blank page is the one without the chosen template; if the host
+  // names templates otherwise, the page inserted first is kept.
+  const blankPage = pageTemplates.findIndex(
+    template => template !== name && !template.includes(name),
+  );
+  const removed = await PluginFileAPI.removeNotePage(
+    path,
+    blankPage >= 0 ? blankPage : 1,
+  );
+  logInkLink(
+    `note: removeNotePage ${blankPage >= 0 ? blankPage : 1}: ${describe(
+      removed,
+    )}`,
+  );
+  return succeeded(removed) ? null : `removeNotePage: ${describe(removed)}`;
+}
+
+/**
+ * Creates the note file from the chosen template. The packaged blank page
+ * is the fallback of every choice.
+ *
+ * @returns Whether the file was made, and what went wrong with the chosen
+ * template, if anything.
+ */
+async function createFromTemplate(
+  path: string,
+  portrait: boolean,
+  choice: NoteTemplateChoice,
+): Promise<{created: boolean; answer: string; templateWarning: string | null}> {
+  if (choice.kind === 'file') {
+    const exists = await fileExists(choice.path);
+    const made =
+      exists === 'false'
+        ? {created: false, answer: `${choice.path} does not exist`}
+        : await createNoteFile(path, portrait, [choice.path]);
+    if (made.created) {
+      return {...made, templateWarning: null};
+    }
+    const blank = await createNoteFile(
+      path,
+      portrait,
+      await blankTemplates(portrait),
+    );
+    return {...blank, templateWarning: made.answer};
+  }
+  if (choice.kind === 'system') {
+    // The host may take the template's name as it is.
+    const direct = await createNoteFile(path, portrait, [choice.name]);
+    if (direct.created) {
+      return {...direct, templateWarning: null};
+    }
+    const blank = await createNoteFile(
+      path,
+      portrait,
+      await blankTemplates(portrait),
+    );
+    return {
+      ...blank,
+      templateWarning: blank.created
+        ? await applySystemTemplate(path, choice.name)
+        : null,
+    };
+  }
+  return {
+    ...(await createNoteFile(path, portrait, await blankTemplates(portrait))),
+    templateWarning: null,
+  };
+}
+
 export type CreatedNote =
-  | {ok: true; path: string; created: boolean; titled: boolean}
+  | {
+      ok: true;
+      path: string;
+      created: boolean;
+      titled: boolean;
+      /** Why the chosen template could not be used (the page is blank). */
+      templateWarning: string | null;
+    }
   | {
       ok: false;
       /** The step that failed and what the host answered, for the report. */
@@ -213,7 +417,10 @@ export type CreatedNote =
  * kept as it is. Every step is written to the Diagnostics log (`note:`
  * lines); on failure, the failing step is returned to be shown.
  */
-export async function createCardNote(card: NoteCard): Promise<CreatedNote> {
+export async function createCardNote(
+  card: NoteCard,
+  template: NoteTemplateChoice,
+): Promise<CreatedNote> {
   const fail = (reason: string): CreatedNote => {
     logInkLink(`note: FAILED ${reason}`);
     return {ok: false, reason};
@@ -229,7 +436,13 @@ export async function createCardNote(card: NoteCard): Promise<CreatedNote> {
     const existing = await findCardNote(card.shortLink, true);
     if (existing) {
       logInkLink(`note: already there ${existing}`);
-      return {ok: true, path: existing, created: false, titled: true};
+      return {
+        ok: true,
+        path: existing,
+        created: false,
+        titled: true,
+        templateWarning: null,
+      };
     }
     if (
       !(await ensurePermission(
@@ -244,43 +457,28 @@ export async function createCardNote(card: NoteCard): Promise<CreatedNote> {
       );
     }
     const dir = await notesDir();
-    let made: string;
+    let dirMade: string;
     try {
-      made = String(await FileUtils.makeDir(dir));
+      dirMade = String(await FileUtils.makeDir(dir));
     } catch (error) {
-      made = `threw ${String(error)}`;
+      dirMade = `threw ${String(error)}`;
     }
     const dirExists = await fileExists(dir);
-    logInkLink(`note: dir ${dir}, makeDir ${made}, exists ${dirExists}`);
+    logInkLink(`note: dir ${dir}, makeDir ${dirMade}, exists ${dirExists}`);
     if (dirExists === 'false') {
-      return fail(`folder ${dir} could not be created (makeDir ${made})`);
+      return fail(`folder ${dir} could not be created (makeDir ${dirMade})`);
     }
 
     const path = `${dir}/${cardNoteFileName(card.name, card.shortLink)}`;
     const {width, height} = Dimensions.get('window');
     const portrait = height >= width;
-    let lastAnswer = '';
-    let created = false;
-    for (const template of await blankTemplates(portrait)) {
-      const response = await PluginFileAPI.createNote({
-        notePath: path,
-        template,
-        mode: 0,
-        isPortrait: portrait,
-      });
-      const exists = await fileExists(path);
-      lastAnswer = `${describe(response)}, file exists ${exists}`;
-      logInkLink(
-        `note: createNote ${path} portrait ${portrait} template ${template}: ${lastAnswer}`,
-      );
-      // A file written despite a failed answer is used all the same.
-      if (succeeded(response) || exists === 'true') {
-        created = true;
-        break;
-      }
+    logInkLink(`note: template ${JSON.stringify(template)}`);
+    const made = await createFromTemplate(path, portrait, template);
+    if (!made.created) {
+      return fail(`createNote: ${made.answer}`);
     }
-    if (!created) {
-      return fail(`createNote: ${lastAnswer}`);
+    if (made.templateWarning) {
+      logInkLink(`note: template not used: ${made.templateWarning}`);
     }
 
     const titled = await insertInkLinkInNoteFile(
@@ -290,7 +488,13 @@ export async function createCardNote(card: NoteCard): Promise<CreatedNote> {
       card.name,
     );
     logInkLink(`note: created ${path}, title ${titled ? 'ok' : 'missing'}`);
-    return {ok: true, path, created: true, titled};
+    return {
+      ok: true,
+      path,
+      created: true,
+      titled,
+      templateWarning: made.templateWarning,
+    };
   } catch (error) {
     return fail(`threw ${String(error)}`);
   }

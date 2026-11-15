@@ -2,7 +2,11 @@ import {planIsEmpty, planStartWork} from '../src/startWork/plan';
 import {
   cardNoteFileName,
   cardNotesDir,
+  customTemplatesDir,
   isCardNoteFile,
+  isTemplateFile,
+  systemTemplateLabel,
+  templateFileLabel,
 } from '../src/startWork/noteFiles';
 import {
   addLabelName,
@@ -13,6 +17,7 @@ import {
   START_WORK_SETTINGS_KEY,
   startWorkDisabled,
   StartWorkSettings,
+  templateChoiceKey,
 } from '../src/startWork/settings';
 import {applyStartWork} from '../src/startWork/startWork';
 import {createMemoryStore} from '../src/storage/keyValueStore';
@@ -56,7 +61,49 @@ describe('Start work settings', () => {
       moveToList: false,
       listName: '',
       createNote: true,
+      noteTemplate: {kind: 'blank'},
     });
+  });
+
+  it('keeps the chosen note template and drops broken ones', async () => {
+    const store = createMemoryStore();
+    for (const noteTemplate of [
+      {kind: 'system', name: 'style_8mm_ruled_line'},
+      {
+        kind: 'file',
+        path: '/storage/emulated/0/MyStyle/Lines.png',
+        name: 'Lines',
+      },
+    ] as const) {
+      await saveStartWorkSettings(store, settingsWith({noteTemplate}));
+      expect((await loadStartWorkSettings(store)).noteTemplate).toEqual(
+        noteTemplate,
+      );
+    }
+    for (const broken of [
+      {kind: 'system', name: ''},
+      {kind: 'file', path: 'relative.png'},
+      {kind: 'other'},
+      'blank',
+    ]) {
+      await store.setItem(
+        START_WORK_SETTINGS_KEY,
+        JSON.stringify({noteTemplate: broken}),
+      );
+      expect((await loadStartWorkSettings(store)).noteTemplate).toEqual({
+        kind: 'blank',
+      });
+    }
+  });
+
+  it('tells template choices apart', () => {
+    expect(templateChoiceKey({kind: 'blank'})).toBe('blank');
+    expect(templateChoiceKey({kind: 'system', name: 'style_dots'})).toBe(
+      'system:style_dots',
+    );
+    expect(templateChoiceKey({kind: 'file', path: '/a/b.png', name: 'b'})).toBe(
+      'file:/a/b.png',
+    );
   });
 
   it('adds names once, whatever their case, and removes them', () => {
@@ -334,5 +381,29 @@ describe('card note files', () => {
     expect(isCardNoteFile('Old name [AbC123xy].note', 'AbC123xy')).toBe(true);
     expect(isCardNoteFile('Old name [AbC123xy].note', 'AbC123')).toBe(false);
     expect(isCardNoteFile('Old name [AbC123xy].pdf', 'AbC123xy')).toBe(false);
+  });
+});
+
+describe('note templates', () => {
+  it('takes the user templates from MyStyle at the storage root', () => {
+    expect(customTemplatesDir('/storage/emulated/0/EXPORT')).toBe(
+      '/storage/emulated/0/MyStyle',
+    );
+    expect(customTemplatesDir(undefined)).toBe('/storage/emulated/0/MyStyle');
+  });
+
+  it('keeps PNG images only, named without their extension', () => {
+    expect(isTemplateFile('/x/Templates_Page_1.png')).toBe(true);
+    expect(isTemplateFile('/x/Lines.PNG')).toBe(true);
+    expect(isTemplateFile('/x/sINKforTrello.snplg')).toBe(false);
+    expect(templateFileLabel('/x/Templates_Page_1.png')).toBe(
+      'Templates_Page_1',
+    );
+  });
+
+  it('names the tablet templates readably', () => {
+    expect(systemTemplateLabel('style_8mm_ruled_line')).toBe('8mm ruled line');
+    expect(systemTemplateLabel('style_5mm_dots')).toBe('5mm dots');
+    expect(systemTemplateLabel('custom')).toBe('Custom');
   });
 });

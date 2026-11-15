@@ -3,6 +3,30 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.46.0 — Template of the card notes
+
+- New **Note template** section in Settings > Start work (shown while
+  **Create a note** is on): templates as tiles, each with a small preview
+  and its name, the chosen one framed thickly and ticked:
+  - **Blank page**, the page packaged with s-INK (the default);
+  - **My templates**: the PNG images of the tablet's `MyStyle` folder,
+    where Supernote keeps the templates the user adds;
+  - **Supernote templates**: the tablet's own (ruled lines, grids, dots,
+    Cornell…), named after their identifier (`style_8mm_ruled_line` →
+    "8mm ruled line"), previewed in the orientation the tablet is held in.
+- A card's note uses the chosen template:
+  - a template of `MyStyle` is given to `createNote` as a file;
+  - a Supernote template is first given by name; if the host refuses it,
+    the note is made from the blank page, a page with the template is
+    inserted (`insertNotePage`) and the blank page is removed;
+  - if the chosen template cannot be used (a file removed from the
+    tablet, for one), the note gets the blank page and the card's report
+    says so, with the reason, instead of opening the note at once.
+- Each step (template chosen, each attempt and the host's answer, pages
+  and their templates after the insertion, page removed) is written to the
+  Diagnostics log (`note:` lines).
+- New `startWork.template*` strings in all locales.
+
 ## 0.45.1 — Card notes get a blank page template
 
 - Creating a card's note failed on the tablet with error 802 "Background

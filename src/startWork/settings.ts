@@ -25,6 +25,55 @@ export interface StartWorkSettings {
   listName: string;
   /** Creates a note for the card on the tablet, titled with its s-INK link. */
   createNote: boolean;
+  /** Page background of the notes created for cards. */
+  noteTemplate: NoteTemplateChoice;
+}
+
+/**
+ * Template of a card's new note: the blank page packaged with s-INK, one of
+ * the tablet's own templates (by name, e.g. `style_8mm_ruled_line`), or a
+ * PNG file of the tablet's `MyStyle` folder.
+ */
+export type NoteTemplateChoice =
+  | {kind: 'blank'}
+  | {kind: 'system'; name: string}
+  | {kind: 'file'; path: string; name: string};
+
+export const BLANK_TEMPLATE_CHOICE: NoteTemplateChoice = {kind: 'blank'};
+
+/** Identifies a template choice, to compare two of them. */
+export function templateChoiceKey(choice: NoteTemplateChoice): string {
+  switch (choice.kind) {
+    case 'blank':
+      return 'blank';
+    case 'system':
+      return `system:${choice.name}`;
+    case 'file':
+      return `file:${choice.path}`;
+  }
+}
+
+function readTemplateChoice(value: unknown): NoteTemplateChoice {
+  const choice = value as Partial<Record<string, unknown>> | null;
+  if (
+    choice?.kind === 'system' &&
+    typeof choice.name === 'string' &&
+    choice.name
+  ) {
+    return {kind: 'system', name: choice.name};
+  }
+  if (
+    choice?.kind === 'file' &&
+    typeof choice.path === 'string' &&
+    choice.path.startsWith('/')
+  ) {
+    return {
+      kind: 'file',
+      path: choice.path,
+      name: typeof choice.name === 'string' ? choice.name : '',
+    };
+  }
+  return BLANK_TEMPLATE_CHOICE;
 }
 
 export const DEFAULT_START_WORK_SETTINGS: StartWorkSettings = {
@@ -37,6 +86,7 @@ export const DEFAULT_START_WORK_SETTINGS: StartWorkSettings = {
   moveToList: false,
   listName: '',
   createNote: true,
+  noteTemplate: BLANK_TEMPLATE_CHOICE,
 };
 
 /** Trims a name and cuts it to the length kept. */
@@ -109,6 +159,7 @@ export async function loadStartWorkSettings(
           ? cleanName(parsed.listName)
           : defaults.listName,
       createNote: readBoolean(parsed.createNote, defaults.createNote),
+      noteTemplate: readTemplateChoice(parsed.noteTemplate),
     };
   } catch (error) {
     console.warn('[sINK] Failed to read the Start work settings', error);

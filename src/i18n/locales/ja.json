@@ -256,5 +256,14 @@
   "startWork.noteFound": "このカードにはすでにノートがあります：{file}",
   "startWork.noteFailed": "ノートを作成できませんでした。",
   "startWork.noteOpenFailed": "ノートを開けませんでした。",
-  "startWork.failureDetail": "（詳細：{reason}）"
+  "startWork.failureDetail": "（詳細：{reason}）",
+  "startWork.templateSection": "ノートのテンプレート",
+  "startWork.templateHelp": "カード用に作成するノートのページ背景です。独自のテンプレートは、端末の {folder} フォルダーにある PNG 画像です。",
+  "startWork.templateBlank": "白紙",
+  "startWork.templateLoading": "テンプレートを読み込んでいます…",
+  "startWork.templateCustom": "マイテンプレート",
+  "startWork.templateNoCustom": "{folder} に PNG 画像がありません。",
+  "startWork.templateMissing": "選択したテンプレート {name} は端末にありません。ノートは白紙になります。",
+  "startWork.templateSystem": "Supernote のテンプレート",
+  "startWork.templateNotUsed": "選択したテンプレートを使用できませんでした。ノートは白紙です。"
 }

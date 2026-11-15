@@ -256,5 +256,14 @@
   "startWork.noteFound": "La carte a déjà une note : {file}",
   "startWork.noteFailed": "La note n'a pas pu être créée.",
   "startWork.noteOpenFailed": "La note n'a pas pu être ouverte.",
-  "startWork.failureDetail": "(Détail : {reason})"
+  "startWork.failureDetail": "(Détail : {reason})",
+  "startWork.templateSection": "Modèle de la note",
+  "startWork.templateHelp": "Fond de page des notes créées pour les cartes. Vos propres modèles sont les images PNG du dossier {folder} de la tablette.",
+  "startWork.templateBlank": "Page blanche",
+  "startWork.templateLoading": "Chargement des modèles…",
+  "startWork.templateCustom": "Mes modèles",
+  "startWork.templateNoCustom": "Aucune image PNG dans {folder}.",
+  "startWork.templateMissing": "Le modèle choisi {name} n'est plus sur la tablette : les notes ont une page blanche.",
+  "startWork.templateSystem": "Modèles Supernote",
+  "startWork.templateNotUsed": "Le modèle choisi n'a pas pu être utilisé : la note a une page blanche."
 }

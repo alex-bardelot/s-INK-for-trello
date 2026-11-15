@@ -21,10 +21,47 @@ const NOTE_EXTENSION = '.note';
  * (`/storage/emulated/0/EXPORT`), which lies at the storage root.
  */
 export function cardNotesDir(exportPath: string | null | undefined): string {
+  return `${storageRoot(exportPath)}/${CARD_NOTES_FOLDER}`;
+}
+
+/** Folder holding the tablet's own templates: PNG files put by the user. */
+export const TEMPLATES_FOLDER = 'MyStyle';
+
+/** Storage root of the tablet, from the host's export folder. */
+function storageRoot(exportPath: string | null | undefined): string {
   const root = exportPath
     ? exportPath.replace(/\/+$/, '').replace(/\/EXPORT$/i, '')
     : '';
-  return `${root || DEFAULT_STORAGE_ROOT}/${CARD_NOTES_FOLDER}`;
+  return root || DEFAULT_STORAGE_ROOT;
+}
+
+/** Folder of the user's own templates (`/storage/emulated/0/MyStyle`). */
+export function customTemplatesDir(
+  exportPath: string | null | undefined,
+): string {
+  return `${storageRoot(exportPath)}/${TEMPLATES_FOLDER}`;
+}
+
+/** `true` for a file usable as a page template: a PNG image. */
+export function isTemplateFile(path: string): boolean {
+  return /\.png$/i.test(path);
+}
+
+/** Name of a template file shown to the user: without its extension. */
+export function templateFileLabel(path: string): string {
+  return fileNameOf(path).replace(/\.png$/i, '');
+}
+
+/**
+ * Name of one of the tablet's templates shown to the user, from its
+ * identifier: `style_8mm_ruled_line` → `8mm ruled line`.
+ */
+export function systemTemplateLabel(name: string): string {
+  const words = name
+    .replace(/^style_/, '')
+    .replace(/_/g, ' ')
+    .trim();
+  return words ? words.charAt(0).toUpperCase() + words.slice(1) : name;
 }
 
 /** Ending of the file name of a card's note. */
