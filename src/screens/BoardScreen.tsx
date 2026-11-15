@@ -292,7 +292,7 @@ export function BoardScreen({
             )}
             {modesAvailable && (
               <SegmentGroup
-                label={t('settings.boardMode')}
+                label={t('settings.mode')}
                 segments={modeChoices}
                 value={mode ?? 'all'}
                 onChange={changeMode}

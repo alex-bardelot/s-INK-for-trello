@@ -81,10 +81,11 @@ export interface SettingsScreenProps {
 /**
  * Settings that are rarely needed, kept off the boards page. Laid out like
  * the Supernote system settings: categories in a left column, separated by
- * dotted lines, and the selected one's sections on the right. "Boards"
- * holds the public boards, board layouts and board mode sections; "Links"
- * the tool opening s-INK links; "Trello" the connected account (and where
- * its token is kept); "About" the version and the non-affiliation notice.
+ * dotted lines, and the selected one's sections on the right. "General"
+ * holds the public boards and the Trello account (and where its token is
+ * kept); "Boards" the settings of an open board (layout and mode); "Links"
+ * the tool opening s-INK links; "About" the version and the
+ * non-affiliation notice.
  */
 export function SettingsScreen({
   category,
@@ -108,9 +109,9 @@ export function SettingsScreen({
   const aboutTaps = useRef(new RapidTapCounter()).current;
 
   const categories: {value: SettingsCategory; label: string}[] = [
+    {value: 'general', label: t('settings.general')},
     {value: 'boards', label: t('settings.boards')},
     {value: 'links', label: t('settings.links')},
-    {value: 'trello', label: t('settings.trello')},
     {value: 'about', label: t('settings.about')},
     ...(showDiagnostics
       ? [
@@ -168,7 +169,7 @@ export function SettingsScreen({
         <ScrollView
           style={styles.panel}
           contentContainerStyle={styles.panelContent}>
-          {category === 'boards' ? (
+          {category === 'general' ? (
             <>
               <Section title={t('settings.publicBoards')}>
                 <PublicBoardsSettings
@@ -179,14 +180,6 @@ export function SettingsScreen({
                 />
               </Section>
 
-              <BoardLayoutSettings store={store} />
-
-              <BoardModeSettings store={store} />
-            </>
-          ) : category === 'links' ? (
-            <NoteLinkSettings store={store} />
-          ) : category === 'trello' ? (
-            <>
               <Section title={t('settings.account')}>
                 {member && tokenStorage ? (
                   <AccountCard
@@ -214,6 +207,14 @@ export function SettingsScreen({
                 )}
               </Section>
             </>
+          ) : category === 'boards' ? (
+            <>
+              <BoardLayoutSettings store={store} />
+
+              <BoardModeSettings store={store} />
+            </>
+          ) : category === 'links' ? (
+            <NoteLinkSettings store={store} />
           ) : category === 'about' ? (
             <AboutSettings />
           ) : (
@@ -229,9 +230,9 @@ export function SettingsScreen({
 
 /** Categories of the left column, like the Supernote system settings. */
 export type SettingsCategory =
+  | 'general'
   | 'boards'
   | 'links'
-  | 'trello'
   | 'about'
   | 'diagnostics';
 
@@ -355,7 +356,7 @@ function BoardLayoutSettings({
     }));
 
   return (
-    <Section title={t('settings.boardLayouts')}>
+    <Section title={t('settings.layout')}>
       {(['portrait', 'landscape'] as const).map(orientation => (
         <View key={orientation} style={styles.columnsRow}>
           <TabletPreview
@@ -412,7 +413,7 @@ function BoardModeSettings({store}: {store: KeyValueStore}): React.JSX.Element {
   ];
 
   return (
-    <Section title={t('settings.boardMode')}>
+    <Section title={t('settings.mode')}>
       <SegmentedControl
         label={t('settings.boardModeDefault')}
         help={t('settings.boardModeHelp')}

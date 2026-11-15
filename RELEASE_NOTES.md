@@ -3,6 +3,18 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.39.0 — General category in Settings
+
+- Settings get a **General** category, first in the list and selected
+  when Settings open. It holds the **Public boards** section (with the
+  Quick add button) and the **Trello account** section (with the Quick
+  connect button), which leaves the Trello category: it is removed.
+- **Boards** now only holds the settings of an open board, in two
+  sections renamed **Layout** and **Mode**.
+- Strings: `settings.general` replaces `settings.trello`;
+  `settings.layout` and `settings.mode` replace `settings.boardLayouts`
+  and `settings.boardMode`, in all locales.
+
 ## 0.38.3 — Settings come back to the Trello category after connecting
 
 - Connecting from Settings > Trello no longer brings Settings back to

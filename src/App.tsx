@@ -48,7 +48,7 @@ export default function App(): React.JSX.Element {
   // Kept here so that Settings comes back to the same category after the
   // connection screen opened over it.
   const [settingsCategory, setSettingsCategory] =
-    useState<SettingsCategory>('boards');
+    useState<SettingsCategory>('general');
   const [connectOpen, setConnectOpen] = useState(false);
   const [boardsPreferences, setBoardsPreferences] = useState(
     DEFAULT_BOARDS_PREFERENCES,
@@ -256,7 +256,7 @@ export default function App(): React.JSX.Element {
         ensureNetwork={session.ensureNetwork}
         onOpenBoard={setOpenBoard}
         onOpenSettings={() => {
-          setSettingsCategory('boards');
+          setSettingsCategory('general');
           setSettingsOpen(true);
         }}
         onConnect={() => setConnectOpen(true)}
