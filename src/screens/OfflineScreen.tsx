@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useState} from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 
 import {Button} from '../components/Button';
@@ -14,15 +14,13 @@ export interface OfflineScreenProps {
 
 /**
  * Shown when s-INK opens without internet while a Trello account is linked:
- * the account is kept, nothing is lost. The plugin checks the connection
- * every few seconds and goes on by itself once it is back.
+ * the account is kept, nothing is lost. Nothing is checked in the
+ * background (battery): Retry, or opening s-INK again, checks the internet
+ * and goes on to the boards once it is back.
  */
 export function OfflineScreen({onRetry}: OfflineScreenProps): React.JSX.Element {
   const {t} = useTranslation();
   const [checking, setChecking] = useState(false);
-
-  // Keeps the connection watched (and checked again) while shown.
-  useEffect(() => connectivity.subscribe(() => {}), []);
 
   const retry = async () => {
     setChecking(true);

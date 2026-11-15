@@ -76,30 +76,36 @@ describe('ConnectivityMonitor', () => {
     expect(monitor.current).toBe('online');
   });
 
-  it('checks again periodically only while offline and watched', async () => {
+  it('checks nothing in the background', async () => {
     jest.useFakeTimers();
+    const fetchImpl = jest.fn(noAnswer);
+    const monitor = new ConnectivityMonitor({fetchImpl});
+    const stop = monitor.subscribe(() => {});
+
+    await monitor.probe();
+    expect(monitor.current).toBe('offline');
+    jest.advanceTimersByTime(60 * 60 * 1000);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    stop();
+  });
+
+  it('checks on page arrival only while offline', async () => {
     const fetchImpl = jest
       .fn()
       .mockImplementationOnce(noAnswer)
       .mockImplementation(answered);
-    const monitor = new ConnectivityMonitor({fetchImpl, intervalMs: 1000});
+    const monitor = new ConnectivityMonitor({fetchImpl});
 
-    // Offline but nobody watching: no checks.
+    // Online: arriving on a page costs nothing.
+    monitor.pageShown();
+    expect(fetchImpl).not.toHaveBeenCalled();
+
     await monitor.probe();
     expect(monitor.current).toBe('offline');
-    jest.advanceTimersByTime(3000);
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
-
-    const stop = monitor.subscribe(() => {});
-    jest.advanceTimersByTime(1000);
+    monitor.pageShown();
     expect(fetchImpl).toHaveBeenCalledTimes(2);
     await flush();
     expect(monitor.current).toBe('online');
-
-    // Back online: the checks stop.
-    jest.advanceTimersByTime(3000);
-    expect(fetchImpl).toHaveBeenCalledTimes(2);
-    stop();
   });
 });
 

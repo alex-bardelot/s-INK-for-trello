@@ -1,8 +1,9 @@
-import React, {useCallback} from 'react';
+import React, {useCallback, useEffect} from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {PluginManager} from 'sn-plugin-lib';
 
 import {useTranslation} from '../i18n';
+import {connectivity} from '../network/connectivity';
 import {borders, colors, spacing, typography} from '../theme';
 import {CloseIcon} from './CloseIcon';
 import {OfflineBanner} from './OfflineBanner';
@@ -36,6 +37,12 @@ export function ScreenFrame({
   hideOfflineBanner,
 }: ScreenFrameProps): React.JSX.Element {
   const {t} = useTranslation();
+
+  // Arriving on a page while offline checks whether the internet is back:
+  // nothing is checked in the background, to spare the battery.
+  useEffect(() => {
+    connectivity.pageShown();
+  }, []);
 
   const handleClose = useCallback(() => {
     PluginManager.closePluginView().catch(error =>

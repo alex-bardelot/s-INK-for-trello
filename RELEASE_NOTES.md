@@ -3,6 +3,16 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.43.2 — No background internet checks
+
+- To spare the battery, the tablet's internet is no longer checked every
+  5 seconds while offline. It is checked when s-INK opens, when a page is
+  shown while offline, when **Retry** is pressed, and when a Trello
+  request gets no answer. Online, arriving on a page checks nothing.
+- The texts no longer promise an automatic return: the strip says "Check
+  its Wi-Fi", and the offline page "Once the Wi-Fi is back, press Retry
+  to open your boards", in all locales.
+
 ## 0.43.1 — Offline means the tablet has no internet
 
 - Offline now means that the tablet itself has no internet, not that
