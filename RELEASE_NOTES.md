@@ -3,6 +3,11 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.48.2 — Insert Trello Link
+
+- The lasso button **Link to Trello** is renamed **Insert Trello Link**
+  (French: « Insérer un lien Trello »), in every language.
+
 ## 0.48.1 — New Trello Card responds again
 
 - Reported on the tablet: **New Trello Card** no longer responded. In

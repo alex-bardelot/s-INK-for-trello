@@ -16,7 +16,7 @@ export interface InsertInkLinkButtonProps {
 /**
  * Title bar button that links the current card or board to the note, then
  * closes the plugin view to show it:
- * - after the lasso "Link to Trello" button, it links the selection;
+ * - after the lasso "Insert Trello Link" button, it links the selection;
  * - otherwise it places an s-INK link in the middle of the current note
  *   page and selects it with the lasso, so that it can be moved at once.
  */

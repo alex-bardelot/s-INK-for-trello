@@ -29,7 +29,8 @@ The *Inspect* button logged the following:
 
 ## Implemented (0.27.0)
 
-1. The **"Link to Trello"** lasso button (strokes, text, geometry):
+1. The **"Insert Trello Link"** lasso button (named "Link to Trello"
+   before 0.48.2; strokes, text, geometry):
    - it stores the `numInPage` of the selected elements, then opens the
      boards view under a band that says what to do;
    - on a board or card, **Link selection** reads the page and writes

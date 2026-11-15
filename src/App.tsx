@@ -178,7 +178,7 @@ export default function App(): React.JSX.Element {
     })();
     return () => {
       cancelled = true;
-      // Another intent (the lasso "Link to Trello" button, say) replaced
+      // Another intent (the lasso "Insert Trello Link" button, say) replaced
       // this one: the opening screen must not stay up.
       setLinkStatus('idle');
     };

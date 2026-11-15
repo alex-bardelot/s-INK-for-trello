@@ -131,7 +131,7 @@
   "offline.checking": "正在检查…",
   "button.lasso.createCard": "新建 Trello 卡片",
   "button.lasso.inspect": "s-INK：检查",
-  "button.lasso.link": "链接到 Trello",
+  "button.lasso.link": "插入 Trello 链接",
   "common.back": "返回",
   "card.title": "新建 Trello 卡片",
   "card.recognizing": "创建 Trello 卡片：正在识别…",
