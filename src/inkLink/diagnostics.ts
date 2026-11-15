@@ -7,9 +7,23 @@ import {useSyncExternalStore} from 'react';
  */
 
 const MAX_LINES = 60;
+/**
+ * Lines of the plugin startup, kept apart so that the taps logged while
+ * writing do not push them out: they tell whether the buttons work.
+ */
+const STARTUP_PREFIX = 'startup:';
+const MAX_STARTUP_LINES = 20;
 
 let lines: readonly string[] = [];
+let startupLines: readonly string[] = [];
+/** What the log shows: recent lines, then the startup ones (oldest last). */
+let snapshot: readonly string[] = [];
 const listeners = new Set<() => void>();
+
+function publish(): void {
+  snapshot = [...lines, ...startupLines];
+  listeners.forEach(listener => listener());
+}
 
 function timestamp(): string {
   const now = new Date();
@@ -22,13 +36,24 @@ function timestamp(): string {
 /** Adds a line, newest first. */
 export function logInkLink(message: string): void {
   console.log(`[sINK] link: ${message}`);
-  lines = [`${timestamp()} ${message}`, ...lines].slice(0, MAX_LINES);
-  listeners.forEach(listener => listener());
+  const line = `${timestamp()} ${message}`;
+  if (message.startsWith(STARTUP_PREFIX)) {
+    startupLines = [line, ...startupLines].slice(0, MAX_STARTUP_LINES);
+  } else {
+    lines = [line, ...lines].slice(0, MAX_LINES);
+  }
+  publish();
 }
 
+/** Clears the recent lines; the startup ones stay, as they still apply. */
 export function clearInkLinkLog(): void {
   lines = [];
-  listeners.forEach(listener => listener());
+  publish();
+}
+
+/** The lines shown, newest first, startup lines last. */
+export function getInkLinkLog(): readonly string[] {
+  return snapshot;
 }
 
 function subscribe(listener: () => void): () => void {
@@ -38,5 +63,5 @@ function subscribe(listener: () => void): () => void {
 
 /** React hook returning the log lines, newest first. */
 export function useInkLinkLog(): readonly string[] {
-  return useSyncExternalStore(subscribe, () => lines);
+  return useSyncExternalStore(subscribe, () => snapshot);
 }

@@ -3,6 +3,21 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.49.6 — Lasso buttons registered at once
+
+- Reported on the tablet: **Insert Trello Link** and **New Trello Card**
+  still did nothing, while the sidebar button opened the plugin. The
+  lasso buttons depend on the plugin's own button listener, which was
+  registered only after the language saved in Settings was read from the
+  tablet; if that read stalls, the lasso buttons get no answer.
+- The buttons and their listener are now registered as soon as the
+  plugin starts, in the system language; the labels switch to the
+  language chosen in Settings once it is read.
+- Diagnostics logs the startup (`startup: plugin started`, `buttons
+  registered`, `button listener ready`, `saved language applied`). These
+  lines stay at the bottom of the log: the taps logged while writing no
+  longer push them out, and **Clear** keeps them.
+
 ## 0.49.5 — Network access asked on the connection page
 
 - The Trello connection page asks for network access as soon as it
