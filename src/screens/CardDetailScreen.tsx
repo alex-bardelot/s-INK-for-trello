@@ -136,6 +136,8 @@ export function CardDetailScreen({
   const startWork = useStartWork({
     card: state.status === 'loaded' ? state.card : null,
     shortLink: card.shortLink,
+    cardName: card.name,
+    boardName,
     client,
     store,
     memberId,

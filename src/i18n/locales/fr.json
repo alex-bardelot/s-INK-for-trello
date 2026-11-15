@@ -229,7 +229,7 @@
   "startWork.noList": "Aucune liste choisie : la carte reste où elle est.",
   "startWork.noteSection": "Note",
   "startWork.createNote": "Créer une note",
-  "startWork.createNoteHelp": "Crée une note pour la carte dans le dossier {folder} de la tablette, avec pour titre un lien s-INK vers la carte, et l'ouvre. Le bouton Note de la carte la rouvre.",
+  "startWork.createNoteHelp": "Crée une note au nom de la carte, dans {folder}/nom du tableau sur la tablette, avec pour titre un lien s-INK vers la carte, et l'ouvre. Le bouton Note de la carte la rouvre.",
   "startWork.notePermission": "s-INK a besoin d'accéder à vos notes pour créer et retrouver les notes de vos cartes.",
   "startWork.start": "Démarrer",
   "startWork.busy": "Démarrage…",

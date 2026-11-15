@@ -3,6 +3,25 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.47.0 — Card notes sorted by board
+
+- A card's note is now `Note/s-INK for Trello/{board name}/{card name}.note`:
+  one folder per board, and the note named after the card, with nothing
+  added. Characters file systems reject are replaced by spaces; a second
+  card of the same name on a board gets `{card name} (2).note`, and so on.
+- Since the name no longer carries the card's short link, a card's note
+  is found:
+  - by the path remembered when it was made (`supertrello.cardNotes.*`);
+  - by `{board}/{card}.note` (and its namesakes) when the s-INK link of
+    its title points to the card;
+  - among the notes of 0.45.x–0.46.x (`Note/s-INK/… [id].note`), kept
+    where they are;
+  - before a note is made, by reading the title of every card note, so
+    that a card or board renamed since keeps its note.
+- The shared copy of the link icon moves to
+  `Note/s-INK for Trello/.s-INK-icon.png`.
+- The help of **Create a note** names the new folders, in all locales.
+
 ## 0.46.3 — Link icon drawn, lasso without timers
 
 - The s-INK icon before a link was accepted by the tablet but not drawn:

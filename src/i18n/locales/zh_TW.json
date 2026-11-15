@@ -229,7 +229,7 @@
   "startWork.noList": "未設定列表：卡片保持原位。",
   "startWork.noteSection": "筆記",
   "startWork.createNote": "建立筆記",
-  "startWork.createNoteHelp": "在裝置的 {folder} 資料夾中為卡片建立一篇筆記，以指向卡片的 s-INK 連結為標題，並開啟它。卡片的「筆記」按鈕可再次開啟它。",
+  "startWork.createNoteHelp": "在裝置的 {folder}/看板名稱 資料夾中建立一篇以卡片命名的筆記，以指向卡片的 s-INK 連結為標題，並開啟它。卡片的「筆記」按鈕可再次開啟它。",
   "startWork.notePermission": "s-INK 需要存取你的筆記，才能建立和尋找卡片的筆記。",
   "startWork.start": "開始",
   "startWork.busy": "正在開始…",

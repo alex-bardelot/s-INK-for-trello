@@ -11,7 +11,7 @@ import {
 import {FALLBACK_PAGE_SIZE} from '../plugin/lassoText';
 import {openInkLinkIntent} from '../plugin/launchIntent';
 import {ensurePermission, Permission} from '../plugin/permissions';
-import {cardNotesDir} from '../startWork/noteFiles';
+import {cardNotesRoot} from '../startWork/noteFiles';
 import {logInkLink} from './diagnostics';
 import {clearPendingBinding} from './lassoBinding';
 import {
@@ -215,7 +215,7 @@ const SHARED_ICON_NAME = '.s-INK-icon.png';
  * Path of the app icon for the note app. The copy next to the bundle lies
  * in the plugin host's private folder, which the note app may not read
  * (the icon was accepted but not drawn): it is copied once to the shared
- * `Note/s-INK` folder. Falls back on the private copy.
+ * `Note/s-INK for Trello` folder. Falls back on the private copy.
  */
 async function sharedIconPath(): Promise<string | null> {
   const dir = await PluginManager.getPluginDirPath();
@@ -224,7 +224,7 @@ async function sharedIconPath(): Promise<string | null> {
   }
   const source = `${dir.replace(/\/+$/, '')}/${ICON_FILE_NAME}`;
   try {
-    const notesDir = cardNotesDir(await FileUtils.getExportPath());
+    const notesDir = cardNotesRoot(await FileUtils.getExportPath());
     const shared = `${notesDir}/${SHARED_ICON_NAME}`;
     if (await FileUtils.exists(shared)) {
       return shared;

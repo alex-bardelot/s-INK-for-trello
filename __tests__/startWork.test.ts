@@ -1,10 +1,14 @@
 import {planIsEmpty, planStartWork} from '../src/startWork/plan';
 import {
+  boardNotesDir,
   cardNoteFileName,
-  cardNotesDir,
+  cardNotesRoot,
   customTemplatesDir,
-  isCardNoteFile,
+  isLegacyCardNoteFile,
+  isNoteFile,
   isTemplateFile,
+  legacyCardNotesDir,
+  safeFileName,
   systemTemplateLabel,
   templateFileLabel,
 } from '../src/startWork/noteFiles';
@@ -354,33 +358,43 @@ describe('applyStartWork', () => {
 });
 
 describe('card note files', () => {
-  it('lives in Note/s-INK at the storage root', () => {
-    expect(cardNotesDir('/storage/emulated/0/EXPORT')).toBe(
-      '/storage/emulated/0/Note/s-INK',
+  it('lives in Note/s-INK for Trello/{board} at the storage root', () => {
+    expect(cardNotesRoot('/storage/emulated/0/EXPORT/')).toBe(
+      '/storage/emulated/0/Note/s-INK for Trello',
     );
-    expect(cardNotesDir('/storage/emulated/0/EXPORT/')).toBe(
-      '/storage/emulated/0/Note/s-INK',
+    expect(boardNotesDir('/storage/emulated/0/EXPORT', 'SuperTrello')).toBe(
+      '/storage/emulated/0/Note/s-INK for Trello/SuperTrello',
     );
-    expect(cardNotesDir(null)).toBe('/storage/emulated/0/Note/s-INK');
-  });
-
-  it('is named after the card, then its short link', () => {
-    expect(cardNoteFileName('Fix the login', 'AbC123xy')).toBe(
-      'Fix the login [AbC123xy].note',
-    );
-    expect(cardNoteFileName(' ..a/b: "c" [d]?\n', 'X1')).toBe(
-      'a b c d [X1].note',
-    );
-    expect(cardNoteFileName('***', 'X1')).toBe('Trello [X1].note');
-    expect(cardNoteFileName('x'.repeat(200), 'X1')).toBe(
-      `${'x'.repeat(60)} [X1].note`,
+    expect(boardNotesDir(null, 'R&D: 2027/Q1')).toBe(
+      '/storage/emulated/0/Note/s-INK for Trello/R&D 2027 Q1',
     );
   });
 
-  it('is found by its short link, even after a rename', () => {
-    expect(isCardNoteFile('Old name [AbC123xy].note', 'AbC123xy')).toBe(true);
-    expect(isCardNoteFile('Old name [AbC123xy].note', 'AbC123')).toBe(false);
-    expect(isCardNoteFile('Old name [AbC123xy].pdf', 'AbC123xy')).toBe(false);
+  it('is named after the card, with a rank for namesakes', () => {
+    expect(cardNoteFileName('Fix the login')).toBe('Fix the login.note');
+    expect(cardNoteFileName('Fix the login', 2)).toBe('Fix the login (2).note');
+    expect(cardNoteFileName(' ..a/b: "c" [d]?\n')).toBe('a b c [d].note');
+    expect(cardNoteFileName('***')).toBe('Trello.note');
+    expect(cardNoteFileName('Ends with dots...')).toBe('Ends with dots.note');
+    expect(cardNoteFileName('x'.repeat(200))).toBe(`${'x'.repeat(80)}.note`);
+  });
+
+  it('makes names safe for folders and files', () => {
+    expect(safeFileName('  ', 'Trello')).toBe('Trello');
+    expect(safeFileName('.hidden', 'Trello')).toBe('hidden');
+    expect(safeFileName('a\tb|c', 'Trello')).toBe('a b c');
+  });
+
+  it('still recognises the notes of 0.45 and 0.46', () => {
+    expect(legacyCardNotesDir(null)).toBe('/storage/emulated/0/Note/s-INK');
+    expect(isLegacyCardNoteFile('Old name [AbC123xy].note', 'AbC123xy')).toBe(
+      true,
+    );
+    expect(isLegacyCardNoteFile('Old name [AbC123xy].note', 'AbC123')).toBe(
+      false,
+    );
+    expect(isNoteFile('/x/Fix.NOTE')).toBe(true);
+    expect(isNoteFile('/x/.s-INK-icon.png')).toBe(false);
   });
 });
 

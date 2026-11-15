@@ -22,13 +22,20 @@ import {
   Permission,
 } from '../plugin/permissions';
 import {listedPath} from '../storage/directoryStore';
+import {parseInkLink} from '../inkLink/inkLink';
+import {KeyValueStore} from '../storage/keyValueStore';
 import {
+  boardNotesDir,
   cardNoteFileName,
-  cardNotesDir,
+  cardNoteKey,
+  cardNotesRoot,
   customTemplatesDir,
   fileNameOf,
-  isCardNoteFile,
+  isLegacyCardNoteFile,
+  isNoteFile,
   isTemplateFile,
+  legacyCardNotesDir,
+  MAX_SAME_NAME_NOTES,
 } from './noteFiles';
 import {NoteTemplateChoice} from './settings';
 
@@ -36,6 +43,8 @@ import {NoteTemplateChoice} from './settings';
 export interface NoteCard {
   name: string;
   shortLink: string;
+  /** Name of the card's board, which names the folder of its note. */
+  boardName: string;
 }
 
 /** Blank page template of the note app. */
@@ -73,20 +82,78 @@ async function exportPath(): Promise<string | null> {
   }
 }
 
-async function notesDir(): Promise<string> {
-  return cardNotesDir(await exportPath());
+/** Full paths of the entries of a folder; none if it does not exist. */
+async function listEntries(dir: string): Promise<string[]> {
+  // Before the first note, the folder does not exist: no entry, no error.
+  if ((await fileExists(dir)) === 'false') {
+    return [];
+  }
+  return ((await FileUtils.listFiles(dir)) ?? [])
+    .map(listedPath)
+    .filter((path): path is string => !!path)
+    .map(path => (path.includes('/') ? path : `${dir}/${path}`));
+}
+
+/**
+ * Short link of the card whose s-INK link titles the first page of a note,
+ * or `null`: this is how a note is known to belong to a card.
+ */
+async function noteOwner(path: string): Promise<string | null> {
+  try {
+    const elements = unwrapResult<
+      {
+        userData?: string | null;
+        textBox?: {textContentFull?: string | null} | null;
+        recycle?: () => Promise<void>;
+      }[]
+    >(await PluginFileAPI.getElements(0, path));
+    if (!Array.isArray(elements)) {
+      return null;
+    }
+    let owner: string | null = null;
+    for (const element of elements) {
+      const target =
+        parseInkLink(element.userData) ??
+        parseInkLink(element.textBox?.textContentFull);
+      if (!owner && target?.kind === 'card') {
+        owner = target.shortLink;
+      }
+      element.recycle?.().catch(() => undefined);
+    }
+    return owner;
+  } catch (error) {
+    logInkLink(`note: reading ${path} failed (${String(error)})`);
+    return null;
+  }
+}
+
+async function remember(
+  store: KeyValueStore,
+  shortLink: string,
+  path: string,
+): Promise<void> {
+  try {
+    await store.setItem(cardNoteKey(shortLink), path);
+  } catch (error) {
+    logInkLink(`note: path not remembered (${String(error)})`);
+  }
 }
 
 /**
  * Path of the note made for a card, or `null` if it has none (or the notes
- * cannot be read).
+ * cannot be read). Looks, in turn, at the path remembered when the note was
+ * made, at `{board}/{card}.note` (and its `(2)`… namesakes) when its title
+ * links to the card, and at the notes of 0.45.x–0.46.x.
  *
  * @param prompt - Asks for note access if needed; otherwise a missing
  * permission answers `null`.
+ * @param scan - Also reads the title of every card note, to find the note
+ * of a card or board renamed since: only before making a note.
  */
 export async function findCardNote(
-  shortLink: string,
-  prompt: boolean,
+  card: NoteCard,
+  store: KeyValueStore,
+  {prompt, scan}: {prompt: boolean; scan: boolean},
 ): Promise<string | null> {
   try {
     const allowed = prompt
@@ -95,20 +162,48 @@ export async function findCardNote(
     if (!allowed) {
       return null;
     }
-    const dir = await notesDir();
-    // Before the first note, the folder does not exist: no note, no error.
-    if ((await fileExists(dir)) === 'false') {
-      return null;
+    const remembered = await store.getItem(cardNoteKey(card.shortLink));
+    if (remembered && (await fileExists(remembered)) !== 'false') {
+      return remembered;
     }
-    const entries = (await FileUtils.listFiles(dir)) ?? [];
-    for (const entry of entries) {
-      const path = listedPath(entry);
-      if (path && isCardNoteFile(fileNameOf(path), shortLink)) {
-        return path.includes('/') ? path : `${dir}/${path}`;
+
+    const exported = await exportPath();
+    const boardDir = boardNotesDir(exported, card.boardName);
+    for (let rank = 1; rank <= MAX_SAME_NAME_NOTES; rank++) {
+      const path = `${boardDir}/${cardNoteFileName(card.name, rank)}`;
+      if ((await fileExists(path)) === 'false') {
+        break;
+      }
+      if ((await noteOwner(path)) === card.shortLink) {
+        await remember(store, card.shortLink, path);
+        return path;
+      }
+    }
+
+    const legacy = (await listEntries(legacyCardNotesDir(exported))).find(
+      path => isLegacyCardNoteFile(fileNameOf(path), card.shortLink),
+    );
+    if (legacy) {
+      await remember(store, card.shortLink, legacy);
+      return legacy;
+    }
+
+    if (scan) {
+      for (const folder of await listEntries(cardNotesRoot(exported))) {
+        if (isNoteFile(folder) || fileNameOf(folder).startsWith('.')) {
+          continue;
+        }
+        for (const path of await listEntries(folder)) {
+          if (isNoteFile(path) && (await noteOwner(path)) === card.shortLink) {
+            logInkLink(`note: found by its title ${path}`);
+            await remember(store, card.shortLink, path);
+            return path;
+          }
+        }
       }
     }
   } catch (error) {
-    logInkLink(`note: listing failed (${String(error)})`);
+    logInkLink(`note: looking for the note failed (${String(error)})`);
   }
   return null;
 }
@@ -419,14 +514,16 @@ export type CreatedNote =
     };
 
 /**
- * Creates the note of a card in `Note/s-INK`, with the card's s-INK link
- * at the top of its first page as a title. A note the card already has is
- * kept as it is. Every step is written to the Diagnostics log (`note:`
- * lines); on failure, the failing step is returned to be shown.
+ * Creates the note of a card in `Note/s-INK for Trello/{board}/{card}.note`,
+ * with the card's s-INK link at the top of its first page as a title. A
+ * note the card already has is kept as it is. Every step is written to the
+ * Diagnostics log (`note:` lines); on failure, the failing step is returned
+ * to be shown.
  */
 export async function createCardNote(
   card: NoteCard,
   template: NoteTemplateChoice,
+  store: KeyValueStore,
 ): Promise<CreatedNote> {
   const fail = (reason: string): CreatedNote => {
     logInkLink(`note: FAILED ${reason}`);
@@ -440,7 +537,10 @@ export async function createCardNote(
         Permission.FileRead,
       )} write ${await permissionState(Permission.FileWrite)}`,
     );
-    const existing = await findCardNote(card.shortLink, true);
+    const existing = await findCardNote(card, store, {
+      prompt: true,
+      scan: true,
+    });
     if (existing) {
       logInkLink(`note: already there ${existing}`);
       return {
@@ -464,7 +564,7 @@ export async function createCardNote(
         )})`,
       );
     }
-    const dir = await notesDir();
+    const dir = boardNotesDir(await exportPath(), card.boardName);
     let dirMade: string;
     try {
       dirMade = String(await FileUtils.makeDir(dir));
@@ -477,7 +577,17 @@ export async function createCardNote(
       return fail(`folder ${dir} could not be created (makeDir ${dirMade})`);
     }
 
-    const path = `${dir}/${cardNoteFileName(card.name, card.shortLink)}`;
+    // A namesake card of the board may own `{card}.note` already.
+    let path = '';
+    for (let rank = 1; rank <= MAX_SAME_NAME_NOTES && !path; rank++) {
+      const candidate = `${dir}/${cardNoteFileName(card.name, rank)}`;
+      if ((await fileExists(candidate)) !== 'true') {
+        path = candidate;
+      }
+    }
+    if (!path) {
+      return fail(`${MAX_SAME_NAME_NOTES} notes named ${card.name} already`);
+    }
     const {width, height} = Dimensions.get('window');
     const portrait = height >= width;
     logInkLink(`note: template ${JSON.stringify(template)}`);
@@ -496,6 +606,7 @@ export async function createCardNote(
       card.name,
     );
     logInkLink(`note: created ${path}, title ${titleRect ? 'ok' : 'missing'}`);
+    await remember(store, card.shortLink, path);
     return {
       ok: true,
       path,

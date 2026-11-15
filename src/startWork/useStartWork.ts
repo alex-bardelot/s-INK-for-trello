@@ -51,6 +51,8 @@ export interface StartWorkControls {
 export function useStartWork({
   card,
   shortLink,
+  cardName,
+  boardName,
   client,
   store,
   memberId,
@@ -59,6 +61,10 @@ export function useStartWork({
 }: {
   card: TrelloCardDetail | null;
   shortLink: string | undefined;
+  /** Name of the card as the board shows it, before its detail loads. */
+  cardName: string;
+  /** Names the folder of the card's note. */
+  boardName: string;
   client: TrelloClient;
   store: KeyValueStore;
   memberId: string;
@@ -69,18 +75,20 @@ export function useStartWork({
   const [busy, setBusy] = useState(false);
   const [report, setReport] = useState<StartWorkReport | null>(null);
 
-  // The Note button shows if the card already has one. Never prompts here.
+  // The Note button shows if the card already has one. Never prompts here,
+  // nor reads every note: a note of a renamed card is found on Start.
   useEffect(() => {
     let active = true;
     if (shortLink) {
-      findCardNote(shortLink, false).then(
-        path => active && path && setNotePath(path),
-      );
+      findCardNote({shortLink, name: cardName, boardName}, store, {
+        prompt: false,
+        scan: false,
+      }).then(path => active && path && setNotePath(path));
     }
     return () => {
       active = false;
     };
-  }, [shortLink]);
+  }, [boardName, cardName, shortLink, store]);
 
   const start = useCallback(async () => {
     if (!card?.idBoard || busy) {
@@ -115,8 +123,9 @@ export function useStartWork({
       const link = card.shortLink ?? shortLink;
       if (settings.createNote && link) {
         const made = await createCardNote(
-          {name: card.name, shortLink: link},
+          {name: card.name, shortLink: link, boardName},
           settings.noteTemplate,
+          store,
         );
         if (made.ok) {
           setNotePath(made.path);
@@ -177,6 +186,7 @@ export function useStartWork({
       setBusy(false);
     }
   }, [
+    boardName,
     busy,
     card,
     client,

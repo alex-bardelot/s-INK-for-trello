@@ -31,7 +31,8 @@ Other Supernote devices that support plugins may work but are not tested.
   becomes the card title, the rest its description.
 - **Start** button on the cards of boards the member can edit: assigns the
   member, swaps labels (e.g. removes `TODO`, adds `WIP`), moves the card to
-  a chosen list and creates a note for it in `Note/s-INK`, titled with an
+  a chosen list and creates a note for it,
+  `Note/s-INK for Trello/{board name}/{card name}.note`, titled with an
   s-INK link to the card, on a blank page, a Supernote template or one of
   the user's own (PNG images of `MyStyle`). Each action is set, or turned
   off, in
