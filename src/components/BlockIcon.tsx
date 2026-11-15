@@ -94,30 +94,54 @@ const list: Draw = (size, stroke, color) => {
   });
 };
 
-/** A price tag, tip up, with its hole. */
+/**
+ * A price tag, as on Trello: a body rounded at one end and pointed at the
+ * other, near which is the hole, turned so that the tip points up right.
+ */
 const labels: Draw = (size, stroke, color) => {
-  const side = size * 0.66;
-  const hole = stroke * 1.4;
+  const height = size * 0.46;
+  const length = size * 0.95;
+  const body = length - height / 2;
+  const left = (size - length) / 2;
+  const top = (size - height) / 2;
+  // A square turned 45°, whose diagonal is the tag's height: its top and
+  // right sides draw the tip.
+  const tip = height / Math.SQRT2;
+  const hole = stroke * 1.5;
+  const round = height * 0.25;
   return (
     <View
       key="tag"
       style={[
         styles.part,
-        styles.tagTip,
-        {
-          left: (size - side) / 2,
-          top: (size - side) / 2 + size * 0.04,
-          width: side,
-          height: side,
-          borderWidth: stroke,
-          borderColor: color,
-          borderRadius: side * 0.18,
-          transform: [{rotate: '45deg'}],
-        },
+        styles.corner,
+        {width: size, height: size, transform: [{rotate: '-45deg'}]},
       ]}>
       {box({
-        left: stroke * 0.6,
-        top: stroke * 0.6,
+        left,
+        top,
+        width: body,
+        height,
+        borderTopWidth: stroke,
+        borderBottomWidth: stroke,
+        borderLeftWidth: stroke,
+        borderColor: color,
+        borderTopLeftRadius: round,
+        borderBottomLeftRadius: round,
+      })}
+      {box({
+        left: left + body - tip / 2,
+        top: (size - tip) / 2,
+        width: tip,
+        height: tip,
+        borderTopWidth: stroke,
+        borderRightWidth: stroke,
+        borderColor: color,
+        transform: [{rotate: '45deg'}],
+      })}
+      {box({
+        left: left + body - height * 0.18 - hole / 2,
+        top: (size - hole) / 2,
         width: hole,
         height: hole,
         borderRadius: hole / 2,
@@ -274,8 +298,8 @@ const styles = StyleSheet.create({
   part: {
     position: 'absolute',
   },
-  /** The sharp corner of the tag, pointing up once turned. */
-  tagTip: {
-    borderTopLeftRadius: 0,
+  corner: {
+    left: 0,
+    top: 0,
   },
 });

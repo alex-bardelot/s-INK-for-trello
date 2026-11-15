@@ -3,6 +3,18 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.51.1 — Icon column on the New Trello Card page
+
+- The block icons now stand in a column on the left of the page; the
+  titles, chips and fields of each block all start after it, at the
+  same place.
+- **Labels** and **Members** lose their title: their icon stands on the
+  line of the chips, which follow it on the right. Accessibility
+  services still read the block's name on the icon.
+- The labels icon is now a price tag as on Trello: rounded at one end,
+  pointed at the other, with its hole near the tip, which points up
+  right.
+
 ## 0.51.0 — Block icons on the New Trello Card page
 
 - Each block of the New Trello Card page has an icon before its title,

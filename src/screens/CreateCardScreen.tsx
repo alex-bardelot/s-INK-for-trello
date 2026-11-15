@@ -732,7 +732,7 @@ export function CreateCardScreen({
                 </View>
               )}
 
-              <Section icon="labels" title={t('card.labels')}>
+              <Section icon="labels" showTitle={false} title={t('card.labels')}>
                 {!board ? (
                   <Text style={styles.hint}>{t('card.chooseBoardFirst')}</Text>
                 ) : !ready ? null : ready.labels.length === 0 ? (
@@ -765,7 +765,10 @@ export function CreateCardScreen({
                 )}
               </Section>
 
-              <Section icon="members" title={t('card.members')}>
+              <Section
+                icon="members"
+                showTitle={false}
+                title={t('card.members')}>
                 {!board ? (
                   <Text style={styles.hint}>{t('card.chooseBoardFirst')}</Text>
                 ) : !ready ? null : (
@@ -955,7 +958,7 @@ function BlockTitle({
 }): React.JSX.Element {
   return (
     <View style={[styles.blockTitle, style]}>
-      <BlockIcon kind={icon} size={BLOCK_ICON_SIZE} color={colors.foreground} />
+      <IconColumn icon={icon} height={TITLE_LINE_HEIGHT} />
       <Text
         accessibilityRole="header"
         numberOfLines={1}
@@ -966,19 +969,67 @@ function BlockTitle({
   );
 }
 
+/**
+ * The icon of a block, in the column on the left of the page: everything
+ * else in the block starts after it.
+ */
+function IconColumn({
+  icon,
+  height,
+  label,
+}: {
+  icon: BlockIconKind;
+  /** Height of the line the icon is centered on. */
+  height: number;
+  /** Name of the block, read by accessibility services when not shown. */
+  label?: string;
+}): React.JSX.Element {
+  return (
+    <View
+      accessible={!!label}
+      accessibilityRole={label ? 'header' : undefined}
+      accessibilityLabel={label}
+      style={[styles.iconColumn, {height}]}>
+      <BlockIcon kind={icon} size={BLOCK_ICON_SIZE} color={colors.foreground} />
+    </View>
+  );
+}
+
+/**
+ * A block of the form: its icon on the left, then its title, if shown, and
+ * its content. Without a title, the icon stands on the first line of the
+ * content, which is as high as a chip.
+ */
 function Section({
   icon,
   title,
+  showTitle = true,
   children,
 }: {
   icon: BlockIconKind;
   title: string;
+  showTitle?: boolean;
   children: React.ReactNode;
 }): React.JSX.Element {
   return (
     <View style={styles.section}>
-      <BlockTitle icon={icon} title={title} />
-      <View style={styles.sectionBody}>{children}</View>
+      <IconColumn
+        icon={icon}
+        height={showTitle ? TITLE_LINE_HEIGHT : CHIP_HEIGHT}
+        label={showTitle ? undefined : title}
+      />
+      <View
+        style={[styles.sectionContent, !showTitle && styles.sectionUntitled]}>
+        {showTitle && (
+          <Text
+            accessibilityRole="header"
+            numberOfLines={1}
+            style={styles.blockTitleText}>
+            {title}
+          </Text>
+        )}
+        {children}
+      </View>
     </View>
   );
 }
@@ -1159,6 +1210,9 @@ const PLACE_GAP = spacing.md;
 /** Room for the icon and the longest "Board" or "List" title. */
 const PLACE_LABEL_WIDTH = 170;
 const BLOCK_ICON_SIZE = 26;
+/** The icons' column: every block's content starts after it. */
+const ICON_COLUMN_WIDTH = BLOCK_ICON_SIZE + spacing.md;
+const TITLE_LINE_HEIGHT = 32;
 const CONNECTOR_DOT = 14;
 
 const styles = StyleSheet.create({
@@ -1306,25 +1360,35 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   section: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  sectionContent: {
+    flex: 1,
     gap: spacing.sm,
+  },
+  sectionUntitled: {
+    minHeight: CHIP_HEIGHT,
+    justifyContent: 'center',
+  },
+  iconColumn: {
+    width: ICON_COLUMN_WIDTH,
+    justifyContent: 'center',
   },
   blockTitle: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
   },
   blockTitleText: {
     flexShrink: 1,
     color: colors.foreground,
     fontSize: typography.label,
     fontWeight: '700',
+    lineHeight: TITLE_LINE_HEIGHT,
   },
   separator: {
     height: borders.width,
     backgroundColor: colors.foreground,
-  },
-  sectionBody: {
-    gap: spacing.sm,
   },
   chips: {
     flexDirection: 'row',
