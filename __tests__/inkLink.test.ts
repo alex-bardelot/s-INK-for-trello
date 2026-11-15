@@ -18,6 +18,9 @@ import {formatInkLink, parseInkLink} from '../src/inkLink/inkLink';
 import {
   layoutLink,
   layoutLinkMark,
+  layoutTitleLink,
+  linkBounds,
+  TITLE_TOP,
   LINK_FONT_SIZE,
   MARK_LABEL_GAP_PX,
   MARK_LABEL_PATTERN,
@@ -67,7 +70,10 @@ describe('linked handwriting', () => {
   });
 
   it('finds linked strokes by their recognition box', () => {
-    const links = findInkLinks([stroke(10, 20, 30, 40), stroke(0, 0, 5, 5, null)]);
+    const links = findInkLinks([
+      stroke(10, 20, 30, 40),
+      stroke(0, 0, 5, 5, null),
+    ]);
     expect(links).toEqual([
       {
         target: {kind: 'card', shortLink: 'abc123'},
@@ -102,7 +108,9 @@ describe('linked handwriting', () => {
 
   it('ignores an empty recognition box', () => {
     expect(
-      findInkLinks([{type: 0, userData: 's-INK/c/abc123', recognizeResult: {}}]),
+      findInkLinks([
+        {type: 0, userData: 's-INK/c/abc123', recognizeResult: {}},
+      ]),
     ).toEqual([]);
   });
 
@@ -116,7 +124,12 @@ describe('linked handwriting', () => {
       ]),
     );
     expect(merged).toHaveLength(1);
-    expect(merged[0].rect).toEqual({left: 100, top: 100, right: 330, bottom: 160});
+    expect(merged[0].rect).toEqual({
+      left: 100,
+      top: 100,
+      right: 330,
+      bottom: 160,
+    });
     expect(inkLinkAt(merged, 190, 105)).not.toBeNull();
   });
 
@@ -172,9 +185,33 @@ describe('linked handwriting', () => {
       {x: 10, y: 20},
       {x: 30, y: 40},
     ];
-    expect(sameSegment([{x: 11, y: 19}, {x: 30, y: 42}], segment)).toBe(true);
-    expect(sameSegment([{x: 30, y: 40}, {x: 10, y: 20}], segment)).toBe(true);
-    expect(sameSegment([{x: 14, y: 20}, {x: 30, y: 40}], segment)).toBe(false);
+    expect(
+      sameSegment(
+        [
+          {x: 11, y: 19},
+          {x: 30, y: 42},
+        ],
+        segment,
+      ),
+    ).toBe(true);
+    expect(
+      sameSegment(
+        [
+          {x: 30, y: 40},
+          {x: 10, y: 20},
+        ],
+        segment,
+      ),
+    ).toBe(true);
+    expect(
+      sameSegment(
+        [
+          {x: 14, y: 20},
+          {x: 30, y: 40},
+        ],
+        segment,
+      ),
+    ).toBe(false);
     expect(sameSegment([{x: 10, y: 20}], segment)).toBe(false);
     expect(sameSegment(null, segment)).toBe(false);
   });
@@ -382,6 +419,17 @@ describe('text size and link layout', () => {
       layout.textRect.top + layout.textRect.bottom,
       -1,
     );
+  });
+
+  it('centres a note title across the page, near its top', () => {
+    const layout = layoutTitleLink('Mode Focus', 's-INK/c/18yXoDet', 1920);
+    const bounds = linkBounds(layout);
+    expect(bounds.top).toBe(TITLE_TOP);
+    expect(bounds.left + bounds.right).toBeCloseTo(1920, -1);
+    expect(bounds.left).toBe(layout.iconRect.left);
+    expect(bounds.right).toBe(layout.textRect.right);
+    // Never off the page, even for a page narrower than the title.
+    expect(linkBounds(layoutTitleLink('x'.repeat(40), 'l', 100)).left).toBe(0);
   });
 });
 

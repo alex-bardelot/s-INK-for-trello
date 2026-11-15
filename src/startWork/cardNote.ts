@@ -9,7 +9,12 @@ import {
 import {i18n} from '../i18n';
 import {logInkLink} from '../inkLink/diagnostics';
 import {InkLinkTarget} from '../inkLink/inkLink';
-import {insertInkLink, insertInkLinkInNoteFile} from '../inkLink/noteBridge';
+import {Rect} from '../inkLink/hitTest';
+import {
+  insertInkLink,
+  insertInkLinkInNoteFile,
+  lassoRect,
+} from '../inkLink/noteBridge';
 import {
   ensureFileReadPermission,
   ensurePermission,
@@ -402,6 +407,8 @@ export type CreatedNote =
       path: string;
       created: boolean;
       titled: boolean;
+      /** Where the title lies on the first page of a new note. */
+      titleRect: Rect | null;
       /** Why the chosen template could not be used (the page is blank). */
       templateWarning: string | null;
     }
@@ -441,6 +448,7 @@ export async function createCardNote(
         path: existing,
         created: false,
         titled: true,
+        titleRect: null,
         templateWarning: null,
       };
     }
@@ -481,18 +489,19 @@ export async function createCardNote(
       logInkLink(`note: template not used: ${made.templateWarning}`);
     }
 
-    const titled = await insertInkLinkInNoteFile(
+    const titleRect = await insertInkLinkInNoteFile(
       path,
       0,
       {kind: 'card', shortLink: card.shortLink},
       card.name,
     );
-    logInkLink(`note: created ${path}, title ${titled ? 'ok' : 'missing'}`);
+    logInkLink(`note: created ${path}, title ${titleRect ? 'ok' : 'missing'}`);
     return {
       ok: true,
       path,
       created: true,
-      titled,
+      titled: !!titleRect,
+      titleRect,
       templateWarning: made.templateWarning,
     };
   } catch (error) {
@@ -518,35 +527,57 @@ async function waitForCurrentFile(path: string): Promise<boolean> {
   return false;
 }
 
+/** Space kept around the title when it is selected. */
+const SELECTION_MARGIN = 12;
+
+/** What to do once a new note is open. */
+export interface NewNoteTitle {
+  /** The title placed in the file, selected with the lasso. */
+  rect: Rect | null;
+  /** Placed once the note is open, when the file refused it. */
+  missing?: {target: InkLinkTarget; name: string};
+}
+
 /**
  * Opens a card's note in the note app and closes the plugin view to show
- * it. When the title could not be written into the closed file, it is
- * placed once the note is open.
+ * it. For a new note, its title is then selected with the lasso, ready to
+ * be moved; a title the closed file refused is placed first.
  *
  * @returns `false` if the host refused to open the note.
  */
 export async function openCardNote(
   path: string,
-  missingTitle?: {target: InkLinkTarget; name: string},
+  title?: NewNoteTitle,
 ): Promise<boolean> {
   try {
-    const opened = await PluginFileAPI.openFile(path, missingTitle ? 0 : -1);
+    const opened = await PluginFileAPI.openFile(path, title ? 0 : -1);
     if (!succeeded(opened)) {
       logInkLink(`note: openFile ${path}: ${describe(opened)}`);
       return false;
     }
-    if (missingTitle) {
-      const current = await waitForCurrentFile(path);
-      const titled =
-        current &&
-        (await insertInkLink(missingTitle.target, missingTitle.name));
-      logInkLink(
-        `note: title placed after opening: ${
-          titled ? 'ok' : current ? 'failed' : 'note not current'
-        }`,
-      );
-    }
+    // The host drops the lasso while the plugin view shows: close it first.
     await PluginManager.closePluginView();
+    if (title) {
+      const current = await waitForCurrentFile(path);
+      if (!current) {
+        logInkLink('note: opened note not current, title not selected');
+      } else if (title.missing) {
+        const placed = await insertInkLink(
+          title.missing.target,
+          title.missing.name,
+        );
+        logInkLink(
+          `note: title placed after opening: ${placed ? 'ok' : 'failed'}`,
+        );
+      } else if (title.rect) {
+        await lassoRect({
+          left: title.rect.left - SELECTION_MARGIN,
+          top: title.rect.top - SELECTION_MARGIN,
+          right: title.rect.right + SELECTION_MARGIN,
+          bottom: title.rect.bottom + SELECTION_MARGIN,
+        });
+      }
+    }
     return true;
   } catch (error) {
     logInkLink(`note: open ${path}: ${String(error)}`);

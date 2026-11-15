@@ -127,11 +127,20 @@ export function useStartWork({
           };
           // All went well: show the note at once.
           if (!result.failed && !made.templateWarning) {
+            // A new note opens with its title selected, ready to be moved.
             const opened = await openCardNote(
               made.path,
-              made.titled
+              !made.created
                 ? undefined
-                : {target: {kind: 'card', shortLink: link}, name: card.name},
+                : made.titled
+                ? {rect: made.titleRect}
+                : {
+                    rect: null,
+                    missing: {
+                      target: {kind: 'card', shortLink: link},
+                      name: card.name,
+                    },
+                  },
             );
             if (opened) {
               return;

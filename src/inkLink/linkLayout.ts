@@ -64,12 +64,7 @@ export function layoutLinkMark(
     Math.min(bounds.right + MARK_LABEL_GAP_PX, pageWidth - 1 - width),
   );
   const baseline = Math.max(MARK_CAP_HEIGHT_PX, y - MARK_LABEL_RISE_PX);
-  const {segments} = layoutStrokeText(
-    text,
-    left,
-    baseline,
-    MARK_CAP_HEIGHT_PX,
-  );
+  const {segments} = layoutStrokeText(text, left, baseline, MARK_CAP_HEIGHT_PX);
   return {
     line: [
       {x: Math.max(0, Math.min(bounds.left, left)), y},
@@ -98,6 +93,35 @@ export function shortName(name: string): string {
  * box sized to the name and the link, both vertically centered on the
  * taller of the two.
  */
+/** Top of the title of a card's note: just under the page's upper edge. */
+export const TITLE_TOP = 120;
+
+/**
+ * Lays a link out as the title of a page: centred across the page, near
+ * its top.
+ */
+export function layoutTitleLink(
+  name: string,
+  link: string,
+  pageWidth: number,
+): LinkLayout {
+  const width = linkBounds(layoutLink(name, link, {x: 0, y: 0})).right;
+  return layoutLink(name, link, {
+    x: Math.max(0, Math.round((pageWidth - width) / 2)),
+    y: TITLE_TOP,
+  });
+}
+
+/** Rectangle around the icon and the text of a link. */
+export function linkBounds(layout: LinkLayout): Rect {
+  return {
+    left: Math.min(layout.iconRect.left, layout.textRect.left),
+    top: Math.min(layout.iconRect.top, layout.textRect.top),
+    right: Math.max(layout.iconRect.right, layout.textRect.right),
+    bottom: Math.max(layout.iconRect.bottom, layout.textRect.bottom),
+  };
+}
+
 export function layoutLink(
   name: string,
   link: string,

@@ -3,6 +3,17 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.46.1 — The title of a card note, centred and selected
+
+- The s-INK link that titles a card's new note is now centred across the
+  page, near its top (`layoutTitleLink`), instead of sitting at the left.
+- When the new note opens, its title is already selected with the lasso
+  (`PluginCommAPI.lassoElements`), so that it can be moved at once. The
+  plugin view is closed first, since the host drops the lasso while the
+  view shows. A note the card already had opens as before, with nothing
+  selected.
+- The selection is written to the Diagnostics log (`lasso …` line).
+
 ## 0.46.0 — Template of the card notes
 
 - New **Note template** section in Settings > Start work (shown while

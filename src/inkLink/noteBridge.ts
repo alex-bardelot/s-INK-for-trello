@@ -20,7 +20,13 @@ import {
   PageElement,
   Rect,
 } from './hitTest';
-import {layoutLink, LINK_FONT_SIZE} from './linkLayout';
+import {
+  layoutLink,
+  layoutTitleLink,
+  LINK_FONT_SIZE,
+  linkBounds,
+  LinkLayout,
+} from './linkLayout';
 import {getDeviceStore} from '../storage/stores';
 import {formatInkLink, InkLinkTarget} from './inkLink';
 import {
@@ -281,21 +287,48 @@ export async function insertInkLink(
 }
 
 /**
- * Places an s-INK link at the top of a page of a note file that is not
- * open, as its title: used for the note created for a card.
+ * Places an s-INK link centred at the top of a page of a note file that is
+ * not open, as its title: used for the note created for a card.
  *
- * @returns `true` if the host accepted the text box.
+ * @returns The rectangle of the title on the page (screen pixels), or
+ * `null` if the host refused the text box.
  */
 export async function insertInkLinkInNoteFile(
   path: string,
   page: number,
   target: InkLinkTarget,
   name: string,
-): Promise<boolean> {
+): Promise<Rect | null> {
   try {
-    return await placeInkLink(target, name, noteFileDestination({path, page}));
+    const destination = noteFileDestination({path, page});
+    const {width} = await pageSize(destination.location);
+    const layout = layoutTitleLink(name, formatInkLink(target), width);
+    return (await placeInkLink(target, name, destination, layout))
+      ? linkBounds(layout)
+      : null;
   } catch (error) {
     logInkLink(`insert in ${path}: ${String(error)}`);
+    return null;
+  }
+}
+
+/**
+ * Selects a rectangle of the current note page with the lasso, so that
+ * what it holds can be moved at once. The plugin view must be closed: the
+ * host drops the lasso while the view shows.
+ */
+export async function lassoRect(rect: Rect): Promise<boolean> {
+  try {
+    const response = await PluginCommAPI.lassoElements(rect);
+    const ok = (response as SdkResponse<unknown> | null)?.success === true;
+    logInkLink(
+      `lasso ${Math.round(rect.left)},${Math.round(rect.top)}-${Math.round(
+        rect.right,
+      )},${Math.round(rect.bottom)}: ${ok ? 'ok' : errorOf(response)}`,
+    );
+    return ok;
+  } catch (error) {
+    logInkLink(`lasso: ${String(error)}`);
     return false;
   }
 }
@@ -304,10 +337,10 @@ async function placeInkLink(
   target: InkLinkTarget,
   name: string,
   destination: LinkDestination,
+  layout: LinkLayout = layoutLink(name, formatInkLink(target), NEW_LINK_ORIGIN),
 ): Promise<boolean> {
   const link = formatInkLink(target);
   const {location} = destination;
-  const layout = layoutLink(name, link, NEW_LINK_ORIGIN);
   const element = await createElement(NoteElementType.Text);
   if (!element) {
     return false;
