@@ -164,7 +164,7 @@
   "card.checklist": "Check-list",
   "card.checklistFailed": "La carte a été créée, mais sa check-list n’a pas pu être ajoutée.",
   "card.nameRequired": "La carte doit avoir un titre.",
-  "card.create": "Créer la carte",
+  "card.create": "Ajouter",
   "card.creating": "Création de la carte…",
   "card.created": "Carte créée dans {board} › {list} :",
   "card.writeManually": "Écrire la carte à la main",

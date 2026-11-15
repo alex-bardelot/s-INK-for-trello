@@ -16,6 +16,8 @@ export const colors = {
   avatar: '#D0D0D0',
   /** Light Wi-Fi sign while offline, like the tablet's own when Wi-Fi is off. */
   wifiOff: '#8A8A8A',
+  /** Action that cannot be used yet, on the black dialog title bar. */
+  disabledOnDark: '#8A8A8A',
 } as const;
 
 export const spacing = {

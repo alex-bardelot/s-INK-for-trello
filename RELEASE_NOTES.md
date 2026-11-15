@@ -3,6 +3,15 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.49.2 — New Trello Card looks like the tablet's own dialogs
+
+- The card page has the title bar of the tablet's New Task and New Event
+  dialogs: black, **Cancel** on the left, **New Trello Card** in the
+  middle, **Add** on the right. **Add** is greyed out until the card has a
+  board, a list and a title.
+- **Add** replaces the button at the bottom of the page; what is missing
+  and any creation error now show at the top, next to it.
+
 ## 0.49.1 — Lasso buttons no longer hang without note access
 
 - Reported on the tablet after updating to 0.49.0: **New Trello Card** did

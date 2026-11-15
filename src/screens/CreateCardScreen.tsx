@@ -509,16 +509,26 @@ export function CreateCardScreen({
       return (
         <ScreenFrame
           title={title}
-          actions={
-            <SmallButton
-              label={t('common.cancel')}
-              accessibilityLabel={t('common.cancel')}
-              onPress={close}
-            />
-          }>
+          dialog={{
+            cancelLabel: t('common.cancel'),
+            onCancel: close,
+            confirmLabel: t('card.create'),
+            onConfirm: create,
+            confirmDisabled: missingPlace || missingName,
+          }}>
           <ScrollView
             contentContainerStyle={styles.form}
             keyboardShouldPersistTaps="handled">
+            {createError && (
+              <Text accessibilityRole="alert" style={styles.error}>
+                {t(SESSION_ERRORS[createError])}
+              </Text>
+            )}
+            {missingPlace ? (
+              <Text style={styles.hint}>{t('card.listRequired')}</Text>
+            ) : missingName ? (
+              <Text style={styles.hint}>{t('card.nameRequired')}</Text>
+            ) : null}
             <View style={styles.placeRow}>
               <Text style={styles.placeLabel}>{t('card.board')}</Text>
               <View style={styles.placeValue}>
@@ -692,23 +702,6 @@ export function CreateCardScreen({
                 }
               />
             </Section>
-
-            {createError && (
-              <Text accessibilityRole="alert" style={styles.error}>
-                {t(SESSION_ERRORS[createError])}
-              </Text>
-            )}
-            {missingPlace ? (
-              <Text style={styles.hint}>{t('card.listRequired')}</Text>
-            ) : missingName ? (
-              <Text style={styles.hint}>{t('card.nameRequired')}</Text>
-            ) : null}
-            <Button
-              primary
-              disabled={missingPlace || missingName}
-              label={t('card.create')}
-              onPress={create}
-            />
           </ScrollView>
         </ScreenFrame>
       );

@@ -25,6 +25,22 @@ export interface ScreenFrameProps {
   flush?: boolean;
   /** Hides the offline button, on a screen that has its own Retry. */
   hideOfflineButton?: boolean;
+  /**
+   * Shows the title bar of the tablet's own creation dialogs (New Task,
+   * New Event) instead: black, Cancel on the left, the title in the
+   * middle, the confirming action on the right. Back, actions, close and
+   * offline buttons are then left out.
+   */
+  dialog?: DialogBar;
+}
+
+/** The two actions of a dialog title bar. */
+export interface DialogBar {
+  cancelLabel: string;
+  onCancel: () => void;
+  confirmLabel: string;
+  onConfirm: () => void;
+  confirmDisabled?: boolean;
 }
 
 /**
@@ -40,6 +56,7 @@ export function ScreenFrame({
   actions,
   flush,
   hideOfflineButton,
+  dialog,
 }: ScreenFrameProps): React.JSX.Element {
   const {t} = useTranslation();
 
@@ -57,6 +74,16 @@ export function ScreenFrame({
       console.warn('[sINK] Failed to close plugin view', error),
     );
   }, []);
+
+  if (dialog) {
+    return (
+      <View style={styles.container}>
+        <DialogHeader title={title} bar={dialog} />
+        <View style={[styles.content, flush && styles.flush]}>{children}</View>
+        {offline.failed && <OfflinePopup onClose={offline.dismiss} />}
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -79,7 +106,10 @@ export function ScreenFrame({
             {actions}
             {/* Last, where the board page's refresh button stands. */}
             {showOffline && (
-              <OfflineButton checking={offline.checking} onPress={offline.retry} />
+              <OfflineButton
+                checking={offline.checking}
+                onPress={offline.retry}
+              />
             )}
           </View>
         )}
@@ -98,7 +128,96 @@ export function ScreenFrame({
   );
 }
 
+/** Black title bar with Cancel on the left and the action on the right. */
+function DialogHeader({
+  title,
+  bar,
+}: {
+  title: string;
+  bar: DialogBar;
+}): React.JSX.Element {
+  const disabled = !!bar.confirmDisabled;
+  return (
+    <View style={styles.dialogHeader}>
+      <View style={styles.dialogSide}>
+        <Pressable
+          accessibilityRole="button"
+          hitSlop={spacing.md}
+          onPress={bar.onCancel}>
+          {({pressed}) => (
+            <Text
+              style={[styles.dialogAction, pressed && styles.dialogPressed]}>
+              {bar.cancelLabel}
+            </Text>
+          )}
+        </Pressable>
+      </View>
+      <Text
+        accessibilityRole="header"
+        numberOfLines={1}
+        style={styles.dialogTitle}>
+        {title}
+      </Text>
+      <View style={[styles.dialogSide, styles.dialogSideEnd]}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{disabled}}
+          disabled={disabled}
+          hitSlop={spacing.md}
+          onPress={bar.onConfirm}>
+          {({pressed}) => (
+            <Text
+              style={[
+                styles.dialogAction,
+                styles.dialogConfirm,
+                disabled && styles.dialogDisabled,
+                pressed && styles.dialogPressed,
+              ]}>
+              {bar.confirmLabel}
+            </Text>
+          )}
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  dialogHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.foreground,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+  },
+  // Both sides share the width left by the title, so it stays centered.
+  dialogSide: {
+    flex: 1,
+    alignItems: 'flex-start',
+  },
+  dialogSideEnd: {
+    alignItems: 'flex-end',
+  },
+  dialogTitle: {
+    flex: 2,
+    color: colors.background,
+    fontSize: typography.heading,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  dialogAction: {
+    color: colors.background,
+    fontSize: typography.label,
+  },
+  dialogConfirm: {
+    fontWeight: '700',
+  },
+  dialogDisabled: {
+    color: colors.disabledOnDark,
+  },
+  dialogPressed: {
+    textDecorationLine: 'underline',
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background,

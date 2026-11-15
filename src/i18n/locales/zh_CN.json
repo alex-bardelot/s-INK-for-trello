@@ -164,7 +164,7 @@
   "card.checklist": "清单",
   "card.checklistFailed": "卡片已创建，但无法添加其清单。",
   "card.nameRequired": "卡片需要标题。",
-  "card.create": "创建卡片",
+  "card.create": "添加",
   "card.creating": "正在创建卡片…",
   "card.created": "已在 {board} › {list} 中创建卡片：",
   "card.writeManually": "手动填写卡片",
