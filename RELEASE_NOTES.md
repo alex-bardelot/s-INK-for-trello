@@ -3,6 +3,17 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.42.2 — Open in browser: feedback and diagnostics
+
+- **Open in browser** (and **Open Trello directly**) no longer look dead
+  when the browser does not open: if the system neither opens it nor
+  reports an error within 3 seconds, the "No browser could be opened"
+  message is shown.
+- Each attempt is traced in the Diagnostics log (`browser: …` lines: the
+  host opened, the system's answer, and whether the plugin went to the
+  background), to find on the tablet why the browser stays closed. The
+  relay address is never logged, since it carries the session key.
+
 ## 0.42.1 — ON / OFF on the switches
 
 - Like the Supernote system settings, every switch shows **ON** or

@@ -1,5 +1,6 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
+  AppState,
   Linking,
   Pressable,
   ScrollView,
@@ -15,6 +16,7 @@ import {ScreenFrame} from '../components/ScreenFrame';
 import {SegmentedControl} from '../components/SegmentedControl';
 import {SmallButton} from '../components/SmallButton';
 import {TranslationKey, useTranslation} from '../i18n';
+import {logInkLink} from '../inkLink/diagnostics';
 import {isClipboardAvailable, readClipboardText} from '../platform/clipboard';
 import {watchClipboardForToken} from '../session/clipboardTokenWatch';
 import {SessionErrorCode} from '../session/trelloSession';
@@ -40,6 +42,9 @@ const ERROR_MESSAGES: Record<SessionErrorCode, TranslationKey> = {
   rateLimited: 'error.rateLimited',
   unknown: 'error.unknown',
 };
+
+/** Past this delay, a browser that did not answer is reported. */
+const BROWSER_TIMEOUT_MS = 3000;
 
 /** Side of the QR code of the authorization page, quiet zone included. */
 const QR_SIZE = 220;
@@ -150,12 +155,42 @@ export function ConnectScreen({
   const typed = token.replace(/\s+/g, '');
   const validToken = normalizeToken(token) !== null;
 
+  // The browser opening is traced in the diagnostics log (host only: the
+  // relay address carries the session key). A call that neither opens the
+  // browser nor fails would otherwise leave the button looking dead.
   const openUrl = useCallback((url: string) => {
     setBrowserError(false);
-    Linking.openURL(url).catch(openError => {
-      console.warn('[sINK] Failed to open the browser', openError);
-      setBrowserError(true);
-    });
+    const host = url.replace(/^[a-z]+:\/\/([^/?#]+).*$/i, '$1');
+    logInkLink(`browser: opening ${host} (app ${AppState.currentState})`);
+    let settled = false;
+    const timeout = setTimeout(() => {
+      if (!settled) {
+        logInkLink(`browser: no answer after ${BROWSER_TIMEOUT_MS} ms`);
+        setBrowserError(true);
+      }
+    }, BROWSER_TIMEOUT_MS);
+    Linking.openURL(url)
+      .then(result => {
+        settled = true;
+        logInkLink(
+          `browser: opened (${String(result)}, app ${AppState.currentState})`,
+        );
+      })
+      .catch(openError => {
+        settled = true;
+        console.warn('[sINK] Failed to open the browser', openError);
+        logInkLink(`browser: failed: ${String(openError)}`);
+        setBrowserError(true);
+      })
+      .finally(() => clearTimeout(timeout));
+  }, []);
+
+  // Whether the browser really came over the plugin shows in the log.
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', next =>
+      logInkLink(`browser: app ${next}`),
+    );
+    return () => subscription.remove();
   }, []);
 
   const submit = useCallback(() => {
