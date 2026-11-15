@@ -15,11 +15,14 @@ import {
   canAddCards,
   hasHiddenBoards,
   isObserverOf,
+  formatCheckItems,
   OfferBoardsInput,
   offerBoards,
   orderLists,
+  parseCheckItemsText,
   splitCardText,
 } from '../cards/ordering';
+import {addCardChecklist} from '../cards/checklist';
 import {Button} from '../components/Button';
 import {ChoiceList} from '../components/ChoiceList';
 import {ScreenFrame} from '../components/ScreenFrame';
@@ -37,6 +40,7 @@ import {
 import {borders, colors, spacing, typography} from '../theme';
 
 type Step =
+  | {kind: 'recognizing'}
   | {kind: 'loading'}
   | {kind: 'noText'; error: LassoTextError; diagnostics: string}
   | {kind: 'failed'; error: SessionErrorCode; retry: () => void}
@@ -45,7 +49,14 @@ type Step =
   | {kind: 'list'; board: TrelloBoard; lists: TrelloList[]}
   | {kind: 'confirm'; board: TrelloBoard; list: TrelloList; lists: TrelloList[]}
   | {kind: 'creating'; board: TrelloBoard; list: TrelloList}
-  | {kind: 'done'; board: TrelloBoard; list: TrelloList; card: TrelloCard};
+  | {
+      kind: 'done';
+      board: TrelloBoard;
+      list: TrelloList;
+      card: TrelloCard;
+      /** The card exists, but its checklist could not be added. */
+      checklistFailed: boolean;
+    };
 
 const LASSO_ERRORS: Record<LassoTextError, TranslationKey> = {
   noSelection: 'card.noSelection',
@@ -86,12 +97,14 @@ export function CreateCardScreen({
   onTokenRejected,
 }: CreateCardScreenProps): React.JSX.Element {
   const {t} = useTranslation();
-  const [step, setStep] = useState<Step>({kind: 'loading'});
+  const [step, setStep] = useState<Step>({kind: 'recognizing'});
   const [boards, setBoards] = useState<TrelloBoard[]>([]);
   const [publicBoards, setPublicBoards] = useState<TrelloBoard[]>([]);
   const [showAllBoards, setShowAllBoards] = useState(false);
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
+  // Checklist items, one per line, as edited on the review page.
+  const [checklist, setChecklist] = useState('');
   const preferences = useRef<CardPreferences>(EMPTY_PREFERENCES);
 
   const fail = useCallback(
@@ -140,7 +153,7 @@ export function CreateCardScreen({
   );
 
   const start = useCallback(async () => {
-    setStep({kind: 'loading'});
+    setStep({kind: 'recognizing'});
     const [lassoText, prefs] = await Promise.all([
       lasso,
       loadCardPreferences(store),
@@ -157,6 +170,8 @@ export function CreateCardScreen({
     const split = splitCardText(lassoText.text);
     setName(split.name);
     setDesc(split.desc);
+    setChecklist(formatCheckItems(split.checkItems));
+    setStep({kind: 'loading'});
     await loadBoards(prefs);
   }, [lasso, loadBoards, store]);
 
@@ -164,6 +179,7 @@ export function CreateCardScreen({
   const writeManually = useCallback(async () => {
     setName('');
     setDesc('');
+    setChecklist('');
     setStep({kind: 'loading'});
     await loadBoards(preferences.current);
   }, [loadBoards]);
@@ -203,12 +219,24 @@ export function CreateCardScreen({
           board.id,
           list.id,
         );
-        setStep({kind: 'done', board, list, card});
+        // The card exists: a failure here must not offer to create it again.
+        let checklistFailed = false;
+        try {
+          await addCardChecklist(
+            client,
+            card.id,
+            parseCheckItemsText(checklist),
+          );
+        } catch (error) {
+          console.warn('[sINK] Failed to add the checklist', error);
+          checklistFailed = true;
+        }
+        setStep({kind: 'done', board, list, card, checklistFailed});
       } catch (error) {
         fail(error, () => setStep({kind: 'confirm', board, list, lists}));
       }
     },
-    [client, desc, fail, name, store],
+    [checklist, client, desc, fail, name, store],
   );
 
   const allBoards = useMemo(
@@ -239,10 +267,23 @@ export function CreateCardScreen({
   const lastUsed = t('card.lastUsed');
 
   switch (step.kind) {
+    case 'recognizing':
+      // Popup shown from the opening of the view until the handwriting
+      // recognition is done.
+      return (
+        <ScreenFrame title={title}>
+          <View style={styles.popupArea}>
+            <View accessibilityRole="progressbar" style={styles.popup}>
+              <Text style={styles.popupText}>{t('card.recognizing')}</Text>
+            </View>
+          </View>
+        </ScreenFrame>
+      );
+
     case 'loading':
       return (
         <ScreenFrame title={title}>
-          <Text style={styles.message}>{t('card.reading')}</Text>
+          <Text style={styles.message}>{t('card.loading')}</Text>
         </ScreenFrame>
       );
 
@@ -389,6 +430,15 @@ export function CreateCardScreen({
               textAlignVertical="top"
               value={desc}
             />
+            <Text style={styles.label}>{t('card.checklist')}</Text>
+            <TextInput
+              accessibilityLabel={t('card.checklist')}
+              multiline
+              onChangeText={setChecklist}
+              style={[styles.input, styles.checklistInput]}
+              textAlignVertical="top"
+              value={checklist}
+            />
             {!canCreate && (
               <Text style={styles.message}>{t('card.nameRequired')}</Text>
             )}
@@ -421,6 +471,11 @@ export function CreateCardScreen({
               })}
             </Text>
             <Text style={styles.preview}>{step.card.name}</Text>
+            {step.checklistFailed && (
+              <Text accessibilityRole="alert" style={styles.error}>
+                {t('card.checklistFailed')}
+              </Text>
+            )}
             <Button primary label={t('common.close')} onPress={close} />
           </View>
         </ScreenFrame>
@@ -513,6 +568,29 @@ const styles = StyleSheet.create({
   },
   descInput: {
     minHeight: 160,
+  },
+  checklistInput: {
+    minHeight: 120,
+  },
+  popupArea: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+    padding: spacing.xl,
+  },
+  popup: {
+    backgroundColor: colors.background,
+    borderColor: colors.foreground,
+    borderRadius: borders.radius,
+    borderWidth: borders.width * 2,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.lg,
+  },
+  popupText: {
+    color: colors.foreground,
+    fontSize: typography.body,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   diagnostics: {
     borderColor: colors.foreground,

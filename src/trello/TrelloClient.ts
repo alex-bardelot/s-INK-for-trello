@@ -12,6 +12,7 @@ import {
   TrelloLabel,
   TrelloList,
   TrelloMember,
+  TrelloNewChecklist,
   TrelloOrganization,
 } from './types';
 
@@ -78,6 +79,8 @@ export function organizationLogoUrl(
 /** Trello limits, from the REST reference of `POST /1/cards`. */
 export const CARD_NAME_MAX_LENGTH = 16384;
 export const CARD_DESC_MAX_LENGTH = 16384;
+/** Trello limit of a checklist or checklist item name. */
+export const CHECKLIST_NAME_MAX_LENGTH = 16384;
 
 /**
  * Minimal client for the Trello REST API.
@@ -248,6 +251,37 @@ export class TrelloClient {
         pos: 'bottom',
       },
     });
+  }
+
+  /** Adds an empty checklist at the bottom of a card. */
+  createChecklist(cardId: string, name: string): Promise<TrelloNewChecklist> {
+    return this.request<TrelloNewChecklist>('/checklists', {
+      method: 'POST',
+      body: {
+        idCard: cardId,
+        name: name.slice(0, CHECKLIST_NAME_MAX_LENGTH),
+        pos: 'bottom',
+      },
+    });
+  }
+
+  /** Adds an item at the bottom of a checklist, ticked or not. */
+  async addCheckItem(
+    checklistId: string,
+    name: string,
+    checked = false,
+  ): Promise<void> {
+    await this.request<unknown>(
+      `/checklists/${encodeURIComponent(checklistId)}/checkItems`,
+      {
+        method: 'POST',
+        body: {
+          name: name.slice(0, CHECKLIST_NAME_MAX_LENGTH),
+          checked,
+          pos: 'bottom',
+        },
+      },
+    );
   }
 
   /** Returns the labels of a board, named or not. */

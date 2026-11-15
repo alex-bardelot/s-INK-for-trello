@@ -3,6 +3,24 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.48.0 — Checklists from the lasso, and a recognizing popup
+
+- **New Trello Card** reads checkboxes: every line of the selection that
+  starts with a square (`☐`, `□`, `▢`, `[ ]`…) becomes an item of a
+  checklist named `Check-list`, added to the new card in the same order.
+  A ticked or filled square (`☑`, `☒`, `■`, `[x]`…) makes a ticked item.
+- The card title is the first line without a square, the description the
+  other lines without one.
+- The review page has a third field, the checklist, one item per line,
+  to fix or complete the items before the card is created.
+- If the card is created but its checklist cannot be added, the last page
+  says so, rather than offering to create the card again.
+- A "Trello card creation: recognizing…" popup now shows during the
+  handwriting recognition, which takes a while, and closes when it is done.
+  The lasso is still read before the view opens (the host drops it once the
+  view is shown); only the recognition, which works on the elements already
+  read, runs with the view open.
+
 ## 0.47.2 — The new link stays selected
 
 - On the tablet, the title of a new card note was selected when the note

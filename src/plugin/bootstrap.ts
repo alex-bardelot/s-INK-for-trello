@@ -96,8 +96,10 @@ export function bootstrapPlugin(): void {
           const intent = handleButtonPress(event.id);
           if (intent?.kind === 'lassoCreateCard') {
             // The lasso button does not open the view by itself: the
-            // selection must be read before the host drops the lasso.
-            intent.lasso.finally(() =>
+            // selection must be read before the host drops the lasso. The
+            // view then shows a "Recognizing…" popup until the slow
+            // handwriting recognition is done.
+            intent.captured.then(() =>
               PluginManager.showPluginView().catch(error =>
                 console.warn(
                   `${LOG_TAG} Failed to show the plugin view`,

@@ -135,21 +135,71 @@ export function orderLists(
 /** Maximum length of a card title built from the selection. */
 const TITLE_MAX_LENGTH = Math.min(CARD_NAME_MAX_LENGTH, 200);
 
+/** An item of the checklist written in the selection. */
+export interface CardCheckItem {
+  name: string;
+  checked: boolean;
+}
+
+/** A card title, description and checklist taken from the selection. */
+export interface CardText {
+  name: string;
+  desc: string;
+  checkItems: CardCheckItem[];
+}
+
+/** Squares the recognition engine or a text box may start a line with. */
+const EMPTY_BOXES = '□☐▢◻◽⬜❏❐❑❒⧠';
+/** Squares that are ticked or filled in. */
+const TICKED_BOXES = '☑☒✅■▣◼◾⬛';
+/** Groups: an empty square, a ticked square, then the item text. */
+const CHECKBOX_LINE = new RegExp(
+  `^(?:([${EMPTY_BOXES}]|\\[\\s?\\])|([${TICKED_BOXES}]|\\[[xX✓✔]\\]))\\s*(.*)$`,
+  'u',
+);
+
+/**
+ * Reads a checkbox line (`☐ Buy milk`, `☑ Done`, `[ ] Buy milk`, `[x] Done`).
+ * Returns `null` for any other line.
+ */
+export function parseCheckItem(line: string): CardCheckItem | null {
+  const match = CHECKBOX_LINE.exec(line.trim());
+  if (!match) {
+    return null;
+  }
+  const name = match[3].trim();
+  if (!name) {
+    return null;
+  }
+  return {name, checked: Boolean(match[2])};
+}
+
 /**
  * Splits text taken from the lasso selection into a card title (first
- * non-empty line) and a description (the remaining lines).
+ * non-empty line without a square), a description (the other lines) and a
+ * checklist (every line that starts with a square).
  */
-export function splitCardText(text: string): {name: string; desc: string} {
+export function splitCardText(text: string): CardText {
   const lines = text
     .replace(/\r\n?/g, '\n')
     .split('\n')
     .map(line => line.trim());
-  const first = lines.findIndex(line => line.length > 0);
-  if (first < 0) {
-    return {name: '', desc: ''};
+  const checkItems: CardCheckItem[] = [];
+  const textLines: string[] = [];
+  for (const line of lines) {
+    const item = parseCheckItem(line);
+    if (item) {
+      checkItems.push(item);
+    } else {
+      textLines.push(line);
+    }
   }
-  let name = lines[first];
-  let desc = lines
+  const first = textLines.findIndex(line => line.length > 0);
+  if (first < 0) {
+    return {name: '', desc: '', checkItems};
+  }
+  let name = textLines[first];
+  let desc = textLines
     .slice(first + 1)
     .join('\n')
     .trim();
@@ -157,5 +207,25 @@ export function splitCardText(text: string): {name: string; desc: string} {
     desc = [name, desc].filter(Boolean).join('\n');
     name = name.slice(0, TITLE_MAX_LENGTH - 1).trimEnd() + '…';
   }
-  return {name, desc};
+  return {name, desc, checkItems};
+}
+
+/** Checklist items as edited on the review page: one item per line. */
+export function formatCheckItems(items: readonly CardCheckItem[]): string {
+  return items
+    .map(item => (item.checked ? `☑ ${item.name}` : item.name))
+    .join('\n');
+}
+
+/**
+ * Reads back the checklist edited on the review page. Each non-empty line is
+ * an item; a line may still start with a square, ticked or not.
+ */
+export function parseCheckItemsText(text: string): CardCheckItem[] {
+  return text
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map(line => parseCheckItem(line) ?? {name: line, checked: false});
 }

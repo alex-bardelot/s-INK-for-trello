@@ -17,6 +17,12 @@ export type LaunchIntent =
        * lasso APIs fail with error 904 ("no lasso").
        */
       lasso: Promise<LassoTextResult>;
+      /**
+       * Settles once the selection itself is read, before the handwriting
+       * recognition: the view can then be shown with a "Recognizing…"
+       * popup without making the host drop the lasso too early.
+       */
+      captured: Promise<void>;
     }
   | {
       /** An s-INK link was tapped in a note. */
@@ -26,8 +32,13 @@ export type LaunchIntent =
       target: InkLinkTarget;
     };
 
-/** Reads the current lasso selection. */
-export type SelectionReader = () => Promise<LassoTextResult>;
+/**
+ * Reads the current lasso selection, calling `onCaptured` once the lasso
+ * is no longer needed (before the handwriting recognition).
+ */
+export type SelectionReader = (
+  onCaptured: () => void,
+) => Promise<LassoTextResult>;
 
 type Listener = () => void;
 
@@ -35,12 +46,28 @@ let current: LaunchIntent = {kind: 'boards'};
 let requestCounter = 0;
 const listeners = new Set<Listener>();
 
-async function readSafely(read: SelectionReader): Promise<LassoTextResult> {
-  try {
-    return await read();
-  } catch (error) {
-    return {ok: false, error: 'noSelection', diagnostics: String(error)};
-  }
+/**
+ * Reads the selection without ever rejecting. `captured` settles when the
+ * reader says so, or at the latest when the reading ends.
+ */
+function readSafely(read: SelectionReader): {
+  lasso: Promise<LassoTextResult>;
+  captured: Promise<void>;
+} {
+  let markCaptured: () => void = () => {};
+  const captured = new Promise<void>(resolve => {
+    markCaptured = resolve;
+  });
+  const lasso = (async (): Promise<LassoTextResult> => {
+    try {
+      return await read(markCaptured);
+    } catch (error) {
+      return {ok: false, error: 'noSelection', diagnostics: String(error)};
+    } finally {
+      markCaptured();
+    }
+  })();
+  return {lasso, captured};
 }
 
 /**
@@ -60,7 +87,7 @@ export function handleButtonPress(
     current = {
       kind: 'lassoCreateCard',
       requestId: requestCounter,
-      lasso: readSafely(readSelection),
+      ...readSafely(readSelection),
     };
   } else if (buttonId === ButtonId.Open) {
     current = {kind: 'boards'};

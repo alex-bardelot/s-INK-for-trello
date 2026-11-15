@@ -216,6 +216,12 @@ export interface TrelloCard {
   shortUrl: string;
 }
 
+/** A checklist, as returned by `POST /1/checklists` (without its items). */
+export interface TrelloNewChecklist {
+  id: string;
+  name: string;
+}
+
 /** Fields needed to create a card. */
 export interface NewCard {
   idList: string;

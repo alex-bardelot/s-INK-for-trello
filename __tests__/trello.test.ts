@@ -195,6 +195,33 @@ describe('TrelloClient', () => {
     });
   });
 
+  it('adds a checklist and its items to a card', async () => {
+    const fetchImpl = jest
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({id: 'cl1', name: 'Check-list'}))
+      .mockResolvedValueOnce(jsonResponse({id: 'i1'}));
+    const client = clientWith(fetchImpl);
+    const checklist = await client.createChecklist('c1', 'Check-list');
+    await client.addCheckItem(checklist.id, 'Buy me a coffee', true);
+
+    const [listUrl, listInit] = fetchImpl.mock.calls[0];
+    expect(listUrl).toBe('https://api.trello.com/1/checklists');
+    expect(listInit.method).toBe('POST');
+    expect(JSON.parse(listInit.body)).toEqual({
+      idCard: 'c1',
+      name: 'Check-list',
+      pos: 'bottom',
+    });
+    const [itemUrl, itemInit] = fetchImpl.mock.calls[1];
+    expect(itemUrl).toBe('https://api.trello.com/1/checklists/cl1/checkItems');
+    expect(itemInit.method).toBe('POST');
+    expect(JSON.parse(itemInit.body)).toEqual({
+      name: 'Buy me a coffee',
+      checked: true,
+      pos: 'bottom',
+    });
+  });
+
   it('reads the labels of a board', async () => {
     const fetchImpl = jest
       .fn()

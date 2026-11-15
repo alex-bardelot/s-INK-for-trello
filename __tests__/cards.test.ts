@@ -2,12 +2,19 @@ jest.mock('sn-plugin-lib', () => ({}));
 
 import {
   canAddCards,
+  formatCheckItems,
   hasHiddenBoards,
   isObserverOf,
   offerBoards,
   orderLists,
+  parseCheckItem,
+  parseCheckItemsText,
   splitCardText,
 } from '../src/cards/ordering';
+import {
+  addCardChecklist,
+  NEW_CARD_CHECKLIST_NAME,
+} from '../src/cards/checklist';
 import {
   CARD_PREFERENCES_KEY,
   loadCardPreferences,
@@ -222,11 +229,116 @@ describe('splitCardText', () => {
   it('uses the first non-empty line as the title', () => {
     expect(
       splitCardText('\n  Buy milk \r\n2 litres\n\nsemi-skimmed\n'),
-    ).toEqual({name: 'Buy milk', desc: '2 litres\n\nsemi-skimmed'});
+    ).toEqual({
+      name: 'Buy milk',
+      desc: '2 litres\n\nsemi-skimmed',
+      checkItems: [],
+    });
   });
 
   it('handles empty text', () => {
-    expect(splitCardText(' \n ')).toEqual({name: '', desc: ''});
+    expect(splitCardText(' \n ')).toEqual({
+      name: '',
+      desc: '',
+      checkItems: [],
+    });
+  });
+
+  it('turns lines starting with a square into checklist items', () => {
+    expect(
+      splitCardText(
+        'Donate button\nAdd a support link\n☐ Buy me a coffee\n□Don paypal\nin the footer\n☑ Draft the text\n[ ] Test\n[x] Ship',
+      ),
+    ).toEqual({
+      name: 'Donate button',
+      desc: 'Add a support link\nin the footer',
+      checkItems: [
+        {name: 'Buy me a coffee', checked: false},
+        {name: 'Don paypal', checked: false},
+        {name: 'Draft the text', checked: true},
+        {name: 'Test', checked: false},
+        {name: 'Ship', checked: true},
+      ],
+    });
+  });
+
+  it('takes the title from the first line without a square', () => {
+    expect(splitCardText('☐ First item\nTitle\n☐ Second item')).toEqual({
+      name: 'Title',
+      desc: '',
+      checkItems: [
+        {name: 'First item', checked: false},
+        {name: 'Second item', checked: false},
+      ],
+    });
+  });
+
+  it('keeps a lone square as text', () => {
+    expect(splitCardText('Title\n☐').desc).toBe('☐');
+  });
+});
+
+describe('checklist text', () => {
+  it('reads parseable lines only', () => {
+    expect(parseCheckItem('  ☐  Buy milk ')).toEqual({
+      name: 'Buy milk',
+      checked: false,
+    });
+    expect(parseCheckItem('■ Done')).toEqual({name: 'Done', checked: true});
+    expect(parseCheckItem('Buy milk')).toBeNull();
+    expect(parseCheckItem('[a] Buy milk')).toBeNull();
+  });
+
+  it('round-trips through the review page field', () => {
+    const items = [
+      {name: 'Buy me a coffee', checked: false},
+      {name: 'Draft the text', checked: true},
+    ];
+    const text = formatCheckItems(items);
+    expect(text).toBe('Buy me a coffee\n☑ Draft the text');
+    expect(parseCheckItemsText(`${text}\n\n  New item \n☐ Boxed`)).toEqual([
+      ...items,
+      {name: 'New item', checked: false},
+      {name: 'Boxed', checked: false},
+    ]);
+  });
+});
+
+describe('addCardChecklist', () => {
+  function fakeClient() {
+    const calls: string[] = [];
+    return {
+      calls,
+      createChecklist: jest.fn(async (cardId: string, name: string) => {
+        calls.push(`checklist ${cardId} ${name}`);
+        return {id: 'cl1', name};
+      }),
+      addCheckItem: jest.fn(
+        async (checklistId: string, name: string, checked?: boolean) => {
+          calls.push(`item ${checklistId} ${name} ${checked}`);
+        },
+      ),
+    };
+  }
+
+  it('creates the "Check-list" checklist with its items in order', async () => {
+    const client = fakeClient();
+    await addCardChecklist(client, 'c1', [
+      {name: 'Buy me a coffee', checked: false},
+      {name: 'Don paypal', checked: true},
+    ]);
+    expect(NEW_CARD_CHECKLIST_NAME).toBe('Check-list');
+    expect(client.calls).toEqual([
+      'checklist c1 Check-list',
+      'item cl1 Buy me a coffee false',
+      'item cl1 Don paypal true',
+    ]);
+  });
+
+  it('adds no checklist without items', async () => {
+    const client = fakeClient();
+    await addCardChecklist(client, 'c1', []);
+    expect(client.createChecklist).not.toHaveBeenCalled();
   });
 
   it('moves an overly long first line to the description', () => {
@@ -316,6 +428,40 @@ describe('launch intent', () => {
     if (intent?.kind === 'lassoCreateCard') {
       await expect(intent.lasso).resolves.toEqual({ok: true, text: 'Buy milk'});
     }
+  });
+
+  it('tells when the selection is captured, before the recognition', async () => {
+    let finishRecognition: () => void = () => {};
+    const events: string[] = [];
+    const intent = handleButtonPress(
+      ButtonId.LassoCreateCard,
+      async onCaptured => {
+        onCaptured();
+        await new Promise<void>(resolve => {
+          finishRecognition = resolve;
+        });
+        return {ok: true, text: 'Buy milk'};
+      },
+    );
+    if (intent?.kind !== 'lassoCreateCard') {
+      throw new Error('Expected a lasso intent');
+    }
+    intent.lasso.then(() => events.push('recognized'));
+    await intent.captured.then(() => events.push('captured'));
+    expect(events).toEqual(['captured']);
+    finishRecognition();
+    await intent.lasso;
+    expect(events).toEqual(['captured', 'recognized']);
+  });
+
+  it('settles "captured" when the reader fails before capturing', async () => {
+    const intent = handleButtonPress(ButtonId.LassoCreateCard, () =>
+      Promise.resolve({ok: false, error: 'noSelection', diagnostics: ''}),
+    );
+    if (intent?.kind !== 'lassoCreateCard') {
+      throw new Error('Expected a lasso intent');
+    }
+    await expect(intent.captured).resolves.toBeUndefined();
   });
 
   it('turns a failing reader into a "no selection" result', async () => {

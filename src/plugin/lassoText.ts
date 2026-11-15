@@ -162,8 +162,14 @@ function countTypes(elements: LassoElement[]): string {
  * Reads the text of the current lasso selection: handwriting is converted
  * by the device's recognition engine, text boxes are read as is.
  * Several strategies are tried in turn, since the SDK documents little.
+ *
+ * @param onCaptured - Called once the selection itself is read (elements,
+ *   typed text, page size), before the slow handwriting recognition, which
+ *   no longer needs the lasso. Not called if the selection cannot be read.
  */
-export async function readLassoText(): Promise<LassoTextResult> {
+export async function readLassoText(
+  onCaptured: () => void = () => {},
+): Promise<LassoTextResult> {
   // getLassoElements is a file read API: without FILE:READ the host rejects it.
   if (
     !(await ensureFileReadPermission(i18n.t('card.filePermissionRationale')))
@@ -194,9 +200,13 @@ export async function readLassoText(): Promise<LassoTextResult> {
   const others = elements.filter(e => !TEXT_TYPES.has(e.type));
   const handwritingCandidates = strokes.length > 0 ? strokes : others;
 
+  // Read while the note is still in front, before the view is shown.
+  const pageSize =
+    handwritingCandidates.length > 0 ? await getCurrentPageSize(log) : null;
+  onCaptured();
+
   let handwriting = '';
   if (handwritingCandidates.length > 0) {
-    const pageSize = await getCurrentPageSize(log);
     const sizes = [pageSize ?? FALLBACK_PAGE_SIZE];
     if (
       pageSize &&
