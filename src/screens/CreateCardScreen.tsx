@@ -2,10 +2,12 @@ import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   Pressable,
   ScrollView,
+  StyleProp,
   StyleSheet,
   Text,
   TextInput,
   View,
+  ViewStyle,
 } from 'react-native';
 import {PluginManager} from 'sn-plugin-lib';
 
@@ -47,6 +49,7 @@ import {
 import {Button} from '../components/Button';
 import {ChoiceList} from '../components/ChoiceList';
 import {CloseIcon} from '../components/CloseIcon';
+import {BlockIcon, BlockIconKind} from '../components/BlockIcon';
 import {MemberAvatar} from '../components/MemberAvatar';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {SmallButton} from '../components/SmallButton';
@@ -670,7 +673,11 @@ export function CreateCardScreen({
               ) : null}
               <View style={styles.placeBlock}>
                 <View style={styles.placeRow}>
-                  <Text style={styles.placeLabel}>{t('card.board')}</Text>
+                  <BlockTitle
+                    icon="board"
+                    title={t('card.board')}
+                    style={styles.placeLabel}
+                  />
                   <View style={styles.placeValue}>
                     <Button
                       primary={!board}
@@ -680,7 +687,11 @@ export function CreateCardScreen({
                   </View>
                 </View>
                 <View style={styles.placeRow}>
-                  <Text style={styles.placeLabel}>{t('card.list')}</Text>
+                  <BlockTitle
+                    icon="list"
+                    title={t('card.list')}
+                    style={styles.placeLabel}
+                  />
                   {/* Elbow from under the board down to the list: the list
                     belongs to the board. */}
                   <View style={styles.connector}>
@@ -721,7 +732,7 @@ export function CreateCardScreen({
                 </View>
               )}
 
-              <Section title={t('card.labels')}>
+              <Section icon="labels" title={t('card.labels')}>
                 {!board ? (
                   <Text style={styles.hint}>{t('card.chooseBoardFirst')}</Text>
                 ) : !ready ? null : ready.labels.length === 0 ? (
@@ -754,7 +765,7 @@ export function CreateCardScreen({
                 )}
               </Section>
 
-              <Section title={t('card.members')}>
+              <Section icon="members" title={t('card.members')}>
                 {!board ? (
                   <Text style={styles.hint}>{t('card.chooseBoardFirst')}</Text>
                 ) : !ready ? null : (
@@ -789,7 +800,7 @@ export function CreateCardScreen({
                   what it says. */}
               <View style={styles.separator} />
 
-              <Section title={t('card.name')}>
+              <Section icon="title" title={t('card.name')}>
                 <TextInput
                   accessibilityLabel={t('card.name')}
                   multiline
@@ -799,7 +810,7 @@ export function CreateCardScreen({
                 />
               </Section>
 
-              <Section title={t('card.description')}>
+              <Section icon="description" title={t('card.description')}>
                 <TextInput
                   accessibilityLabel={t('card.description')}
                   multiline
@@ -810,7 +821,7 @@ export function CreateCardScreen({
                 />
               </Section>
 
-              <Section title={t('card.checklist')}>
+              <Section icon="checklist" title={t('card.checklist')}>
                 {items.map(item => (
                   <View key={item.key} style={styles.itemRow}>
                     <Pressable
@@ -932,18 +943,41 @@ export function CreateCardScreen({
  * A titled block of the form, underlined like the sections of a note.
  * `plain` leaves the line out, for a block that is a single framed field.
  */
+/** Title of a block, after the icon that identifies it. */
+function BlockTitle({
+  icon,
+  title,
+  style,
+}: {
+  icon: BlockIconKind;
+  title: string;
+  style?: StyleProp<ViewStyle>;
+}): React.JSX.Element {
+  return (
+    <View style={[styles.blockTitle, style]}>
+      <BlockIcon kind={icon} size={BLOCK_ICON_SIZE} color={colors.foreground} />
+      <Text
+        accessibilityRole="header"
+        numberOfLines={1}
+        style={styles.blockTitleText}>
+        {title}
+      </Text>
+    </View>
+  );
+}
+
 function Section({
+  icon,
   title,
   children,
 }: {
+  icon: BlockIconKind;
   title: string;
   children: React.ReactNode;
 }): React.JSX.Element {
   return (
     <View style={styles.section}>
-      <Text accessibilityRole="header" style={styles.sectionTitle}>
-        {title}
-      </Text>
+      <BlockTitle icon={icon} title={title} />
       <View style={styles.sectionBody}>{children}</View>
     </View>
   );
@@ -1122,7 +1156,9 @@ async function loadWritablePublicBoards(
 const BOX_SIZE = 36;
 /** Space between the board row and the list row, spanned by the elbow. */
 const PLACE_GAP = spacing.md;
-const PLACE_LABEL_WIDTH = 120;
+/** Room for the icon and the longest "Board" or "List" title. */
+const PLACE_LABEL_WIDTH = 170;
+const BLOCK_ICON_SIZE = 26;
 const CONNECTOR_DOT = 14;
 
 const styles = StyleSheet.create({
@@ -1217,9 +1253,6 @@ const styles = StyleSheet.create({
   placeLabel: {
     width: PLACE_LABEL_WIDTH,
     marginRight: spacing.md,
-    color: colors.foreground,
-    fontSize: typography.label,
-    fontWeight: '700',
   },
   placeValue: {
     flex: 1,
@@ -1275,7 +1308,13 @@ const styles = StyleSheet.create({
   section: {
     gap: spacing.sm,
   },
-  sectionTitle: {
+  blockTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  blockTitleText: {
+    flexShrink: 1,
     color: colors.foreground,
     fontSize: typography.label,
     fontWeight: '700',

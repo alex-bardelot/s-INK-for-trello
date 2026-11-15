@@ -3,6 +3,16 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.51.0 — Block icons on the New Trello Card page
+
+- Each block of the New Trello Card page has an icon before its title,
+  to find it at a glance: a board for **Board**, a bulleted list for
+  **List**, a tag for **Labels**, a person for **Members**, a T for
+  **Title**, a paragraph for **Description** and a ticked box for
+  **Checklist**.
+- The icons are drawn by the plugin, with the same line weight as its
+  other icons; they do not depend on the tablet's fonts.
+
 ## 0.50.3 — One separator on the New Trello Card page
 
 - The headings of the New Trello Card page (Labels, Members, Checklist)
