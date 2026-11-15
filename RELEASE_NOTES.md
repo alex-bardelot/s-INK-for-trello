@@ -3,6 +3,16 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.33.0 — Hidden Diagnostics category in Settings
+
+- The s-INK link log moves from About to a **Diagnostics** category of
+  its own in Settings.
+- The category is hidden at first. Pressing **About** 7 times in quick
+  succession (at most 700 ms apart) shows it and opens it, like
+  Android's developer options. It then stays visible until the plugin
+  restarts.
+- New `RapidTapCounter` helper, with tests. New string in all locales.
+
 ## 0.32.1 — Link mode hides the "+" public board tile
 
 - While a lasso selection waits to be linked, the boards page also hides

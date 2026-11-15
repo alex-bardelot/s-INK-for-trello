@@ -88,6 +88,7 @@
   "settings.modeAll": "すべて",
   "settings.general": "一般",
   "settings.about": "このプラグインについて",
+  "settings.diagnostics": "診断",
   "settings.version": "バージョン {version}",
   "settings.aboutDescription": "Supernote で Trello のボードを閲覧し、手書きノートからカードを追加できます。",
   "settings.disclaimer": "s-INK for Trello は独立したコミュニティプロジェクトです。Trello, Inc.、Atlassian、Ratta（Supernote）とは提携・関連しておらず、これらの企業による承認・推奨も受けておらず、いかなる形でも公式な関係はありません。Trello® は Atlassian の登録商標、Supernote は Ratta の商標です。これらの名称は、本プラグインの連携先を示す目的でのみ使用しています。",

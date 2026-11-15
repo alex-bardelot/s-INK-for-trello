@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 
 import pluginConfig from '../../PluginConfig.json';
@@ -32,6 +32,11 @@ import {Switch} from '../components/Switch';
 import {BoardsPreferences} from '../boards/preferences';
 import {useTranslation} from '../i18n';
 import {TokenStorage} from '../session/trelloSession';
+import {
+  diagnosticsUnlocked,
+  RapidTapCounter,
+  unlockDiagnostics,
+} from '../settings/rapidTaps';
 import {KeyValueStore} from '../storage/keyValueStore';
 import {TrelloClient, TrelloMember} from '../trello';
 import {PublicBoardsSettings} from './PublicBoardsSettings';
@@ -84,11 +89,31 @@ export function SettingsScreen({
 }: SettingsScreenProps): React.JSX.Element {
   const {t} = useTranslation();
   const [category, setCategory] = useState<SettingsCategory>('general');
+  // Diagnostics is hidden until About is pressed 7 times quickly.
+  const [showDiagnostics, setShowDiagnostics] = useState(diagnosticsUnlocked);
+  const aboutTaps = useRef(new RapidTapCounter()).current;
 
   const categories: {value: SettingsCategory; label: string}[] = [
     {value: 'general', label: t('settings.general')},
     {value: 'about', label: t('settings.about')},
+    ...(showDiagnostics
+      ? [
+          {
+            value: 'diagnostics' as const,
+            label: t('settings.diagnostics'),
+          },
+        ]
+      : []),
   ];
+
+  const select = (value: SettingsCategory) => {
+    setCategory(value);
+    if (value === 'about' && !showDiagnostics && aboutTaps.tap()) {
+      unlockDiagnostics();
+      setShowDiagnostics(true);
+      setCategory('diagnostics');
+    }
+  };
 
   return (
     <ScreenFrame title={t('settings.title')} onBack={onBack} flush>
@@ -101,7 +126,7 @@ export function SettingsScreen({
                 <Pressable
                   accessibilityRole="tab"
                   accessibilityState={{selected}}
-                  onPress={() => setCategory(item.value)}
+                  onPress={() => select(item.value)}
                   style={styles.category}>
                   <Text
                     style={[styles.categoryLabel, selected && styles.bold]}
@@ -162,8 +187,12 @@ export function SettingsScreen({
                 )}
               </Section>
             </>
-          ) : (
+          ) : category === 'about' ? (
             <AboutSettings />
+          ) : (
+            <Section title={t('settings.diagnostics')}>
+              <InkLinkDiagnostics />
+            </Section>
           )}
         </ScrollView>
       </View>
@@ -172,7 +201,7 @@ export function SettingsScreen({
 }
 
 /** Categories of the left column, like the Supernote system settings. */
-type SettingsCategory = 'general' | 'about';
+type SettingsCategory = 'general' | 'about' | 'diagnostics';
 
 /** Name, version and description of the plugin, then the non-affiliation notice. */
 function AboutSettings(): React.JSX.Element {
@@ -185,7 +214,6 @@ function AboutSettings(): React.JSX.Element {
       </Text>
       <Text style={styles.text}>{t('settings.aboutDescription')}</Text>
       <Text style={styles.disclaimer}>{t('settings.disclaimer')}</Text>
-      <InkLinkDiagnostics />
     </Section>
   );
 }

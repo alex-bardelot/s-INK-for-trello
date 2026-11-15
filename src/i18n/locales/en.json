@@ -89,6 +89,7 @@
   "settings.modeAll": "All cards",
   "settings.general": "General",
   "settings.about": "About",
+  "settings.diagnostics": "Diagnostics",
   "settings.version": "Version {version}",
   "settings.aboutDescription": "Read your Trello boards and add cards from your handwritten notes, on your Supernote.",
   "settings.disclaimer": "s-INK for Trello is an independent community project. It is not affiliated, associated, authorized, endorsed by, or in any way officially connected with Trello, Inc., Atlassian or Ratta (Supernote). Trello® is a registered trademark of Atlassian; Supernote is a trademark of Ratta. Both are used here only to describe what the plugin works with.",

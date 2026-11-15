@@ -89,6 +89,7 @@
   "settings.modeAll": "Toutes",
   "settings.general": "Général",
   "settings.about": "À propos",
+  "settings.diagnostics": "Diagnostic",
   "settings.version": "Version {version}",
   "settings.aboutDescription": "Consultez vos tableaux Trello et ajoutez des cartes depuis vos notes manuscrites, sur votre Supernote.",
   "settings.disclaimer": "s-INK for Trello est un projet communautaire indépendant. Il n'est ni affilié, ni associé, ni autorisé, ni approuvé par Trello, Inc., Atlassian ou Ratta (Supernote), ni officiellement lié à ces sociétés de quelque manière que ce soit. Trello® est une marque déposée d'Atlassian ; Supernote est une marque de Ratta. Ces noms ne servent ici qu'à indiquer avec quoi le plugin fonctionne.",
