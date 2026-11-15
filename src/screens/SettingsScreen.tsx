@@ -55,6 +55,11 @@ import {
 import {KeyValueStore} from '../storage/keyValueStore';
 import {TrelloClient, TrelloMember} from '../trello';
 import {PublicBoardsSettings} from './PublicBoardsSettings';
+import {
+  RELEASE_NOTES,
+  ReleaseNotesScreen,
+  ReleaseNoteView,
+} from './ReleaseNotes';
 import {borders, colors, spacing, typography} from '../theme';
 
 const AVATAR_SIZE = 64;
@@ -115,6 +120,8 @@ export function SettingsScreen({
   // Diagnostics is hidden until About is pressed 7 times quickly.
   const [showDiagnostics, setShowDiagnostics] = useState(diagnosticsUnlocked);
   const aboutTaps = useRef(new RapidTapCounter()).current;
+  // Sub page of About listing every release.
+  const [releaseNotesOpen, setReleaseNotesOpen] = useState(false);
 
   const categories: {value: SettingsCategory; label: string}[] = [
     {value: 'general', label: t('settings.general')},
@@ -142,6 +149,10 @@ export function SettingsScreen({
       setCategory('diagnostics');
     }
   };
+
+  if (releaseNotesOpen) {
+    return <ReleaseNotesScreen onBack={() => setReleaseNotesOpen(false)} />;
+  }
 
   return (
     <ScreenFrame title={t('settings.title')} onBack={onBack} flush>
@@ -242,7 +253,9 @@ export function SettingsScreen({
           ) : category === 'links' ? (
             <NoteLinkSettings store={store} />
           ) : category === 'about' ? (
-            <AboutSettings />
+            <AboutSettings
+              onOpenReleaseNotes={() => setReleaseNotesOpen(true)}
+            />
           ) : (
             <Section title={t('settings.diagnostics')}>
               <InkLinkDiagnostics />
@@ -263,17 +276,35 @@ export type SettingsCategory =
   | 'diagnostics';
 
 /** Name, version and description of the plugin, then the non-affiliation notice. */
-function AboutSettings(): React.JSX.Element {
+function AboutSettings({
+  onOpenReleaseNotes,
+}: {
+  onOpenReleaseNotes: () => void;
+}): React.JSX.Element {
   const {t} = useTranslation();
+  const latest = RELEASE_NOTES[0];
   return (
-    <Section title={t('settings.about')}>
-      <Text style={styles.name}>{t('app.name')}</Text>
-      <Text style={styles.text}>
-        {t('settings.version', {version: pluginConfig.versionName})}
-      </Text>
-      <Text style={styles.text}>{t('settings.aboutDescription')}</Text>
-      <Text style={styles.disclaimer}>{t('settings.disclaimer')}</Text>
-    </Section>
+    <>
+      <Section title={t('settings.about')}>
+        <Text style={styles.name}>{t('app.name')}</Text>
+        <Text style={styles.text}>
+          {t('settings.version', {version: pluginConfig.versionName})}
+        </Text>
+        <Text style={styles.text}>{t('settings.aboutDescription')}</Text>
+        <Text style={styles.disclaimer}>{t('settings.disclaimer')}</Text>
+      </Section>
+
+      {/* The latest release only; the others are one tap away. */}
+      <Section title={t('settings.releaseNotesLatest')}>
+        {latest && <ReleaseNoteView note={latest} />}
+        <View style={styles.actions}>
+          <Button
+            label={t('settings.releaseNotesAll')}
+            onPress={onOpenReleaseNotes}
+          />
+        </View>
+      </Section>
+    </>
   );
 }
 

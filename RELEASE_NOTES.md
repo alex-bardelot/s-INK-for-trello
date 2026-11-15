@@ -3,6 +3,18 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.42.0 — Release notes in Settings > About
+
+- Settings > About shows a **What's new** section with the latest
+  release, and an **All release notes** button opening a page with
+  every release, newest first.
+- These notes come from this file, bundled with the plugin: Metro and
+  Jest import `.md` files as text (`markdownTransformer.js`,
+  `jest/markdownTransform.js`). `src/settings/releaseNotes.ts` reads the
+  entries, bullets and bold or code spans; covered by tests, including
+  one checking that the newest entry matches the plugin version.
+- New strings in all locales. The notes themselves stay in English.
+
 ## 0.41.3 — Public add and Trello connect buttons
 
 - In Settings > General > Main page, **Quick add button** is renamed
