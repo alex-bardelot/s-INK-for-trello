@@ -69,6 +69,20 @@ export function paginate(
   return pages;
 }
 
+/**
+ * The page that holds the card at `index`, or `null` if none does (the
+ * card is not in the list: `index` is -1).
+ */
+export function pageOfItem(
+  pages: readonly CardPage[],
+  index: number,
+): number | null {
+  const found = pages.findIndex(
+    page => index >= page.start && index < page.end,
+  );
+  return found >= 0 ? found : null;
+}
+
 /** Groups cards by list id, keeping their order. */
 export function groupCardsByList(
   cards: readonly TrelloBoardCard[],

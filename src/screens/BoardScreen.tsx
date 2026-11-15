@@ -29,6 +29,7 @@ import {
   groupCardsByList,
   orientationOf,
   pageCount,
+  pageOfItem,
   paginate,
   SwipeDirection,
 } from '../board/layout';
@@ -91,8 +92,13 @@ export interface BoardScreenProps {
   store: KeyValueStore;
   /** Id of the signed-in member, whose cards Focus mode keeps. */
   memberId: string;
-  /** Card opened over the board once it is loaded (from an s-INK link). */
+  /**
+   * Card the board opens at, once loaded: the whole board shows, at the
+   * page of its list and at the page of its list's cards where it is.
+   */
   initialCardId?: string;
+  /** Whether the initial card also opens over the board (s-INK links). */
+  openInitialCard?: boolean;
   onBack: () => void;
   /** Called when Trello rejects the token while loading. */
   onTokenRejected: () => void;
@@ -109,6 +115,7 @@ export function BoardScreen({
   store,
   memberId,
   initialCardId,
+  openInitialCard = true,
   onBack,
   onTokenRejected,
 }: BoardScreenProps): React.JSX.Element {
@@ -123,6 +130,9 @@ export function BoardScreen({
   const [focus, setFocus] = useState<FocusSettings>(DEFAULT_FOCUS_SETTINGS);
   const [tagsOpen, setTagsOpen] = useState(false);
   const [openCard, setOpenCard] = useState<TrelloBoardCard | null>(null);
+  // Opened at a card, the whole board shows whatever the saved mode, so
+  // that the card is there; choosing a mode goes back to it.
+  const [wholeBoard, setWholeBoard] = useState(!!initialCardId);
 
   useEffect(() => {
     let active = true;
@@ -179,7 +189,9 @@ export function BoardScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [online]);
 
-  // A card asked for by an s-INK link opens once, on the first load.
+  // The board opens at the initial card once, on the first load: its list
+  // comes first on the page of lists (its column pages to the card), and an
+  // s-INK link also opens the card.
   const [initialCardShown, setInitialCardShown] = useState(false);
   useEffect(() => {
     if (!initialCardId || initialCardShown || state.status !== 'loaded') {
@@ -189,11 +201,17 @@ export function BoardScreen({
     for (const cards of state.cardsByList.values()) {
       const card = cards.find(candidate => candidate.id === initialCardId);
       if (card) {
-        setOpenCard(card);
+        const index = state.lists.findIndex(list => list.id === card.idList);
+        if (index >= 0) {
+          setFirstList(index);
+        }
+        if (openInitialCard) {
+          setOpenCard(card);
+        }
         return;
       }
     }
-  }, [initialCardId, initialCardShown, state]);
+  }, [initialCardId, initialCardShown, openInitialCard, state]);
 
   const columns = preferences[orientation];
 
@@ -207,6 +225,7 @@ export function BoardScreen({
   const changeMode = useCallback(
     (choice: ModeChoice) => {
       updateFocus({...focus, mode: choice === 'all' ? null : choice});
+      setWholeBoard(false);
       setTagsOpen(false);
     },
     [focus, updateFocus],
@@ -214,7 +233,7 @@ export function BoardScreen({
   // Focus and Review are about the user's own cards: they make no sense on
   // Supernote's roadmap, where the board is always shown in full.
   const modesAvailable = !isSupernoteRoadmap(board);
-  const mode = modesAvailable ? focus.mode : null;
+  const mode = modesAvailable && !wholeBoard ? focus.mode : null;
   const focusOn = mode === 'focus';
   const modeChoices: Segment<ModeChoice>[] = [
     {value: 'all', label: t('settings.modeAll')},
@@ -392,6 +411,7 @@ export function BoardScreen({
                   list={list}
                   cards={state.cardsByList.get(list.id) ?? []}
                   members={state.members}
+                  revealCardId={initialCardId}
                   onTurnLists={turnListPage}
                   onOpenCard={setOpenCard}
                 />
@@ -436,6 +456,8 @@ interface BoardColumnProps {
   list: TrelloList;
   cards: readonly TrelloBoardCard[];
   members: MembersById;
+  /** Card to show the page of, once, when the list holds it. */
+  revealCardId?: string;
   onTurnLists: (delta: number) => void;
   onOpenCard: OpenCard;
 }
@@ -449,6 +471,7 @@ function BoardColumn({
   list,
   cards,
   members,
+  revealCardId,
   onTurnLists,
   onOpenCard,
 }: BoardColumnProps): React.JSX.Element {
@@ -464,6 +487,23 @@ function BoardColumn({
     }
     return paginate(measured as number[], bodyHeight, CARD_GAP);
   }, [bodyHeight, cards, heights]);
+
+  // Once its cards are measured, the list opens at the page of the card
+  // the board was opened at, if it holds it.
+  const [revealed, setRevealed] = useState(false);
+  useEffect(() => {
+    if (!revealCardId || revealed || !pages) {
+      return;
+    }
+    setRevealed(true);
+    const at = pageOfItem(
+      pages,
+      cards.findIndex(card => card.id === revealCardId),
+    );
+    if (at !== null) {
+      setPage(at);
+    }
+  }, [cards, pages, revealCardId, revealed]);
 
   const pageIndex = pages ? Math.min(page, pages.length - 1) : 0;
   const visibleCards = pages

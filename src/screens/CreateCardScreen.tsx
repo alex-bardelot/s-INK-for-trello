@@ -89,15 +89,23 @@ type Step =
   | {kind: 'pickList'}
   | {kind: 'creating'}
   | {
+      /**
+       * The card exists, but something after it failed: told before its
+       * board opens. Without a problem, the board opens at once.
+       */
       kind: 'done';
       board: TrelloBoard;
-      list: TrelloList;
       card: TrelloCard;
-      /** The card exists, but its checklist could not be added. */
-      checklistFailed: boolean;
-      /** Whether the lasso selection was linked to the card, if asked. */
-      link: 'off' | 'linked' | 'failed';
+      problems: readonly CreationProblem[];
     };
+
+/** What could fail once the card itself was created. */
+type CreationProblem = 'card.checklistFailed' | 'card.linkFailed';
+
+/** The working popup's squares, one more filled every second. */
+const WORKING_SQUARES = 3;
+const WORKING_TICK_MS = 1000;
+const WORKING_SQUARE_SIZE = 16;
 
 /** Which list the floating picker shows, and where, under its button. */
 type Picker = {
@@ -151,6 +159,8 @@ export interface CreateCardScreenProps {
   memberId: string;
   /** Called when Trello rejects the token. */
   onTokenRejected: () => void;
+  /** Called once the card is created, to open its board where it is. */
+  onCreated: (board: TrelloBoard, card: TrelloCard) => void;
 }
 
 /**
@@ -158,6 +168,8 @@ export interface CreateCardScreenProps {
  * recognized, a single page shows the card: board and list (filled in with
  * the last ones used, or the only ones offered), labels, members, title,
  * description and checklist, all editable before the card is created.
+ * A popup over the page shows the creation going on; the card's board
+ * then opens where the card is.
  */
 export function CreateCardScreen({
   lasso,
@@ -165,6 +177,7 @@ export function CreateCardScreen({
   store,
   memberId,
   onTokenRejected,
+  onCreated,
 }: CreateCardScreenProps): React.JSX.Element {
   const {t} = useTranslation();
   const [step, setStep] = useState<Step>({kind: 'recognizing'});
@@ -366,19 +379,26 @@ export function CreateCardScreen({
         {labelIds, memberIds, at: Date.now()},
       );
       // The card exists: a failure here must not offer to create it again.
-      let checklistFailed = false;
+      const problems: CreationProblem[] = [];
       try {
         await addCardChecklist(client, card.id, checkItemsToCreate(items));
       } catch (error) {
         console.warn('[sINK] Failed to add the checklist', error);
-        checklistFailed = true;
+        problems.push('card.checklistFailed');
       }
       const link = await linkCardToSelection(
         card,
         selection.current,
         settings.current.linkSelection,
       );
-      setStep({kind: 'done', board, list, card, checklistFailed, link});
+      if (link === 'failed') {
+        problems.push('card.linkFailed');
+      }
+      if (problems.length === 0) {
+        onCreated(board, card);
+      } else {
+        setStep({kind: 'done', board, card, problems});
+      }
     } catch (error) {
       console.warn('[sINK] Failed to create the card', error);
       const code = toSessionError(error);
@@ -398,6 +418,7 @@ export function CreateCardScreen({
     list,
     memberIds,
     name,
+    onCreated,
     onTokenRejected,
     store,
   ]);
@@ -612,7 +633,9 @@ export function CreateCardScreen({
       );
     }
 
-    case 'form': {
+    case 'form':
+    case 'creating':
+    case 'done': {
       const ready = details?.status === 'ready' ? details : null;
       const missingPlace = !board || !list;
       const missingName = name.trim().length === 0;
@@ -646,306 +669,343 @@ export function CreateCardScreen({
             )
           : [];
       return (
-        <ScreenFrame
-          title={title}
-          dialog={{
-            cancelLabel: t('common.cancel'),
-            onCancel: close,
-            confirmLabel: t('card.create'),
-            onConfirm: create,
-            confirmDisabled: missingPlace || missingName,
-          }}>
-          <View ref={formRef} collapsable={false} style={styles.formArea}>
-            <ScrollView
-              contentContainerStyle={styles.form}
-              keyboardShouldPersistTaps="handled"
-              // The floating list stays under its button: it closes on scroll.
-              onScrollBeginDrag={() => setPicker(null)}>
-              {createError && (
-                <Text accessibilityRole="alert" style={styles.error}>
-                  {t(SESSION_ERRORS[createError])}
-                </Text>
-              )}
-              {missingPlace ? (
-                <Text style={styles.hint}>{t('card.listRequired')}</Text>
-              ) : missingName ? (
-                <Text style={styles.hint}>{t('card.nameRequired')}</Text>
-              ) : null}
-              <View style={styles.placeBlock}>
-                <View style={styles.placeRow}>
-                  <BlockTitle
-                    icon="board"
-                    title={t('card.board')}
-                    style={styles.placeLabel}
-                  />
-                  <View style={styles.placeValue}>
-                    <Button
-                      primary={!board}
-                      label={board ? board.name : t('card.chooseBoard')}
-                      onPress={() => setStep({kind: 'pickBoard'})}
-                    />
-                  </View>
-                </View>
-                <View style={styles.placeRow}>
-                  <BlockTitle
-                    icon="list"
-                    title={t('card.list')}
-                    style={styles.placeLabel}
-                  />
-                  {/* Elbow from under the board down to the list: the list
-                    belongs to the board. */}
-                  <View style={styles.connector}>
-                    <View style={styles.connectorGap} />
-                    <View style={styles.connectorElbow} />
-                    <View style={styles.connectorRest} />
-                  </View>
-                  <View style={styles.connectorDot} />
-                  <View style={[styles.placeValue, styles.listValue]}>
-                    {!board ? (
-                      <Button
-                        disabled
-                        label={t('card.chooseListButton')}
-                        onPress={() => {}}
-                      />
-                    ) : details?.status === 'loading' ? (
-                      <Text style={styles.message}>{t('card.loading')}</Text>
-                    ) : ready ? (
-                      <Button
-                        primary={!list}
-                        label={list ? list.name : t('card.chooseListButton')}
-                        onPress={() => setStep({kind: 'pickList'})}
-                      />
-                    ) : null}
-                  </View>
-                </View>
-              </View>
-              {board && details?.status === 'failed' && (
-                <View style={styles.inlineError}>
-                  <Text accessibilityRole="alert" style={styles.message}>
-                    {t('card.detailsFailed')}
+        <View style={styles.screen}>
+          <ScreenFrame
+            title={title}
+            dialog={{
+              cancelLabel: t('common.cancel'),
+              onCancel: close,
+              confirmLabel: t('card.create'),
+              onConfirm: create,
+              confirmDisabled: missingPlace || missingName,
+            }}>
+            <View ref={formRef} collapsable={false} style={styles.formArea}>
+              <ScrollView
+                contentContainerStyle={styles.form}
+                keyboardShouldPersistTaps="handled"
+                // The floating list stays under its button: it closes on scroll.
+                onScrollBeginDrag={() => setPicker(null)}>
+                {createError && (
+                  <Text accessibilityRole="alert" style={styles.error}>
+                    {t(SESSION_ERRORS[createError])}
                   </Text>
-                  <SmallButton
-                    label={t('common.retry')}
-                    accessibilityLabel={t('common.retry')}
-                    onPress={() => loadBoardDetails(board)}
-                  />
+                )}
+                {missingPlace ? (
+                  <Text style={styles.hint}>{t('card.listRequired')}</Text>
+                ) : missingName ? (
+                  <Text style={styles.hint}>{t('card.nameRequired')}</Text>
+                ) : null}
+                <View style={styles.placeBlock}>
+                  <View style={styles.placeRow}>
+                    <BlockTitle
+                      icon="board"
+                      title={t('card.board')}
+                      style={styles.placeLabel}
+                    />
+                    <View style={styles.placeValue}>
+                      <Button
+                        primary={!board}
+                        label={board ? board.name : t('card.chooseBoard')}
+                        onPress={() => setStep({kind: 'pickBoard'})}
+                      />
+                    </View>
+                  </View>
+                  <View style={styles.placeRow}>
+                    <BlockTitle
+                      icon="list"
+                      title={t('card.list')}
+                      style={styles.placeLabel}
+                    />
+                    {/* Elbow from under the board down to the list: the list
+                    belongs to the board. */}
+                    <View style={styles.connector}>
+                      <View style={styles.connectorGap} />
+                      <View style={styles.connectorElbow} />
+                      <View style={styles.connectorRest} />
+                    </View>
+                    <View style={styles.connectorDot} />
+                    <View style={[styles.placeValue, styles.listValue]}>
+                      {!board ? (
+                        <Button
+                          disabled
+                          label={t('card.chooseListButton')}
+                          onPress={() => {}}
+                        />
+                      ) : details?.status === 'loading' ? (
+                        <Text style={styles.message}>{t('card.loading')}</Text>
+                      ) : ready ? (
+                        <Button
+                          primary={!list}
+                          label={list ? list.name : t('card.chooseListButton')}
+                          onPress={() => setStep({kind: 'pickList'})}
+                        />
+                      ) : null}
+                    </View>
+                  </View>
                 </View>
-              )}
-
-              <Section icon="labels" showTitle={false} title={t('card.labels')}>
-                {!board ? (
-                  <Text style={styles.hint}>{t('card.chooseBoardFirst')}</Text>
-                ) : !ready ? null : ready.labels.length === 0 ? (
-                  <Text style={styles.hint}>{t('card.noLabels')}</Text>
-                ) : (
-                  <View style={styles.chips}>
-                    {shownLabels.map(label => {
-                      const selected = labelIds.includes(label.id);
-                      return (
-                        <ToggleChip
-                          key={label.id}
-                          selected={selected}
-                          accessibilityLabel={t(
-                            selected ? 'card.remove' : 'card.add',
-                            {name: label.name},
-                          )}
-                          onPress={() =>
-                            setLabelIds(ids => toggleId(ids, label.id))
-                          }>
-                          {labelContent(label)}
-                        </ToggleChip>
-                      );
-                    })}
-                    <PickerButton
-                      buttonRef={labelsButton}
-                      label={t('card.pickLabel')}
-                      onPress={() => openPicker('labels', labelsButton)}
+                {board && details?.status === 'failed' && (
+                  <View style={styles.inlineError}>
+                    <Text accessibilityRole="alert" style={styles.message}>
+                      {t('card.detailsFailed')}
+                    </Text>
+                    <SmallButton
+                      label={t('common.retry')}
+                      accessibilityLabel={t('common.retry')}
+                      onPress={() => loadBoardDetails(board)}
                     />
                   </View>
                 )}
-              </Section>
 
-              <Section
-                icon="members"
-                showTitle={false}
-                title={t('card.members')}>
-                {!board ? (
-                  <Text style={styles.hint}>{t('card.chooseBoardFirst')}</Text>
-                ) : !ready ? null : (
-                  <View style={styles.chips}>
-                    {shownMembers.map(member => {
-                      const selected = memberIds.includes(member.id);
-                      return (
-                        <ToggleChip
-                          key={member.id}
-                          selected={selected}
-                          accessibilityLabel={t(
-                            selected ? 'card.remove' : 'card.add',
-                            {name: member.fullName},
-                          )}
-                          onPress={() =>
-                            setMemberIds(ids => toggleId(ids, member.id))
-                          }>
-                          {memberContent(member)}
-                        </ToggleChip>
-                      );
-                    })}
-                    <PickerButton
-                      buttonRef={membersButton}
-                      label={t('card.pickMember')}
-                      onPress={() => openPicker('members', membersButton)}
-                    />
-                  </View>
-                )}
-              </Section>
-
-              {/* Ends where the card goes and how it is tagged, before
-                  what it says. */}
-              <View style={styles.separator} />
-
-              <Section icon="title" title={t('card.name')}>
-                <TextInput
-                  accessibilityLabel={t('card.name')}
-                  multiline
-                  onChangeText={setName}
-                  style={styles.input}
-                  value={name}
-                />
-              </Section>
-
-              <Section icon="description" title={t('card.description')}>
-                <TextInput
-                  accessibilityLabel={t('card.description')}
-                  multiline
-                  onChangeText={setDesc}
-                  style={[styles.input, styles.descInput]}
-                  textAlignVertical="top"
-                  value={desc}
-                />
-              </Section>
-
-              <Section icon="checklist" title={t('card.checklist')}>
-                {items.map(item => (
-                  <View key={item.key} style={styles.itemRow}>
-                    <Pressable
-                      accessibilityRole="checkbox"
-                      accessibilityLabel={item.name || t('card.item')}
-                      accessibilityState={{checked: item.checked}}
-                      hitSlop={spacing.sm}
-                      onPress={() =>
-                        updateItem(item.key, {checked: !item.checked})
-                      }
-                      style={[styles.box, item.checked && styles.boxChecked]}>
-                      {item.checked && <Text style={styles.boxMark}>✓</Text>}
-                    </Pressable>
-                    <TextInput
-                      accessibilityLabel={t('card.item')}
-                      onChangeText={text => updateItem(item.key, {name: text})}
-                      style={[styles.input, styles.itemInput]}
-                      value={item.name}
-                    />
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={t('card.remove', {
-                        name: item.name || t('card.item'),
+                <Section
+                  icon="labels"
+                  showTitle={false}
+                  title={t('card.labels')}>
+                  {!board ? (
+                    <Text style={styles.hint}>
+                      {t('card.chooseBoardFirst')}
+                    </Text>
+                  ) : !ready ? null : ready.labels.length === 0 ? (
+                    <Text style={styles.hint}>{t('card.noLabels')}</Text>
+                  ) : (
+                    <View style={styles.chips}>
+                      {shownLabels.map(label => {
+                        const selected = labelIds.includes(label.id);
+                        return (
+                          <ToggleChip
+                            key={label.id}
+                            selected={selected}
+                            accessibilityLabel={t(
+                              selected ? 'card.remove' : 'card.add',
+                              {name: label.name},
+                            )}
+                            onPress={() =>
+                              setLabelIds(ids => toggleId(ids, label.id))
+                            }>
+                            {labelContent(label)}
+                          </ToggleChip>
+                        );
                       })}
-                      hitSlop={spacing.sm}
-                      onPress={() =>
-                        setItems(current =>
-                          current.filter(other => other.key !== item.key),
-                        )
-                      }
-                      style={styles.box}>
-                      <CloseIcon size={20} color={colors.foreground} />
-                    </Pressable>
-                  </View>
-                ))}
-                <SmallButton
-                  label={`+ ${t('card.addItem')}`}
-                  accessibilityLabel={t('card.addItem')}
-                  onPress={() =>
-                    setItems(current => [
-                      ...current,
-                      ...makeItems([{name: '', checked: false}]),
-                    ])
+                      <PickerButton
+                        buttonRef={labelsButton}
+                        label={t('card.pickLabel')}
+                        onPress={() => openPicker('labels', labelsButton)}
+                      />
+                    </View>
+                  )}
+                </Section>
+
+                <Section
+                  icon="members"
+                  showTitle={false}
+                  title={t('card.members')}>
+                  {!board ? (
+                    <Text style={styles.hint}>
+                      {t('card.chooseBoardFirst')}
+                    </Text>
+                  ) : !ready ? null : (
+                    <View style={styles.chips}>
+                      {shownMembers.map(member => {
+                        const selected = memberIds.includes(member.id);
+                        return (
+                          <ToggleChip
+                            key={member.id}
+                            selected={selected}
+                            accessibilityLabel={t(
+                              selected ? 'card.remove' : 'card.add',
+                              {name: member.fullName},
+                            )}
+                            onPress={() =>
+                              setMemberIds(ids => toggleId(ids, member.id))
+                            }>
+                            {memberContent(member)}
+                          </ToggleChip>
+                        );
+                      })}
+                      <PickerButton
+                        buttonRef={membersButton}
+                        label={t('card.pickMember')}
+                        onPress={() => openPicker('members', membersButton)}
+                      />
+                    </View>
+                  )}
+                </Section>
+
+                {/* Ends where the card goes and how it is tagged, before
+                  what it says. */}
+                <View style={styles.separator} />
+
+                <Section icon="title" title={t('card.name')}>
+                  <TextInput
+                    accessibilityLabel={t('card.name')}
+                    multiline
+                    onChangeText={setName}
+                    style={styles.input}
+                    value={name}
+                  />
+                </Section>
+
+                <Section icon="description" title={t('card.description')}>
+                  <TextInput
+                    accessibilityLabel={t('card.description')}
+                    multiline
+                    onChangeText={setDesc}
+                    style={[styles.input, styles.descInput]}
+                    textAlignVertical="top"
+                    value={desc}
+                  />
+                </Section>
+
+                <Section icon="checklist" title={t('card.checklist')}>
+                  {items.map(item => (
+                    <View key={item.key} style={styles.itemRow}>
+                      <Pressable
+                        accessibilityRole="checkbox"
+                        accessibilityLabel={item.name || t('card.item')}
+                        accessibilityState={{checked: item.checked}}
+                        hitSlop={spacing.sm}
+                        onPress={() =>
+                          updateItem(item.key, {checked: !item.checked})
+                        }
+                        style={[styles.box, item.checked && styles.boxChecked]}>
+                        {item.checked && <Text style={styles.boxMark}>✓</Text>}
+                      </Pressable>
+                      <TextInput
+                        accessibilityLabel={t('card.item')}
+                        onChangeText={text =>
+                          updateItem(item.key, {name: text})
+                        }
+                        style={[styles.input, styles.itemInput]}
+                        value={item.name}
+                      />
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={t('card.remove', {
+                          name: item.name || t('card.item'),
+                        })}
+                        hitSlop={spacing.sm}
+                        onPress={() =>
+                          setItems(current =>
+                            current.filter(other => other.key !== item.key),
+                          )
+                        }
+                        style={styles.box}>
+                        <CloseIcon size={20} color={colors.foreground} />
+                      </Pressable>
+                    </View>
+                  ))}
+                  <SmallButton
+                    label={`+ ${t('card.addItem')}`}
+                    accessibilityLabel={t('card.addItem')}
+                    onPress={() =>
+                      setItems(current => [
+                        ...current,
+                        ...makeItems([{name: '', checked: false}]),
+                      ])
+                    }
+                  />
+                </Section>
+              </ScrollView>
+              {picker && ready && (
+                <FloatingPicker
+                  picker={picker}
+                  closeLabel={t('common.close')}
+                  onClose={() => setPicker(null)}
+                  rows={
+                    picker.kind === 'labels'
+                      ? ready.labels.map(label => ({
+                          id: label.id,
+                          name: label.name,
+                          selected: labelIds.includes(label.id),
+                          content: labelContent(label),
+                        }))
+                      : ready.members.map(member => ({
+                          id: member.id,
+                          name: member.fullName,
+                          selected: memberIds.includes(member.id),
+                          content: memberContent(member),
+                        }))
+                  }
+                  onToggle={id =>
+                    picker.kind === 'labels'
+                      ? setLabelIds(ids => toggleId(ids, id))
+                      : setMemberIds(ids => toggleId(ids, id))
                   }
                 />
-              </Section>
-            </ScrollView>
-            {picker && ready && (
-              <FloatingPicker
-                picker={picker}
-                closeLabel={t('common.close')}
-                onClose={() => setPicker(null)}
-                rows={
-                  picker.kind === 'labels'
-                    ? ready.labels.map(label => ({
-                        id: label.id,
-                        name: label.name,
-                        selected: labelIds.includes(label.id),
-                        content: labelContent(label),
-                      }))
-                    : ready.members.map(member => ({
-                        id: member.id,
-                        name: member.fullName,
-                        selected: memberIds.includes(member.id),
-                        content: memberContent(member),
-                      }))
-                }
-                onToggle={id =>
-                  picker.kind === 'labels'
-                    ? setLabelIds(ids => toggleId(ids, id))
-                    : setMemberIds(ids => toggleId(ids, id))
-                }
+              )}
+            </View>
+          </ScreenFrame>
+          {step.kind === 'creating' && (
+            <PopupOverlay>
+              <Text style={styles.popupText}>{t('card.creating')}</Text>
+              <WorkingSquares />
+            </PopupOverlay>
+          )}
+          {step.kind === 'done' && (
+            <PopupOverlay>
+              {step.problems.map(problem => (
+                <Text
+                  key={problem}
+                  accessibilityRole="alert"
+                  style={styles.popupText}>
+                  {t(problem)}
+                </Text>
+              ))}
+              <Button
+                primary
+                label={t('card.openBoard')}
+                onPress={() => onCreated(step.board, step.card)}
               />
-            )}
-          </View>
-        </ScreenFrame>
+            </PopupOverlay>
+          )}
+        </View>
       );
     }
-
-    case 'creating':
-      return (
-        <ScreenFrame title={title}>
-          <Text style={styles.message}>{t('card.creating')}</Text>
-        </ScreenFrame>
-      );
-
-    case 'done':
-      return (
-        <ScreenFrame title={title}>
-          <View style={styles.stack}>
-            <Text style={styles.message}>
-              {t('card.created', {
-                board: step.board.name,
-                list: step.list.name,
-              })}
-            </Text>
-            <Text style={styles.preview}>{step.card.name}</Text>
-            {step.checklistFailed && (
-              <Text accessibilityRole="alert" style={styles.error}>
-                {t('card.checklistFailed')}
-              </Text>
-            )}
-            {step.link === 'linked' && (
-              <Text style={styles.message}>{t('card.linked')}</Text>
-            )}
-            {step.link === 'failed' && (
-              <Text accessibilityRole="alert" style={styles.error}>
-                {t('card.linkFailed')}
-              </Text>
-            )}
-            <Button primary label={t('common.close')} onPress={close} />
-          </View>
-        </ScreenFrame>
-      );
   }
 }
 
 /**
- * A titled block of the form, underlined like the sections of a note.
- * `plain` leaves the line out, for a block that is a single framed field.
+ * A popup over the whole page, which stays visible under it; the page
+ * cannot be used while it shows.
  */
+function PopupOverlay({
+  children,
+}: {
+  children: React.ReactNode;
+}): React.JSX.Element {
+  return (
+    <View style={styles.overlay}>
+      <View style={styles.popupArea}>
+        <View style={[styles.popup, styles.popupStack]}>{children}</View>
+      </View>
+    </View>
+  );
+}
+
+/**
+ * Shows that the work goes on: one more square is filled every second,
+ * then they start over. Once a second at most, gentle on E Ink.
+ */
+function WorkingSquares(): React.JSX.Element {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(
+      () => setTick(current => (current + 1) % (WORKING_SQUARES + 1)),
+      WORKING_TICK_MS,
+    );
+    return () => clearInterval(timer);
+  }, []);
+  return (
+    <View accessibilityRole="progressbar" style={styles.working}>
+      {Array.from({length: WORKING_SQUARES}, (_, index) => (
+        <View
+          key={index}
+          style={[styles.workingSquare, index < tick && styles.workingFilled]}
+        />
+      ))}
+    </View>
+  );
+}
+
 /** Title of a block, after the icon that identifies it. */
 function BlockTitle({
   icon,
@@ -1291,12 +1351,6 @@ const styles = StyleSheet.create({
     borderWidth: borders.width,
     padding: spacing.md,
   },
-  preview: {
-    color: colors.foreground,
-    fontSize: typography.body,
-    fontStyle: 'italic',
-    marginBottom: spacing.md,
-  },
   placeBlock: {
     gap: PLACE_GAP,
   },
@@ -1456,6 +1510,29 @@ const styles = StyleSheet.create({
     fontSize: typography.body,
     fontWeight: '700',
     textAlign: 'center',
+  },
+  popupStack: {
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  screen: {
+    flex: 1,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  working: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  workingSquare: {
+    width: WORKING_SQUARE_SIZE,
+    height: WORKING_SQUARE_SIZE,
+    borderColor: colors.foreground,
+    borderWidth: borders.width,
+  },
+  workingFilled: {
+    backgroundColor: colors.foreground,
   },
   diagnostics: {
     borderColor: colors.foreground,

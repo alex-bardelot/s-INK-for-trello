@@ -10,7 +10,7 @@ import {PendingBindingBanner} from './components/PendingBindingBanner';
 import {language, loadLanguageChoice, useTranslation} from './i18n';
 import {loadLinkTrigger, setLinkTrigger} from './inkLink/trigger';
 import {connectivity, useConnectivity} from './network/connectivity';
-import {useLaunchIntent} from './plugin/launchIntent';
+import {openBoardsIntent, useLaunchIntent} from './plugin/launchIntent';
 import {
   ensureFileReadPermission,
   hasInternetPermission,
@@ -43,10 +43,13 @@ export default function App(): React.JSX.Element {
   const intent = useLaunchIntent();
   const {state} = session;
   const [openBoard, setOpenBoard] = useState<TrelloBoard | null>(null);
-  // Card to open over the board, and key of the request that asked for it.
+  // Card the board opens at, and key of the request that asked for it. A
+  // tapped s-INK link also opens the card over the board; a card just
+  // created is only shown on its page.
   const [linkedCard, setLinkedCard] = useState<{
     requestId: number;
     cardId?: string;
+    openDetail: boolean;
   } | null>(null);
   const [linkStatus, setLinkStatus] = useState<'idle' | 'opening' | 'failed'>(
     'idle',
@@ -166,7 +169,7 @@ export default function App(): React.JSX.Element {
         );
         if (!cancelled) {
           setOpenBoard(board);
-          setLinkedCard({requestId, cardId: location?.id});
+          setLinkedCard({requestId, cardId: location?.id, openDetail: true});
           setLinkStatus('idle');
         }
       } catch (error) {
@@ -233,6 +236,17 @@ export default function App(): React.JSX.Element {
         store={session.settingsStore}
         memberId={account.member.id}
         onTokenRejected={session.retry}
+        onCreated={(board, card) => {
+          setSettingsOpen(false);
+          setOpenBoard(board);
+          setLinkedCard({
+            requestId: Date.now(),
+            cardId: card.id,
+            openDetail: false,
+          });
+          // Leaves card creation for the board.
+          openBoardsIntent();
+        }}
       />
     );
   }
@@ -250,6 +264,7 @@ export default function App(): React.JSX.Element {
           store={session.settingsStore}
           memberId={account?.member.id ?? ''}
           initialCardId={linkedCard?.cardId}
+          openInitialCard={linkedCard?.openDetail ?? false}
           onBack={() => {
             setOpenBoard(null);
             setLinkedCard(null);

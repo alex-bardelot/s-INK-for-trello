@@ -3,6 +3,23 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.52.0 — Creation popup, then the card's board
+
+- While the card is being created, the New Trello Card page stays on
+  screen under a **Creating the card…** popup. Below the message, three
+  squares fill in one by one, once a second, to show the work goes on:
+  no faster, to spare the E Ink screen.
+- Once created, the card's board opens where the card is: its list
+  comes first on the page of lists, and that list shows the page of
+  cards that holds it. The whole board is shown for this opening, even
+  if Focus or Review mode is on; choosing a mode goes back to it.
+- If the checklist could not be added, or the selection could not be
+  linked to the card, the popup says so, with an **Open the board**
+  button. The page that followed creation, with its **Close** button,
+  is gone.
+- An s-INK link to a card now also opens its board at the card's page,
+  under the card it opens.
+
 ## 0.51.1 — Icon column on the New Trello Card page
 
 - The block icons now stand in a column on the left of the page; the

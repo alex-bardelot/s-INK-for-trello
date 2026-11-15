@@ -5,6 +5,7 @@ import {
   groupCardsByList,
   orientationOf,
   pageCount,
+  pageOfItem,
   paginate,
 } from '../src/board/layout';
 import {
@@ -110,10 +111,7 @@ describe('board preferences', () => {
       portrait: 3,
       landscape: 4,
     });
-    await store.setItem(
-      BOARD_PREFERENCES_KEY,
-      '{"portrait":4,"landscape":4}',
-    );
+    await store.setItem(BOARD_PREFERENCES_KEY, '{"portrait":4,"landscape":4}');
     expect(await loadBoardPreferences(store)).toEqual({
       portrait: 2,
       landscape: 4,
@@ -150,5 +148,22 @@ describe('labelShade', () => {
 
   it('falls back for unknown or missing colors', () => {
     expect(labelShade(null)).toEqual(labelShade('unknown'));
+  });
+});
+
+describe('pageOfItem', () => {
+  const pages = paginate([100, 100, 100, 100, 100], 250, 10);
+
+  it('finds the page that holds a card', () => {
+    expect(pages).toHaveLength(3);
+    expect(pageOfItem(pages, 0)).toBe(0);
+    expect(pageOfItem(pages, 1)).toBe(0);
+    expect(pageOfItem(pages, 2)).toBe(1);
+    expect(pageOfItem(pages, 4)).toBe(2);
+  });
+
+  it('finds none for a card not in the list', () => {
+    expect(pageOfItem(pages, -1)).toBeNull();
+    expect(pageOfItem(pages, 5)).toBeNull();
   });
 });
