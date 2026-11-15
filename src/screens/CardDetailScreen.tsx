@@ -252,13 +252,8 @@ function describeStep(
         step.ok ? 'startWork.stepAddLabel' : 'startWork.stepAddLabelFailed',
         {name: step.name},
       );
-    case 'createLabel':
-      return t(
-        step.ok
-          ? 'startWork.stepCreateLabel'
-          : 'startWork.stepCreateLabelFailed',
-        {name: step.name},
-      );
+    case 'missingLabel':
+      return t('startWork.stepMissingLabel', {name: step.name});
     case 'move':
       return t(step.ok ? 'startWork.stepMove' : 'startWork.stepMoveFailed', {
         name: step.name,

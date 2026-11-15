@@ -16,7 +16,11 @@ import {CloseIcon} from '../components/CloseIcon';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {SettingsSection} from '../components/SettingsSection';
 import {Switch} from '../components/Switch';
+import {ToggleChip} from '../components/ToggleChip';
 import {WaitingBox} from '../components/WaitingBox';
+import {labelKey} from '../board/focus';
+import {labelShade} from '../board/labels';
+import {TrelloBoard, TrelloClient, TrelloLabel} from '../trello';
 import {useTranslation} from '../i18n';
 import {
   listCustomTemplates,
@@ -48,16 +52,22 @@ import {borders, colors, spacing, typography} from '../theme';
 
 /**
  * "Start work" category of Settings: what the **Start** button of a card
- * does. Each action has its own switch; the labels removed and added, and
- * the list the card moves to, are named here. The note template is only
- * shown; it is changed on a page of its own, which lists the templates.
+ * does. Each action has its own switch, but the labels: those taken off
+ * (−) and put on (+) are listed side by side, and none listed changes
+ * none. The note template is only shown; it is changed on a page of its
+ * own, which lists the templates.
  */
 export function StartWorkSettingsPanel({
   store,
+  client,
+  board,
   reloadKey = 0,
   onBrowseTemplates,
 }: {
   store: KeyValueStore;
+  client: TrelloClient;
+  /** Board Settings was opened from, whose labels **Add** offers. */
+  board: TrelloBoard | null;
   /** Changes when the settings were saved elsewhere, to read them again. */
   reloadKey?: number;
   /** Opens the page listing the templates, to choose another. */
@@ -85,6 +95,36 @@ export function StartWorkSettingsPanel({
     [settings, store],
   );
 
+  // The named labels of the board Settings was opened from, read once
+  // **Add** is first pressed.
+  const [labelsState, setLabelsState] = useState<BoardLabelsState>({
+    status: 'idle',
+  });
+  const boardLabels: BoardLabels | null = board
+    ? {
+        boardName: board.name,
+        state: labelsState,
+        load: () => {
+          if (labelsState.status === 'loading') {
+            return;
+          }
+          setLabelsState({status: 'loading'});
+          client
+            .getBoardLabels(board.id)
+            .then(labels =>
+              setLabelsState({
+                status: 'loaded',
+                labels: labels.filter(label => label.name.trim() !== ''),
+              }),
+            )
+            .catch(error => {
+              console.warn('[sINK] Failed to read the board labels', error);
+              setLabelsState({status: 'failed'});
+            });
+        },
+      }
+    : null;
+
   return (
     <>
       <SettingsSection title={t('settings.startWork')}>
@@ -101,30 +141,23 @@ export function StartWorkSettingsPanel({
       </SettingsSection>
 
       <SettingsSection title={t('startWork.labelsSection')}>
-        <Switch
-          label={t('startWork.removeLabels')}
-          help={t('startWork.removeLabelsHelp')}
-          value={settings.removeLabels}
-          onChange={removeLabels => change({removeLabels})}
-        />
-        {settings.removeLabels && (
-          <LabelNamesEditor
+        <Text style={styles.small}>{t('startWork.labelsHelp')}</Text>
+        <View style={styles.labelSides}>
+          <LabelNamesSide
+            sign="−"
+            accessibilityLabel={t('startWork.labelsRemoved')}
             names={settings.removeLabelNames}
             onChange={removeLabelNames => change({removeLabelNames})}
+            boardLabels={boardLabels}
           />
-        )}
-        <Switch
-          label={t('startWork.addLabels')}
-          help={t('startWork.addLabelsHelp')}
-          value={settings.addLabels}
-          onChange={addLabels => change({addLabels})}
-        />
-        {settings.addLabels && (
-          <LabelNamesEditor
+          <LabelNamesSide
+            sign="+"
+            accessibilityLabel={t('startWork.labelsAdded')}
             names={settings.addLabelNames}
             onChange={addLabelNames => change({addLabelNames})}
+            boardLabels={boardLabels}
           />
-        )}
+        </View>
       </SettingsSection>
 
       <SettingsSection title={t('startWork.listSection')}>
@@ -466,76 +499,182 @@ function TemplateTile({
   );
 }
 
-/** Label names as removable chips, then a field adding one. */
-function LabelNamesEditor({
+type BoardLabelsState =
+  | {status: 'idle' | 'loading' | 'failed'}
+  | {status: 'loaded'; labels: TrelloLabel[]};
+
+/** The labels of the board Settings was opened from, read on demand. */
+interface BoardLabels {
+  boardName: string;
+  state: BoardLabelsState;
+  load: () => void;
+}
+
+/**
+ * One side of the Start labels: a round − (taken off) or + (put on), the
+ * label names as chips a tap removes, then a dashed **Add**. Opened from a
+ * board, **Add** lists that board's labels, a tap adding or removing one;
+ * otherwise it opens a field to type a name.
+ */
+function LabelNamesSide({
+  sign,
+  accessibilityLabel,
   names,
   onChange,
+  boardLabels,
 }: {
+  sign: '−' | '+';
+  accessibilityLabel: string;
   names: readonly string[];
   onChange: (names: string[]) => void;
+  boardLabels: BoardLabels | null;
 }): React.JSX.Element {
   const {t} = useTranslation();
+  const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState('');
 
-  const add = () => {
+  const toggleOpen = () => {
+    if (!open && boardLabels?.state.status === 'idle') {
+      boardLabels.load();
+    }
+    setOpen(!open);
+  };
+  const addTyped = () => {
     if (cleanName(draft)) {
       onChange(addLabelName(names, draft));
     }
     setDraft('');
   };
+  const listed = new Set(names.map(labelKey));
 
   return (
-    <View style={styles.editor}>
-      {names.length > 0 ? (
-        <View style={styles.chips}>
-          {names.map(name => (
-            <Pressable
-              key={name}
-              accessibilityRole="button"
-              accessibilityLabel={t('startWork.removeName', {name})}
-              onPress={() => onChange(removeLabelName(names, name))}
-              style={({pressed}) => [styles.chip, pressed && styles.pressed]}>
-              {({pressed}) => (
-                <>
-                  <Text
-                    style={[styles.chipText, pressed && styles.pressedText]}
-                    numberOfLines={1}>
-                    {name}
-                  </Text>
-                  <CloseIcon
-                    size={CHIP_ICON_SIZE}
-                    color={pressed ? colors.background : colors.foreground}
-                  />
-                </>
-              )}
-            </Pressable>
-          ))}
+    <View accessibilityLabel={accessibilityLabel} style={styles.labelSide}>
+      <View style={styles.chips}>
+        <View style={styles.signCircle}>
+          <Text style={styles.signText}>{sign}</Text>
         </View>
-      ) : (
-        <Text style={styles.small}>{t('startWork.noLabels')}</Text>
-      )}
-      <View style={styles.addRow}>
-        <TextInput
-          accessibilityLabel={t('startWork.labelPlaceholder')}
-          autoCapitalize="none"
-          autoComplete="off"
-          autoCorrect={false}
-          maxLength={START_WORK_NAME_MAX_LENGTH}
-          onChangeText={setDraft}
-          onSubmitEditing={add}
-          placeholder={t('startWork.labelPlaceholder')}
-          placeholderTextColor={colors.labelBorder}
-          returnKeyType="done"
-          spellCheck={false}
-          style={[styles.input, styles.addInput]}
-          value={draft}
-        />
-        <Button
-          label={t('startWork.addLabel')}
-          disabled={!cleanName(draft)}
-          onPress={add}
-        />
+        {names.map(name => (
+          <Pressable
+            key={name}
+            accessibilityRole="button"
+            accessibilityLabel={t('startWork.removeName', {name})}
+            onPress={() => onChange(removeLabelName(names, name))}
+            style={({pressed}) => [styles.chip, pressed && styles.pressed]}>
+            {({pressed}) => (
+              <>
+                <Text
+                  style={[styles.chipText, pressed && styles.pressedText]}
+                  numberOfLines={1}>
+                  {name}
+                </Text>
+                <CloseIcon
+                  size={CHIP_ICON_SIZE}
+                  color={pressed ? colors.background : colors.foreground}
+                />
+              </>
+            )}
+          </Pressable>
+        ))}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('startWork.addLabel')}
+          accessibilityState={{expanded: open}}
+          onPress={toggleOpen}
+          style={({pressed}) => [
+            styles.addButton,
+            (pressed || open) && styles.pressed,
+          ]}>
+          {({pressed}) => (
+            <Text
+              style={[
+                styles.addButtonText,
+                (pressed || open) && styles.pressedText,
+              ]}>
+              {t('startWork.addLabel')}
+            </Text>
+          )}
+        </Pressable>
       </View>
+
+      {open && !boardLabels && (
+        <View style={styles.addRow}>
+          <TextInput
+            accessibilityLabel={t('startWork.labelPlaceholder')}
+            autoCapitalize="none"
+            autoComplete="off"
+            autoCorrect={false}
+            autoFocus
+            maxLength={START_WORK_NAME_MAX_LENGTH}
+            onChangeText={setDraft}
+            onSubmitEditing={addTyped}
+            placeholder={t('startWork.labelPlaceholder')}
+            placeholderTextColor={colors.labelBorder}
+            returnKeyType="done"
+            spellCheck={false}
+            style={[styles.input, styles.addInput]}
+            value={draft}
+          />
+          <Button
+            label={t('common.ok')}
+            disabled={!cleanName(draft)}
+            onPress={addTyped}
+          />
+        </View>
+      )}
+
+      {open && boardLabels && (
+        <View style={styles.boardLabels}>
+          <Text style={styles.small}>
+            {t('startWork.boardLabels', {board: boardLabels.boardName})}
+          </Text>
+          {boardLabels.state.status === 'loaded' ? (
+            boardLabels.state.labels.length > 0 ? (
+              <View style={styles.chips}>
+                {boardLabels.state.labels.map(label => {
+                  const selected = listed.has(labelKey(label.name));
+                  return (
+                    <ToggleChip
+                      key={label.id}
+                      selected={selected}
+                      accessibilityLabel={t(
+                        selected ? 'card.remove' : 'card.add',
+                        {name: label.name},
+                      )}
+                      onPress={() =>
+                        onChange(
+                          selected
+                            ? removeLabelName(names, label.name)
+                            : addLabelName(names, label.name),
+                        )
+                      }>
+                      <View
+                        style={[
+                          styles.swatch,
+                          {backgroundColor: labelShade(label.color).background},
+                        ]}
+                      />
+                      <Text style={styles.toggleText} numberOfLines={1}>
+                        {label.name}
+                      </Text>
+                    </ToggleChip>
+                  );
+                })}
+              </View>
+            ) : (
+              <Text style={styles.small}>{t('startWork.boardNoLabels')}</Text>
+            )
+          ) : boardLabels.state.status === 'failed' ? (
+            <View style={styles.addRow}>
+              <Text style={styles.small}>
+                {t('startWork.boardLabelsFailed')}
+              </Text>
+              <Button label={t('common.retry')} onPress={boardLabels.load} />
+            </View>
+          ) : (
+            <Text style={styles.small}>{t('card.loading')}</Text>
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -578,6 +717,9 @@ function ListNameInput({
 }
 
 const CHIP_ICON_SIZE = 20;
+/** Label chips, the round sign and Add share one height. */
+const CHIP_HEIGHT = 40;
+const SIGN_SIZE = 32;
 /** Preview size of a template, about a twentieth of the page. */
 const TILE_SHORT_SIDE = 96;
 const TILE_LONG_SIDE = 128;
@@ -599,18 +741,71 @@ const styles = StyleSheet.create({
   chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    alignItems: 'center',
     gap: spacing.sm,
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    height: CHIP_HEIGHT,
     borderColor: colors.foreground,
     borderWidth: borders.width,
-    borderRadius: borders.radius * 3,
+    borderRadius: CHIP_HEIGHT / 2,
     paddingLeft: spacing.md,
     paddingRight: spacing.sm,
-    paddingVertical: spacing.xs,
+  },
+  labelSides: {
+    flexDirection: 'row',
+    gap: spacing.lg,
+  },
+  labelSide: {
+    flex: 1,
+    gap: spacing.sm,
+  },
+  signCircle: {
+    width: SIGN_SIZE,
+    height: SIGN_SIZE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderColor: colors.foreground,
+    borderWidth: borders.width,
+    borderRadius: SIGN_SIZE / 2,
+  },
+  signText: {
+    color: colors.foreground,
+    fontSize: typography.label,
+    fontWeight: '700',
+    lineHeight: typography.label + 2,
+  },
+  addButton: {
+    height: CHIP_HEIGHT,
+    justifyContent: 'center',
+    borderColor: colors.foreground,
+    borderStyle: 'dashed',
+    borderWidth: borders.width,
+    borderRadius: CHIP_HEIGHT / 2,
+    paddingHorizontal: spacing.md,
+  },
+  addButtonText: {
+    color: colors.foreground,
+    fontSize: typography.body,
+    fontWeight: '700',
+  },
+  boardLabels: {
+    gap: spacing.sm,
+  },
+  swatch: {
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+    borderColor: colors.labelBorder,
+    borderWidth: 1.5,
+  },
+  toggleText: {
+    flexShrink: 1,
+    color: colors.foreground,
+    fontSize: typography.body,
   },
   chipText: {
     color: colors.foreground,

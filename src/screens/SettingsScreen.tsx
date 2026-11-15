@@ -54,7 +54,7 @@ import {
   unlockDiagnostics,
 } from '../settings/rapidTaps';
 import {KeyValueStore} from '../storage/keyValueStore';
-import {TrelloClient, TrelloMember} from '../trello';
+import {TrelloBoard, TrelloClient, TrelloMember} from '../trello';
 import {NewCardSettingsPanel} from './NewCardSettingsPanel';
 import {PublicBoardsSettings} from './PublicBoardsSettings';
 import {
@@ -95,6 +95,8 @@ export interface SettingsScreenProps {
   /** Opens the connection screen (signed out only). */
   onConnect: () => void;
   onBack: () => void;
+  /** Board Settings was opened from, if any: Start work offers its labels. */
+  currentBoard?: TrelloBoard | null;
 }
 
 /**
@@ -123,6 +125,7 @@ export function SettingsScreen({
   onDisconnect,
   onConnect,
   onBack,
+  currentBoard = null,
 }: SettingsScreenProps): React.JSX.Element {
   const {t} = useTranslation();
   // Diagnostics is hidden until About is pressed 7 times quickly.
@@ -271,6 +274,8 @@ export function SettingsScreen({
             ) : category === 'startWork' ? (
               <StartWorkSettingsPanel
                 store={store}
+                client={client}
+                board={currentBoard}
                 reloadKey={templateChanges}
                 onBrowseTemplates={() => setTemplatesOpen(true)}
               />

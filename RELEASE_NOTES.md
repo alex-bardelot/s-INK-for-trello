@@ -3,6 +3,19 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.55.0 — Compact Start labels, picked from the board
+
+- **Settings › Start work › Labels** loses its two switches: the labels
+  taken off and put on are listed side by side, after a round **−** and
+  a round **+**. With no label listed, Start leaves the labels alone.
+  Settings saved with a switch off start with that list empty.
+- A dashed **Add** after each list shows the labels of the board
+  Settings was opened from (a board or one of its cards), with their
+  colors: a tap adds or removes one. Opened from the boards page, **Add**
+  opens a field to type a name instead.
+- Start no longer creates on the board a label it does not have: the
+  label is left out, and the Start report says so.
+
 ## 0.54.1 — Template preview in the Create a note row
 
 - In **Settings › Start work**, the preview of the note template now

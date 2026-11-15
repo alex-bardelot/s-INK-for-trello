@@ -17,8 +17,8 @@ export interface StartWorkPlan {
   removedLabels: Pick<TrelloLabel, 'id' | 'name'>[];
   /** Labels of the board put on the card. */
   addedLabels: Pick<TrelloLabel, 'id' | 'name'>[];
-  /** Label names missing from the board: they are created, then put on. */
-  createdLabelNames: string[];
+  /** Label names to put on that the board does not have: left out. */
+  missingLabelNames: string[];
   /** List the card moves to, if it is not already in it. */
   moveTo: Pick<TrelloList, 'id' | 'name'> | null;
   /** Name of the list to move to when the board has none of that name. */
@@ -38,13 +38,9 @@ export function planStartWork(
   boardLabels: readonly Pick<TrelloLabel, 'id' | 'name'>[],
   lists: readonly Pick<TrelloList, 'id' | 'name'>[],
 ): StartWorkPlan {
-  const addKeys = new Set(
-    settings.addLabels ? settings.addLabelNames.map(labelKey) : [],
-  );
+  const addKeys = new Set(settings.addLabelNames.map(labelKey));
   const removeKeys = new Set(
-    settings.removeLabels
-      ? settings.removeLabelNames.map(labelKey).filter(key => !addKeys.has(key))
-      : [],
+    settings.removeLabelNames.map(labelKey).filter(key => !addKeys.has(key)),
   );
 
   const removedLabels = card.labels.filter(label =>
@@ -53,23 +49,22 @@ export function planStartWork(
 
   const onCard = new Set(card.labels.map(label => labelKey(label.name ?? '')));
   const addedLabels: Pick<TrelloLabel, 'id' | 'name'>[] = [];
-  const createdLabelNames: string[] = [];
-  if (settings.addLabels) {
-    for (const name of settings.addLabelNames) {
-      const key = labelKey(name);
-      if (!key || onCard.has(key)) {
-        continue;
-      }
-      onCard.add(key);
-      // Boards may hold several labels of the same name: the first one is used.
-      const existing = boardLabels.find(
-        label => labelKey(label.name ?? '') === key,
-      );
-      if (existing) {
-        addedLabels.push(existing);
-      } else {
-        createdLabelNames.push(name.trim());
-      }
+  const missingLabelNames: string[] = [];
+  for (const name of settings.addLabelNames) {
+    const key = labelKey(name);
+    if (!key || onCard.has(key)) {
+      continue;
+    }
+    onCard.add(key);
+    // Boards may hold several labels of the same name: the first one is used.
+    const existing = boardLabels.find(
+      label => labelKey(label.name ?? '') === key,
+    );
+    if (existing) {
+      addedLabels.push(existing);
+    } else {
+      // Not created on the board: only its own labels are put on.
+      missingLabelNames.push(name.trim());
     }
   }
 
@@ -91,7 +86,7 @@ export function planStartWork(
       settings.assignMe && !!memberId && !card.idMembers.includes(memberId),
     removedLabels,
     addedLabels,
-    createdLabelNames,
+    missingLabelNames,
     moveTo,
     missingListName,
   };
@@ -103,7 +98,6 @@ export function planIsEmpty(plan: StartWorkPlan): boolean {
     !plan.assign &&
     plan.removedLabels.length === 0 &&
     plan.addedLabels.length === 0 &&
-    plan.createdLabelNames.length === 0 &&
     !plan.moveTo
   );
 }

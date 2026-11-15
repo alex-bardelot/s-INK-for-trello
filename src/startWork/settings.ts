@@ -8,17 +8,16 @@ export const START_WORK_SETTINGS_KEY = 'supertrello.startWork.settings';
 export const START_WORK_NAME_MAX_LENGTH = 100;
 
 /**
- * What pressing **Start** on a card does. Every action can be turned off;
- * the label and list names are matched without regard to case.
+ * What pressing **Start** on a card does. Every action can be turned off
+ * (the labels by naming none); the label and list names are matched
+ * without regard to case.
  */
 export interface StartWorkSettings {
   /** Adds the signed-in member to the card's members. */
   assignMe: boolean;
   /** Takes these labels off the card. */
-  removeLabels: boolean;
   removeLabelNames: string[];
-  /** Puts these labels on the card, creating them on the board if needed. */
-  addLabels: boolean;
+  /** Puts these labels on the card, if its board has them. */
   addLabelNames: string[];
   /** Moves the card to the top of the list of this name. */
   moveToList: boolean;
@@ -93,9 +92,7 @@ function readTemplateChoice(
 
 export const DEFAULT_START_WORK_SETTINGS: StartWorkSettings = {
   assignMe: true,
-  removeLabels: true,
   removeLabelNames: ['TODO'],
-  addLabels: true,
   addLabelNames: ['WIP'],
   // No list by default: the card stays where it is.
   moveToList: false,
@@ -130,8 +127,8 @@ export function removeLabelName(
 export function startWorkDisabled(settings: StartWorkSettings): boolean {
   return (
     !settings.assignMe &&
-    !(settings.removeLabels && settings.removeLabelNames.length > 0) &&
-    !(settings.addLabels && settings.addLabelNames.length > 0) &&
+    settings.removeLabelNames.length === 0 &&
+    settings.addLabelNames.length === 0 &&
     !(settings.moveToList && cleanName(settings.listName) !== '') &&
     !settings.createNote
   );
@@ -141,7 +138,18 @@ function readBoolean(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback;
 }
 
-function readNames(value: unknown, fallback: readonly string[]): string[] {
+/**
+ * Reads a list of label names. Settings saved before the label switches
+ * were dropped may have one turned off: its names then no longer apply.
+ */
+function readNames(
+  value: unknown,
+  fallback: readonly string[],
+  formerSwitch: unknown,
+): string[] {
+  if (formerSwitch === false) {
+    return [];
+  }
   if (!Array.isArray(value)) {
     return [...fallback];
   }
@@ -157,17 +165,21 @@ export async function loadStartWorkSettings(
   const defaults = DEFAULT_START_WORK_SETTINGS;
   try {
     const raw = await store.getItem(START_WORK_SETTINGS_KEY);
-    const parsed: Partial<Record<keyof StartWorkSettings, unknown>> =
-      (raw ? JSON.parse(raw) : null) ?? {};
+    const parsed: Partial<
+      Record<keyof StartWorkSettings | 'removeLabels' | 'addLabels', unknown>
+    > = (raw ? JSON.parse(raw) : null) ?? {};
     return {
       assignMe: readBoolean(parsed.assignMe, defaults.assignMe),
-      removeLabels: readBoolean(parsed.removeLabels, defaults.removeLabels),
       removeLabelNames: readNames(
         parsed.removeLabelNames,
         defaults.removeLabelNames,
+        parsed.removeLabels,
       ),
-      addLabels: readBoolean(parsed.addLabels, defaults.addLabels),
-      addLabelNames: readNames(parsed.addLabelNames, defaults.addLabelNames),
+      addLabelNames: readNames(
+        parsed.addLabelNames,
+        defaults.addLabelNames,
+        parsed.addLabels,
+      ),
       moveToList: readBoolean(parsed.moveToList, defaults.moveToList),
       listName:
         typeof parsed.listName === 'string'

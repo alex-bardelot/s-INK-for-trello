@@ -8,7 +8,7 @@ export type StartWorkStep =
   | {kind: 'assign'; ok: boolean}
   | {kind: 'removeLabel'; name: string; ok: boolean}
   | {kind: 'addLabel'; name: string; ok: boolean}
-  | {kind: 'createLabel'; name: string; ok: boolean}
+  | {kind: 'missingLabel'; name: string}
   | {kind: 'move'; name: string; ok: boolean}
   | {kind: 'missingList'; name: string}
   | {kind: 'boardUnreadable'}
@@ -28,8 +28,7 @@ export interface StartWorkResult {
 
 function needsLabels(settings: StartWorkSettings): boolean {
   return (
-    (settings.removeLabels && settings.removeLabelNames.length > 0) ||
-    (settings.addLabels && settings.addLabelNames.length > 0)
+    settings.removeLabelNames.length > 0 || settings.addLabelNames.length > 0
   );
 }
 
@@ -54,7 +53,6 @@ export async function applyStartWork(
     | 'addCardMember'
     | 'addCardLabel'
     | 'removeCardLabel'
-    | 'createCardLabel'
     | 'moveCard'
   >,
   card: StartWorkTarget,
@@ -109,13 +107,6 @@ export async function applyStartWork(
       ok: await attempt(() => client.addCardLabel(card.id, label.id)),
     });
   }
-  for (const name of plan.createdLabelNames) {
-    steps.push({
-      kind: 'createLabel',
-      name,
-      ok: await attempt(() => client.createCardLabel(card.id, name)),
-    });
-  }
   if (plan.moveTo) {
     const list = plan.moveTo;
     steps.push({
@@ -124,10 +115,17 @@ export async function applyStartWork(
       ok: await attempt(() => client.moveCard(card.id, list.id)),
     });
   }
+  for (const name of plan.missingLabelNames) {
+    steps.push({kind: 'missingLabel', name});
+  }
   if (plan.missingListName) {
     steps.push({kind: 'missingList', name: plan.missingListName});
   }
-  if (planIsEmpty(plan) && !plan.missingListName) {
+  if (
+    planIsEmpty(plan) &&
+    !plan.missingListName &&
+    plan.missingLabelNames.length === 0
+  ) {
     steps.push({kind: 'nothingToChange'});
   }
 
@@ -136,6 +134,7 @@ export async function applyStartWork(
     failed: steps.some(
       step =>
         ('ok' in step && !step.ok) ||
+        step.kind === 'missingLabel' ||
         step.kind === 'missingList' ||
         step.kind === 'boardUnreadable',
     ),

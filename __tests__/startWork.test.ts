@@ -59,9 +59,7 @@ describe('Start work settings', () => {
   it('assigns, swaps TODO for WIP and creates a note by default, without moving', () => {
     expect(DEFAULT_START_WORK_SETTINGS).toEqual({
       assignMe: true,
-      removeLabels: true,
       removeLabelNames: ['TODO'],
-      addLabels: true,
       addLabelNames: ['WIP'],
       moveToList: false,
       listName: '',
@@ -162,11 +160,28 @@ describe('Start work settings', () => {
     );
   });
 
+  it('empties the label lists that a former switch turned off', async () => {
+    const store = createMemoryStore();
+    await store.setItem(
+      START_WORK_SETTINGS_KEY,
+      JSON.stringify({
+        removeLabels: false,
+        removeLabelNames: ['TODO'],
+        addLabels: true,
+        addLabelNames: ['WIP'],
+      }),
+    );
+    const loaded = await loadStartWorkSettings(store);
+    expect(loaded.removeLabelNames).toEqual([]);
+    expect(loaded.addLabelNames).toEqual(['WIP']);
+    expect(loaded).not.toHaveProperty('removeLabels');
+  });
+
   it('knows when Start would do nothing', () => {
     const off = settingsWith({
       assignMe: false,
-      removeLabels: false,
-      addLabels: false,
+      removeLabelNames: [],
+      addLabelNames: [],
       createNote: false,
     });
     expect(startWorkDisabled(off)).toBe(true);
@@ -187,7 +202,7 @@ describe('planStartWork', () => {
       assign: true,
       removedLabels: [{id: 'l-todo', name: 'todo'}],
       addedLabels: [{id: 'l-wip', name: 'WIP'}],
-      createdLabelNames: [],
+      missingLabelNames: [],
       moveTo: null,
       missingListName: null,
     });
@@ -204,7 +219,7 @@ describe('planStartWork', () => {
     expect(plan.assign).toBe(false);
   });
 
-  it('creates labels missing from the board, and skips those on the card', () => {
+  it('leaves out labels missing from the board, and skips those on the card', () => {
     const plan = planStartWork(
       card,
       settingsWith({addLabelNames: ['bug', 'Doing', 'doing']}),
@@ -213,7 +228,8 @@ describe('planStartWork', () => {
       LISTS,
     );
     expect(plan.addedLabels).toEqual([]);
-    expect(plan.createdLabelNames).toEqual(['Doing']);
+    expect(plan.missingLabelNames).toEqual(['Doing']);
+    expect(planIsEmpty({...plan, assign: false, removedLabels: []})).toBe(true);
   });
 
   it('keeps a label both removed and added', () => {
@@ -253,8 +269,8 @@ describe('planStartWork', () => {
       card,
       settingsWith({
         assignMe: false,
-        removeLabels: false,
-        addLabels: false,
+        removeLabelNames: [],
+        addLabelNames: [],
         listName: 'In progress',
       }),
       ME,
@@ -277,11 +293,6 @@ function fakeClient() {
     addCardMember: jest.fn(async () => undefined),
     addCardLabel: jest.fn(async () => undefined),
     removeCardLabel: jest.fn(async () => undefined),
-    createCardLabel: jest.fn(async (_card: string, name: string) => ({
-      id: 'new',
-      name,
-      color: null,
-    })),
     moveCard: jest.fn(async () => undefined),
   };
 }
@@ -302,16 +313,17 @@ describe('applyStartWork', () => {
     expect(client.addCardMember).toHaveBeenCalledWith('card-1', ME);
     expect(client.removeCardLabel).toHaveBeenCalledWith('card-1', 'l-todo');
     expect(client.addCardLabel).toHaveBeenCalledWith('card-1', 'l-wip');
-    expect(client.createCardLabel).toHaveBeenCalledWith('card-1', 'Doing');
+    expect(client.addCardLabel).toHaveBeenCalledTimes(1);
     expect(client.moveCard).toHaveBeenCalledWith('card-1', 'list-doing');
+    // Doing is not on the board: reported, not created.
     expect(result).toEqual({
-      failed: false,
+      failed: true,
       steps: [
         {kind: 'assign', ok: true},
         {kind: 'removeLabel', name: 'todo', ok: true},
         {kind: 'addLabel', name: 'WIP', ok: true},
-        {kind: 'createLabel', name: 'Doing', ok: true},
         {kind: 'move', name: 'In progress', ok: true},
+        {kind: 'missingLabel', name: 'Doing'},
       ],
     });
   });
@@ -321,7 +333,7 @@ describe('applyStartWork', () => {
     const result = await applyStartWork(
       client,
       {...card, idMembers: [ME]},
-      settingsWith({removeLabels: false, addLabels: false}),
+      settingsWith({removeLabelNames: [], addLabelNames: []}),
       ME,
     );
     expect(client.getBoardLabels).not.toHaveBeenCalled();

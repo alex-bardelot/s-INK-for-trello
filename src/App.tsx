@@ -234,6 +234,9 @@ export default function App(): React.JSX.Element {
             // The connection screen opens over Settings and comes back to it.
             onConnect={() => setConnectOpen(true)}
             onBack={() => setSettingsOpen(false)}
+            // Opened from a board or one of its cards: Start work offers
+            // that board's labels.
+            currentBoard={openBoard}
           />
         </View>
       )}
