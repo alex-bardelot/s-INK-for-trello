@@ -3,6 +3,18 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.37.0 — Board layouts and a Board mode category in Settings
+
+- In Settings > Boards, the Supernote Roadmap gets the same bullet as
+  the other public boards, and each bullet is now centered on the whole
+  row (name and link, or name and help text).
+- The **Board view** section is renamed **Board layouts**; its settings
+  read **Columns, portrait** and **Columns, landscape**.
+- The board mode moves to its own **Board mode** category, between
+  Boards and Links, under a new **Default mode** label. The
+  `settings.boardView` string is replaced by `settings.boardLayouts`,
+  and `settings.boardModeDefault` is added, in all locales.
+
 ## 0.36.1 — Bullets before the public boards in Settings
 
 - In Settings > Boards, each public board now starts with a small black

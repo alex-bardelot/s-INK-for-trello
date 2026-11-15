@@ -34,18 +34,23 @@ export function PublicBoardsSettings({
 
   return (
     <View style={styles.container}>
-      <Switch
-        label={SUPERNOTE_ROADMAP_NAME}
-        help={t('settings.roadmapHelp')}
-        value={preferences.showSupernoteRoadmap}
-        onChange={show =>
-          onChange({...preferences, showSupernoteRoadmap: show})
-        }
-      />
+      <View style={styles.row}>
+        {/* A bullet marks each board as an item of the list. */}
+        <View style={styles.bullet} />
+        <View style={styles.texts}>
+          <Switch
+            label={SUPERNOTE_ROADMAP_NAME}
+            help={t('settings.roadmapHelp')}
+            value={preferences.showSupernoteRoadmap}
+            onChange={show =>
+              onChange({...preferences, showSupernoteRoadmap: show})
+            }
+          />
+        </View>
+      </View>
 
       {preferences.publicBoards.map(ref => (
         <View key={ref.shortLink} style={styles.row}>
-          {/* A bullet marks each board as an item of the list. */}
           <View style={styles.bullet} />
           <View style={styles.texts}>
             <Text style={styles.name} numberOfLines={1}>
@@ -96,9 +101,6 @@ const styles = StyleSheet.create({
     height: BULLET_SIZE,
     borderRadius: BULLET_SIZE / 2,
     backgroundColor: colors.foreground,
-    // Centered on the board name, the first line.
-    alignSelf: 'flex-start',
-    marginTop: (typography.label * 1.2 - BULLET_SIZE) / 2,
   },
   texts: {
     flex: 1,

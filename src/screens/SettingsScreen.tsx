@@ -75,10 +75,11 @@ export interface SettingsScreenProps {
 /**
  * Settings that are rarely needed, kept off the boards page. Laid out like
  * the Supernote system settings: categories in a left column, separated by
- * dotted lines, and the selected one's settings on the right. "General"
- * holds the public boards, the board view and the connected account (and
- * where its token is kept); "About" the version and the non-affiliation
- * notice.
+ * dotted lines, and the selected one's settings on the right. "Boards"
+ * holds the public boards and the board layouts; "Board mode" the mode
+ * boards open in; "Links" the tool opening s-INK links; "Trello" the
+ * connected account (and where its token is kept); "About" the version and
+ * the non-affiliation notice.
  */
 export function SettingsScreen({
   store,
@@ -102,6 +103,7 @@ export function SettingsScreen({
 
   const categories: {value: SettingsCategory; label: string}[] = [
     {value: 'boards', label: t('settings.boards')},
+    {value: 'mode', label: t('settings.boardMode')},
     {value: 'links', label: t('settings.links')},
     {value: 'trello', label: t('settings.trello')},
     {value: 'about', label: t('settings.about')},
@@ -172,8 +174,10 @@ export function SettingsScreen({
                 />
               </Section>
 
-              <BoardViewSettings store={store} />
+              <BoardLayoutSettings store={store} />
             </>
+          ) : category === 'mode' ? (
+            <BoardModeSettings store={store} />
           ) : category === 'links' ? (
             <NoteLinkSettings store={store} />
           ) : category === 'trello' ? (
@@ -217,6 +221,7 @@ export function SettingsScreen({
 /** Categories of the left column, like the Supernote system settings. */
 type SettingsCategory =
   | 'boards'
+  | 'mode'
   | 'links'
   | 'trello'
   | 'about'
@@ -307,18 +312,20 @@ function NoteLinkSettings({store}: {store: KeyValueStore}): React.JSX.Element {
 }
 
 /**
- * Column counts and board mode, the same settings the board view changes
+ * Column counts per orientation, the same settings the board view changes
  * from its toolbar: they are read and saved in the same place.
  */
-function BoardViewSettings({store}: {store: KeyValueStore}): React.JSX.Element {
+function BoardLayoutSettings({
+  store,
+}: {
+  store: KeyValueStore;
+}): React.JSX.Element {
   const {t} = useTranslation();
   const [columns, setColumns] = useState<BoardPreferences>(DEFAULT_COLUMNS);
-  const [focus, setFocus] = useState<FocusSettings>(DEFAULT_FOCUS_SETTINGS);
 
   useEffect(() => {
     let active = true;
     loadBoardPreferences(store).then(loaded => active && setColumns(loaded));
-    loadFocusSettings(store).then(loaded => active && setFocus(loaded));
     return () => {
       active = false;
     };
@@ -332,28 +339,15 @@ function BoardViewSettings({store}: {store: KeyValueStore}): React.JSX.Element {
     },
     [columns, store],
   );
-  const changeMode = useCallback(
-    (choice: ModeChoice) => {
-      const next = {...focus, mode: choice === 'all' ? null : choice};
-      setFocus(next);
-      saveFocusSettings(store, next);
-    },
-    [focus, store],
-  );
 
   const countsFor = (orientation: Orientation) =>
     COLUMN_COUNTS[orientation].map(count => ({
       value: count,
       label: String(count),
     }));
-  const modes: {value: ModeChoice; label: string}[] = [
-    {value: 'all', label: t('settings.modeAll')},
-    {value: 'focus', label: t('board.focus')},
-    {value: 'review', label: t('board.review')},
-  ];
 
   return (
-    <Section title={t('settings.boardView')}>
+    <Section title={t('settings.boardLayouts')}>
       {(['portrait', 'landscape'] as const).map(orientation => (
         <View key={orientation} style={styles.columnsRow}>
           <TabletPreview
@@ -374,8 +368,45 @@ function BoardViewSettings({store}: {store: KeyValueStore}): React.JSX.Element {
           </View>
         </View>
       ))}
+    </Section>
+  );
+}
+
+/**
+ * Mode boards open in (all cards, focus or review), shared with the board
+ * view's toolbar like the column counts.
+ */
+function BoardModeSettings({store}: {store: KeyValueStore}): React.JSX.Element {
+  const {t} = useTranslation();
+  const [focus, setFocus] = useState<FocusSettings>(DEFAULT_FOCUS_SETTINGS);
+
+  useEffect(() => {
+    let active = true;
+    loadFocusSettings(store).then(loaded => active && setFocus(loaded));
+    return () => {
+      active = false;
+    };
+  }, [store]);
+
+  const changeMode = useCallback(
+    (choice: ModeChoice) => {
+      const next = {...focus, mode: choice === 'all' ? null : choice};
+      setFocus(next);
+      saveFocusSettings(store, next);
+    },
+    [focus, store],
+  );
+
+  const modes: {value: ModeChoice; label: string}[] = [
+    {value: 'all', label: t('settings.modeAll')},
+    {value: 'focus', label: t('board.focus')},
+    {value: 'review', label: t('board.review')},
+  ];
+
+  return (
+    <Section title={t('settings.boardMode')}>
       <SegmentedControl
-        label={t('settings.boardMode')}
+        label={t('settings.boardModeDefault')}
         help={t('settings.boardModeHelp')}
         segments={modes}
         value={focus.mode ?? 'all'}
