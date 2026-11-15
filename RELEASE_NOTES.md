@@ -3,6 +3,14 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.41.1 — Language last in General, choices only
+
+- The **Language** section moves to the end of Settings > General.
+- It now shows the choices alone (System, English, Français, ...),
+  without the "Interface language" label and help text: the
+  `settings.languageInterface` and `settings.languageHelp` strings are
+  removed from all locales.
+
 ## 0.41.0 — Main page section in Settings
 
 - Settings > General gets a **Main page** section, after Language. It

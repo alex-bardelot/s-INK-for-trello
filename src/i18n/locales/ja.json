@@ -93,8 +93,6 @@
   "settings.general": "一般",
   "settings.language": "言語",
   "settings.mainPage": "メインページ",
-  "settings.languageInterface": "表示言語",
-  "settings.languageHelp": "「システム」は Supernote の言語に従います。",
   "settings.languageSystem": "システム",
   "settings.links": "リンク",
   "settings.about": "このプラグインについて",

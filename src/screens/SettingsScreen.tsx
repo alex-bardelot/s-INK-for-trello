@@ -24,7 +24,7 @@ import {
 import {Button} from '../components/Button';
 import {MemberAvatar} from '../components/MemberAvatar';
 import {ScreenFrame} from '../components/ScreenFrame';
-import {SegmentedControl} from '../components/SegmentedControl';
+import {SegmentedControl, SegmentGroup} from '../components/SegmentedControl';
 import {SmallButton} from '../components/SmallButton';
 import {clearInkLinkLog, useInkLinkLog} from '../inkLink/diagnostics';
 import {
@@ -90,8 +90,8 @@ export interface SettingsScreenProps {
  * Settings that are rarely needed, kept off the boards page. Laid out like
  * the Supernote system settings: categories in a left column, separated by
  * dotted lines, and the selected one's sections on the right. "General"
- * holds the language, the main page shortcuts, the public boards and the
- * Trello account (and where its token is kept); "Boards" the settings of an open board (layout and mode); "Links"
+ * holds the main page shortcuts, the public boards, the Trello account (and
+ * where its token is kept) and the language; "Boards" the settings of an open board (layout and mode); "Links"
  * the tool opening s-INK links; "About" the version and the
  * non-affiliation notice.
  */
@@ -179,8 +179,6 @@ export function SettingsScreen({
           contentContainerStyle={styles.panelContent}>
           {category === 'general' ? (
             <>
-              <LanguageSettings store={store} />
-
               {/* Shortcuts shown on the boards page. */}
               <Section title={t('settings.mainPage')}>
                 <Switch
@@ -232,6 +230,8 @@ export function SettingsScreen({
                   <SignedOutCard onConnect={onConnect} />
                 )}
               </Section>
+
+              <LanguageSettings store={store} />
             </>
           ) : category === 'boards' ? (
             <>
@@ -340,13 +340,15 @@ function LanguageSettings({store}: {store: KeyValueStore}): React.JSX.Element {
 
   return (
     <Section title={t('settings.language')}>
-      <SegmentedControl
-        label={t('settings.languageInterface')}
-        help={t('settings.languageHelp')}
-        segments={choices}
-        value={choice}
-        onChange={change}
-      />
+      {/* The choices speak for themselves: no label or help text. */}
+      <View style={styles.languageRow}>
+        <SegmentGroup
+          label={t('settings.language')}
+          segments={choices}
+          value={choice}
+          onChange={change}
+        />
+      </View>
     </Section>
   );
 }
@@ -778,6 +780,11 @@ const styles = StyleSheet.create({
     borderTopColor: colors.foreground,
     borderTopWidth: borders.width / 2,
     paddingTop: spacing.md,
+  },
+  languageRow: {
+    // The segments keep their own width instead of the panel's.
+    alignItems: 'flex-start',
+    paddingVertical: spacing.sm,
   },
   columnsRow: {
     flexDirection: 'row',
