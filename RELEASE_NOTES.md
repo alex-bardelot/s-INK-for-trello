@@ -3,6 +3,12 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.41.3 — Public add and Trello connect buttons
+
+- In Settings > General > Main page, **Quick add button** is renamed
+  **Public add button** and **Quick connect button** **Trello connect
+  button**, in all locales.
+
 ## 0.41.2 — Board page category
 
 - The **Boards** category of Settings is renamed **Board page**: it only

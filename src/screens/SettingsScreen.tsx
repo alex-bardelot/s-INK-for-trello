@@ -591,7 +591,7 @@ function AccountCard({
 }
 
 /**
- * No account connected: a way to connect. The "Quick connect button" switch
+ * No account connected: a way to connect. The "Trello connect button" switch
  * of the Main page section hides the "My boards" section (and its connect
  * card) of the boards page, for someone who only reads public boards.
  */
