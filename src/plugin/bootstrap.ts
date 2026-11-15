@@ -1,6 +1,8 @@
 import {PluginManager} from 'sn-plugin-lib';
 
-import {getSystemLocale, i18n} from '../i18n';
+import {getSystemLocale, i18n, language, loadLanguageChoice} from '../i18n';
+import {getDeviceStore} from '../storage/stores';
+import {Permission} from './permissions';
 import {
   captureLassoSelection,
   clearPendingBinding,
@@ -14,6 +16,22 @@ import {handleButtonPress, openBoardsIntent} from './launchIntent';
 const LOG_TAG = '[sINK]';
 
 /**
+ * Applies the language saved in Settings, only if file read access is
+ * already granted: no permission prompt at startup. The plugin view reads
+ * it again when it opens.
+ */
+async function restoreLanguage(): Promise<void> {
+  try {
+    const permission = await PluginManager.hasPermission(Permission.FileRead);
+    if (permission === 1 || permission === 2) {
+      language.setChoice(await loadLanguageChoice(getDeviceStore()));
+    }
+  } catch (error) {
+    console.warn(`${LOG_TAG} Failed to restore the language`, error);
+  }
+}
+
+/**
  * Initializes the plugin runtime.
  *
  * Must be called once, right after `AppRegistry.registerComponent`, as
@@ -22,21 +40,19 @@ const LOG_TAG = '[sINK]';
 export function bootstrapPlugin(): void {
   PluginManager.init();
 
-  i18n.setLocale(getSystemLocale());
+  language.setSystemLanguage(getSystemLocale());
 
   PluginManager.registerLangListener({
     onMsg: (languageCode: string) => {
-      if (i18n.setLocale(languageCode)) {
-        refreshButtons().catch(error =>
-          console.warn(`${LOG_TAG} Failed to refresh buttons`, error),
-        );
-      }
+      language.setSystemLanguage(languageCode);
     },
   });
 
   startInkLinkTaps();
 
-  registerButtons()
+  // The buttons are registered in the language chosen in Settings.
+  restoreLanguage()
+    .then(registerButtons)
     .then(registered => {
       if (!registered) {
         console.warn(`${LOG_TAG} A button registration was rejected`);
@@ -46,6 +62,13 @@ export function bootstrapPlugin(): void {
       console.warn(`${LOG_TAG} Failed to register buttons`, error),
     )
     .finally(() => {
+      // Button labels follow the language, whether the system's or the
+      // one chosen in Settings.
+      i18n.subscribe(() => {
+        refreshButtons().catch(error =>
+          console.warn(`${LOG_TAG} Failed to refresh buttons`, error),
+        );
+      });
       // The SDK requires buttons to be registered before the listener.
       PluginManager.registerButtonListener({
         onButtonPress: event => {

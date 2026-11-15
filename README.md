@@ -29,9 +29,10 @@ Other Supernote devices that support plugins may work but are not tested.
   boards on demand), pick a list (the last used one on top), review the
   recognized title and description, and create the card. The first line
   becomes the card title, the rest its description.
-- UI follows the tablet's system language: English, French, Japanese,
-  Simplified Chinese and Traditional Chinese. Unsupported languages fall back
-  to English.
+- UI in English, French, Japanese, Simplified Chinese and Traditional
+  Chinese. By default it follows the tablet's system language (unsupported
+  languages fall back to English); Settings > General > Language can fix
+  another one.
 
 ## Getting started
 
@@ -181,6 +182,9 @@ those sent by the Supernote firmware (`en`, `fr`, `ja`, `zh_CN`, `zh_TW`).
 - Language changes on the tablet are received through
   `PluginManager.registerLangListener`; open views re-render and the toolbar
   button label is refreshed.
+- `LanguageController` (`src/i18n/language.ts`) applies the language chosen
+  in Settings, saved under `supertrello.language`; "system" keeps following
+  the tablet.
 - `en.json` is the reference catalog. A unit test ensures that every catalog
   defines exactly the same keys.
 

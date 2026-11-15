@@ -7,7 +7,7 @@ import {
   saveBoardsPreferences,
 } from './boards/preferences';
 import {PendingBindingBanner} from './components/PendingBindingBanner';
-import {useTranslation} from './i18n';
+import {language, loadLanguageChoice, useTranslation} from './i18n';
 import {loadLinkTrigger, setLinkTrigger} from './inkLink/trigger';
 import {useLaunchIntent} from './plugin/launchIntent';
 import {ensureFileReadPermission} from './plugin/permissions';
@@ -64,6 +64,10 @@ export default function App(): React.JSX.Element {
     });
     // The tap listener starts before the view and cannot always read it.
     loadLinkTrigger(settingsStore).then(setLinkTrigger);
+    // Same for the language, read at startup only with file access.
+    loadLanguageChoice(settingsStore).then(choice =>
+      language.setChoice(choice),
+    );
     return () => {
       cancelled = true;
     };
@@ -207,17 +211,17 @@ export default function App(): React.JSX.Element {
     return (
       <PendingBindingBanner>
         <BoardScreen
-        key={`${openBoard.id}:${linkedCard?.requestId ?? 0}`}
-        board={openBoard}
-        client={client}
-        store={session.settingsStore}
-        memberId={account?.member.id ?? ''}
-        initialCardId={linkedCard?.cardId}
-        onBack={() => {
-          setOpenBoard(null);
-          setLinkedCard(null);
-        }}
-        onTokenRejected={session.retry}
+          key={`${openBoard.id}:${linkedCard?.requestId ?? 0}`}
+          board={openBoard}
+          client={client}
+          store={session.settingsStore}
+          memberId={account?.member.id ?? ''}
+          initialCardId={linkedCard?.cardId}
+          onBack={() => {
+            setOpenBoard(null);
+            setLinkedCard(null);
+          }}
+          onTokenRejected={session.retry}
         />
       </PendingBindingBanner>
     );

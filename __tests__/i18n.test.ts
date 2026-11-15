@@ -4,7 +4,16 @@ import {
   SUPPORTED_LOCALES,
 } from '../src/i18n/catalogs';
 import {I18n} from '../src/i18n/i18n';
+import {
+  LANGUAGE_CHOICES,
+  LANGUAGE_KEY,
+  LANGUAGE_NAMES,
+  LanguageController,
+  loadLanguageChoice,
+  saveLanguageChoice,
+} from '../src/i18n/language';
 import {matchLocale, resolveLocale} from '../src/i18n/resolveLocale';
+import {createMemoryStore} from '../src/storage/keyValueStore';
 
 describe('matchLocale', () => {
   it.each([
@@ -75,5 +84,55 @@ describe('I18n', () => {
     unsubscribe();
     i18n.setLocale('en');
     expect(listener).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('LanguageController', () => {
+  it('follows the system language by default', () => {
+    const target = new I18n();
+    const controller = new LanguageController(target);
+
+    expect(controller.getChoice()).toBe('system');
+    expect(controller.setSystemLanguage('fr_FR')).toBe(true);
+    expect(target.getLocale()).toBe('fr');
+    controller.setSystemLanguage('ja');
+    expect(target.getLocale()).toBe('ja');
+  });
+
+  it('keeps a chosen language when the system one changes', () => {
+    const target = new I18n();
+    const controller = new LanguageController(target);
+    controller.setSystemLanguage('fr_FR');
+
+    expect(controller.setChoice('zh_TW')).toBe(true);
+    expect(target.getLocale()).toBe('zh_TW');
+    expect(controller.setSystemLanguage('ja')).toBe(false);
+    expect(target.getLocale()).toBe('zh_TW');
+
+    // Back to the system language, the latest one known.
+    controller.setChoice('system');
+    expect(target.getLocale()).toBe('ja');
+  });
+});
+
+describe('language choice storage', () => {
+  it('defaults to the system language', async () => {
+    expect(await loadLanguageChoice(createMemoryStore())).toBe('system');
+  });
+
+  it('saves and reads a choice, ignoring unknown values', async () => {
+    const store = createMemoryStore();
+    await saveLanguageChoice(store, 'fr');
+    expect(await loadLanguageChoice(store)).toBe('fr');
+
+    await store.setItem(LANGUAGE_KEY, 'de');
+    expect(await loadLanguageChoice(store)).toBe('system');
+  });
+
+  it('names every supported language', () => {
+    expect(LANGUAGE_CHOICES).toEqual(['system', ...SUPPORTED_LOCALES]);
+    SUPPORTED_LOCALES.forEach(locale =>
+      expect(LANGUAGE_NAMES[locale]).toBeTruthy(),
+    );
   });
 });

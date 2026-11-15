@@ -36,7 +36,15 @@ import {
 } from '../inkLink/trigger';
 import {Switch} from '../components/Switch';
 import {BoardsPreferences} from '../boards/preferences';
-import {useTranslation} from '../i18n';
+import {
+  language,
+  LANGUAGE_CHOICES,
+  LANGUAGE_NAMES,
+  LanguageChoice,
+  loadLanguageChoice,
+  saveLanguageChoice,
+  useTranslation,
+} from '../i18n';
 import {registerInspectButton} from '../plugin/buttons';
 import {TokenStorage} from '../session/trelloSession';
 import {
@@ -82,8 +90,8 @@ export interface SettingsScreenProps {
  * Settings that are rarely needed, kept off the boards page. Laid out like
  * the Supernote system settings: categories in a left column, separated by
  * dotted lines, and the selected one's sections on the right. "General"
- * holds the public boards and the Trello account (and where its token is
- * kept); "Boards" the settings of an open board (layout and mode); "Links"
+ * holds the language, the public boards and the Trello account (and where
+ * its token is kept); "Boards" the settings of an open board (layout and mode); "Links"
  * the tool opening s-INK links; "About" the version and the
  * non-affiliation notice.
  */
@@ -171,6 +179,8 @@ export function SettingsScreen({
           contentContainerStyle={styles.panelContent}>
           {category === 'general' ? (
             <>
+              <LanguageSettings store={store} />
+
               <Section title={t('settings.publicBoards')}>
                 <PublicBoardsSettings
                   client={client}
@@ -271,6 +281,57 @@ function InkLinkDiagnostics(): React.JSX.Element {
         {lines.length ? lines.join('\n') : t('inkLink.emptyLog')}
       </Text>
     </View>
+  );
+}
+
+/**
+ * Language of the plugin: the Supernote's ("System") or a fixed one, each
+ * named in itself. The toolbar and lasso buttons follow it too.
+ */
+function LanguageSettings({store}: {store: KeyValueStore}): React.JSX.Element {
+  const {t} = useTranslation();
+  const [choice, setChoice] = useState<LanguageChoice>(() =>
+    language.getChoice(),
+  );
+
+  useEffect(() => {
+    let active = true;
+    loadLanguageChoice(store).then(loaded => {
+      if (active) {
+        setChoice(loaded);
+        language.setChoice(loaded);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [store]);
+
+  const change = useCallback(
+    (next: LanguageChoice) => {
+      setChoice(next);
+      language.setChoice(next);
+      saveLanguageChoice(store, next);
+    },
+    [store],
+  );
+
+  const choices = LANGUAGE_CHOICES.map(value => ({
+    value,
+    label:
+      value === 'system' ? t('settings.languageSystem') : LANGUAGE_NAMES[value],
+  }));
+
+  return (
+    <Section title={t('settings.language')}>
+      <SegmentedControl
+        label={t('settings.languageInterface')}
+        help={t('settings.languageHelp')}
+        segments={choices}
+        value={choice}
+        onChange={change}
+      />
+    </Section>
   );
 }
 

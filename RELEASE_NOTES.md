@@ -3,6 +3,20 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.40.0 — Language setting
+
+- Settings > General starts with a **Language** section: **System**
+  (the default) follows the Supernote's language as before; English,
+  Français, 日本語, 简体中文 or 繁體中文 fix the plugin's language,
+  whatever the system one. Each language is named in itself.
+- The toolbar and lasso buttons are registered again in the chosen
+  language, as soon as it changes.
+- New `LanguageController` (`src/i18n/language.ts`) combining the system
+  language and the choice, saved under `supertrello.language`. The
+  choice is applied at startup when file access is already granted,
+  otherwise when the plugin view opens. Covered by tests; new strings in
+  all locales.
+
 ## 0.39.1 — Board layout and mode string keys kept
 
 - The `settings.boardLayouts` and `settings.boardMode` string keys are
