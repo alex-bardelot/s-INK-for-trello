@@ -17,12 +17,6 @@ export type LaunchIntent =
        * lasso APIs fail with error 904 ("no lasso").
        */
       lasso: Promise<LassoTextResult>;
-      /**
-       * Settles once the selection itself is read, before the handwriting
-       * recognition: the view can then be shown with a "Recognizing…"
-       * popup without making the host drop the lasso too early.
-       */
-      captured: Promise<void>;
     }
   | {
       /** An s-INK link was tapped in a note. */
@@ -33,12 +27,16 @@ export type LaunchIntent =
     };
 
 /**
- * Reads the current lasso selection, calling `onCaptured` once the lasso
- * is no longer needed (before the handwriting recognition).
+ * Reads the current lasso selection. Once the lasso is no longer needed
+ * (before the handwriting recognition), it awaits `onCaptured`, which opens
+ * the view.
  */
 export type SelectionReader = (
-  onCaptured: () => void,
+  onCaptured: () => Promise<void>,
 ) => Promise<LassoTextResult>;
+
+/** Opens the plugin view. */
+export type ViewOpener = () => Promise<void>;
 
 type Listener = () => void;
 
@@ -47,27 +45,34 @@ let requestCounter = 0;
 const listeners = new Set<Listener>();
 
 /**
- * Reads the selection without ever rejecting. `captured` settles when the
- * reader says so, or at the latest when the reading ends.
+ * Reads the selection without ever rejecting. The view is opened when the
+ * reader says the lasso is captured, or at the latest when reading ends.
  */
-function readSafely(read: SelectionReader): {
-  lasso: Promise<LassoTextResult>;
-  captured: Promise<void>;
-} {
-  let markCaptured: () => void = () => {};
-  const captured = new Promise<void>(resolve => {
-    markCaptured = resolve;
-  });
-  const lasso = (async (): Promise<LassoTextResult> => {
+function readSafely(
+  read: SelectionReader,
+  openView: ViewOpener,
+): Promise<LassoTextResult> {
+  let opened = false;
+  const open = async (): Promise<void> => {
+    if (opened) {
+      return;
+    }
+    opened = true;
     try {
-      return await read(markCaptured);
+      await openView();
+    } catch (error) {
+      console.warn('[sINK] Failed to show the plugin view', error);
+    }
+  };
+  return (async (): Promise<LassoTextResult> => {
+    try {
+      return await read(open);
     } catch (error) {
       return {ok: false, error: 'noSelection', diagnostics: String(error)};
     } finally {
-      markCaptured();
+      await open();
     }
   })();
-  return {lasso, captured};
 }
 
 /**
@@ -75,19 +80,24 @@ function readSafely(read: SelectionReader): {
  * selection is read right away, while the lasso is still active.
  *
  * @param buttonId - Id of the pressed button.
- * @param readSelection - Lasso reader, replaceable in tests.
+ * @param options.openView - Opens the view for the lasso button, once the
+ *   selection is captured (the button does not open it by itself).
+ * @param options.readSelection - Lasso reader, replaceable in tests.
  * @returns The new intent, or `null` if the button is not ours.
  */
 export function handleButtonPress(
   buttonId: number,
-  readSelection: SelectionReader = readLassoText,
+  {
+    openView = async () => {},
+    readSelection = readLassoText,
+  }: {openView?: ViewOpener; readSelection?: SelectionReader} = {},
 ): LaunchIntent | null {
   if (buttonId === ButtonId.LassoCreateCard) {
     requestCounter += 1;
     current = {
       kind: 'lassoCreateCard',
       requestId: requestCounter,
-      ...readSafely(readSelection),
+      lasso: readSafely(readSelection, openView),
     };
   } else if (buttonId === ButtonId.Open) {
     current = {kind: 'boards'};

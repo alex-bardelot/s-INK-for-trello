@@ -14,6 +14,8 @@ import {ButtonId} from './constants';
 import {handleButtonPress, openBoardsIntent} from './launchIntent';
 
 const LOG_TAG = '[sINK]';
+/** Longest wait for the host to say the view is open. */
+const VIEW_OPEN_WAIT_MS = 3000;
 
 /**
  * Applies the language saved in Settings, only if file read access is
@@ -93,21 +95,20 @@ export function bootstrapPlugin(): void {
           if (event.id === ButtonId.Open) {
             clearPendingBinding();
           }
-          const intent = handleButtonPress(event.id);
-          if (intent?.kind === 'lassoCreateCard') {
-            // The lasso button does not open the view by itself: the
-            // selection must be read before the host drops the lasso. The
-            // view then shows a "Recognizing…" popup until the slow
-            // handwriting recognition is done.
-            intent.captured.then(() =>
-              PluginManager.showPluginView().catch(error =>
-                console.warn(
-                  `${LOG_TAG} Failed to show the plugin view`,
-                  error,
+          // The lasso button does not open the view by itself: the
+          // selection must be read before the host drops the lasso. The
+          // view then shows a "recognizing" popup until the slow
+          // handwriting recognition is done.
+          handleButtonPress(event.id, {
+            // Recognition waits for the view, but not forever.
+            openView: () =>
+              Promise.race([
+                PluginManager.showPluginView().then(() => {}),
+                new Promise<void>(resolve =>
+                  setTimeout(resolve, VIEW_OPEN_WAIT_MS),
                 ),
-              ),
-            );
-          }
+              ]),
+          });
         },
       });
     });

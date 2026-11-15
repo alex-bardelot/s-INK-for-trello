@@ -1,6 +1,12 @@
-import {PluginCommAPI, PluginFileAPI, PluginNoteAPI} from 'sn-plugin-lib';
+import {
+  PluginCommAPI,
+  PluginFileAPI,
+  PluginManager,
+  PluginNoteAPI,
+} from 'sn-plugin-lib';
 
 import {i18n} from '../i18n';
+import {logInkLink} from '../inkLink/diagnostics';
 import {ensureFileReadPermission} from './permissions';
 
 /** Element types, from `Element.TYPE_*` in the Supernote SDK. */
@@ -109,15 +115,82 @@ async function getCurrentPageSize(log: string[]): Promise<Size | null> {
   return null;
 }
 
+/**
+ * How long recognition may take with the plugin view open. Past this, the
+ * host is taken not to answer while the view covers the note.
+ */
+export const RECOGNITION_TIMEOUT_MS = 15000;
+
+/** Recognition state shared by the attempts of one reading. */
+interface Recognizer {
+  /** Whether the view is open in front of the note during recognition. */
+  viewOpen: boolean;
+  log: string[];
+}
+
+/** Resolves with `null` if `promise` takes longer than `ms`. */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null> {
+  return new Promise<T | null>((resolve, reject) => {
+    const timer = setTimeout(() => resolve(null), ms);
+    promise.then(
+      value => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      error => {
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
+/**
+ * Hides the view, so that recognition runs with the note in front as it
+ * did before the "recognizing" popup existed.
+ */
+async function hideViewForRecognition(recognizer: Recognizer): Promise<void> {
+  recognizer.viewOpen = false;
+  try {
+    await PluginCommAPI.cancelRecognize();
+  } catch (error) {
+    recognizer.log.push(`cancelRecognize threw: ${String(error)}`);
+  }
+  try {
+    await PluginManager.closePluginView();
+  } catch (error) {
+    recognizer.log.push(`closePluginView threw: ${String(error)}`);
+  }
+}
+
 async function recognize(
   elements: LassoElement[],
   size: Size,
   label: string,
-  log: string[],
+  recognizer: Recognizer,
 ): Promise<string> {
+  const {log} = recognizer;
+  const started = Date.now();
   try {
-    const response = await PluginCommAPI.recognizeElements(elements, size);
-    log.push(`${label} ${size.width}x${size.height}: ${describe(response)}`);
+    const request = PluginCommAPI.recognizeElements(elements, size);
+    let response: unknown = recognizer.viewOpen
+      ? await withTimeout(request, RECOGNITION_TIMEOUT_MS)
+      : await request;
+    if (response === null && recognizer.viewOpen) {
+      log.push(
+        `${label}: no answer after ${Date.now() - started} ms, view open`,
+      );
+      logInkLink(
+        'card: recognition stalled with the view open, retrying hidden',
+      );
+      await hideViewForRecognition(recognizer);
+      response = await PluginCommAPI.recognizeElements(elements, size);
+    }
+    log.push(
+      `${label} ${size.width}x${size.height}: ${describe(response)}, ${
+        Date.now() - started
+      } ms`,
+    );
     return recognizedText(response);
   } catch (error) {
     log.push(`${label} threw: ${String(error)}`);
@@ -165,10 +238,12 @@ function countTypes(elements: LassoElement[]): string {
  *
  * @param onCaptured - Called once the selection itself is read (elements,
  *   typed text, page size), before the slow handwriting recognition, which
- *   no longer needs the lasso. Not called if the selection cannot be read.
+ *   no longer needs the lasso. It opens the view with a "recognizing" popup;
+ *   recognition starts once it has settled. Not called if the selection
+ *   cannot be read.
  */
 export async function readLassoText(
-  onCaptured: () => void = () => {},
+  onCaptured?: () => Promise<void>,
 ): Promise<LassoTextResult> {
   // getLassoElements is a file read API: without FILE:READ the host rejects it.
   if (
@@ -203,7 +278,16 @@ export async function readLassoText(
   // Read while the note is still in front, before the view is shown.
   const pageSize =
     handwritingCandidates.length > 0 ? await getCurrentPageSize(log) : null;
-  onCaptured();
+  logInkLink(
+    `card: captured ${elements.length} elements (${countTypes(elements)})`,
+  );
+  const recognizer: Recognizer = {viewOpen: false, log};
+  if (onCaptured) {
+    // The view must be up before recognizing: the host handles one at a time.
+    await onCaptured();
+    recognizer.viewOpen = true;
+    logInkLink('card: view opened, recognizing');
+  }
 
   let handwriting = '';
   if (handwritingCandidates.length > 0) {
@@ -220,14 +304,32 @@ export async function readLassoText(
         handwritingCandidates,
         size,
         'recognize strokes',
-        log,
+        recognizer,
       );
       if (handwriting) {
         break;
       }
     }
     if (!handwriting && handwritingCandidates.length !== elements.length) {
-      handwriting = await recognize(elements, sizes[0], 'recognize all', log);
+      handwriting = await recognize(
+        elements,
+        sizes[0],
+        'recognize all',
+        recognizer,
+      );
+    }
+  }
+  logInkLink(
+    `card: recognized ${handwriting.length} chars${
+      onCaptured && !recognizer.viewOpen ? ' with the view hidden' : ''
+    }`,
+  );
+  if (onCaptured && !recognizer.viewOpen) {
+    // Hidden for recognition: open it again on the result.
+    try {
+      await PluginManager.showPluginView();
+    } catch (error) {
+      log.push(`showPluginView threw: ${String(error)}`);
     }
   }
 

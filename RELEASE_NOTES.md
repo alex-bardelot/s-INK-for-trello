@@ -3,6 +3,20 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.48.1 — New Trello Card responds again
+
+- Reported on the tablet: **New Trello Card** no longer responded. In
+  0.48.0 the view was opened while the handwriting recognition had already
+  started, and the host does not seem to handle both at once.
+- Recognition now starts only once the view is open (the host is given
+  3 seconds at most to say so).
+- If recognition does not answer within 15 seconds with the view open, it
+  is cancelled, the view is hidden, and recognition runs again with the
+  note in front, as before 0.48.0; the view opens again on the result.
+- Settings › Diagnostics tells what happened (`card: captured …`,
+  `card: view opened, recognizing`, `card: recognition stalled …`,
+  `card: recognized N chars`).
+
 ## 0.48.0 — Checklists from the lasso, and a recognizing popup
 
 - **New Trello Card** reads checkboxes: every line of the selection that

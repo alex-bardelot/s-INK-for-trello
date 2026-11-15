@@ -68,9 +68,10 @@ function withMembership(
 
 describe('offerBoards', () => {
   it('offers starred boards by default', () => {
-    expect(offeredIds(offerBoards({boards: BOARDS, showAll: false}))).toEqual(
-      ['fav-a', 'fav-b'],
-    );
+    expect(offeredIds(offerBoards({boards: BOARDS, showAll: false}))).toEqual([
+      'fav-a',
+      'fav-b',
+    ]);
   });
 
   it('puts the last used starred board first', () => {
@@ -182,9 +183,9 @@ describe('board permissions', () => {
   });
 
   it('refuses observers, other members and deactivated members', () => {
-    expect(
-      canAddCards(withMembership(BOARDS[0], 'observer'), 'me', true),
-    ).toBe(false);
+    expect(canAddCards(withMembership(BOARDS[0], 'observer'), 'me', true)).toBe(
+      false,
+    );
     expect(
       canAddCards(withMembership(BOARDS[0], 'normal', 'other'), 'me', true),
     ).toBe(false);
@@ -206,9 +207,7 @@ describe('board permissions', () => {
     expect(isObserverOf(withMembership(BOARDS[0], 'observer'), 'me')).toBe(
       true,
     );
-    expect(isObserverOf(withMembership(BOARDS[0], 'normal'), 'me')).toBe(
-      false,
-    );
+    expect(isObserverOf(withMembership(BOARDS[0], 'normal'), 'me')).toBe(false);
     expect(isObserverOf(BOARDS[0], 'me')).toBe(false);
   });
 });
@@ -405,11 +404,11 @@ describe('launch intent', () => {
   const readText = () => Promise.resolve({ok: true as const, text: 'Buy milk'});
 
   it('follows the pressed button', () => {
-    handleButtonPress(ButtonId.LassoCreateCard, readText);
+    handleButtonPress(ButtonId.LassoCreateCard, {readSelection: readText});
     const first = getLaunchIntent();
     expect(first.kind).toBe('lassoCreateCard');
 
-    handleButtonPress(ButtonId.LassoCreateCard, readText);
+    handleButtonPress(ButtonId.LassoCreateCard, {readSelection: readText});
     const second = getLaunchIntent();
     expect(second).not.toEqual(first);
 
@@ -422,7 +421,9 @@ describe('launch intent', () => {
 
   it('reads the lasso selection when the button is pressed', async () => {
     const read = jest.fn(readText);
-    const intent = handleButtonPress(ButtonId.LassoCreateCard, read);
+    const intent = handleButtonPress(ButtonId.LassoCreateCard, {
+      readSelection: read,
+    });
     expect(read).toHaveBeenCalledTimes(1);
     expect(intent?.kind).toBe('lassoCreateCard');
     if (intent?.kind === 'lassoCreateCard') {
@@ -430,44 +431,59 @@ describe('launch intent', () => {
     }
   });
 
-  it('tells when the selection is captured, before the recognition', async () => {
-    let finishRecognition: () => void = () => {};
+  it('opens the view once captured, and recognizes after it', async () => {
     const events: string[] = [];
-    const intent = handleButtonPress(
-      ButtonId.LassoCreateCard,
-      async onCaptured => {
-        onCaptured();
-        await new Promise<void>(resolve => {
-          finishRecognition = resolve;
-        });
+    const intent = handleButtonPress(ButtonId.LassoCreateCard, {
+      openView: async () => {
+        await Promise.resolve();
+        events.push('view open');
+      },
+      readSelection: async onCaptured => {
+        events.push('captured');
+        await onCaptured();
+        events.push('recognized');
         return {ok: true, text: 'Buy milk'};
       },
-    );
+    });
     if (intent?.kind !== 'lassoCreateCard') {
       throw new Error('Expected a lasso intent');
     }
-    intent.lasso.then(() => events.push('recognized'));
-    await intent.captured.then(() => events.push('captured'));
-    expect(events).toEqual(['captured']);
-    finishRecognition();
     await intent.lasso;
-    expect(events).toEqual(['captured', 'recognized']);
+    expect(events).toEqual(['captured', 'view open', 'recognized']);
   });
 
-  it('settles "captured" when the reader fails before capturing', async () => {
-    const intent = handleButtonPress(ButtonId.LassoCreateCard, () =>
-      Promise.resolve({ok: false, error: 'noSelection', diagnostics: ''}),
-    );
+  it('opens the view once, even if the reader never captured', async () => {
+    const openView = jest.fn(() => Promise.resolve());
+    const intent = handleButtonPress(ButtonId.LassoCreateCard, {
+      openView,
+      readSelection: () =>
+        Promise.resolve({ok: false, error: 'noSelection', diagnostics: ''}),
+    });
     if (intent?.kind !== 'lassoCreateCard') {
       throw new Error('Expected a lasso intent');
     }
-    await expect(intent.captured).resolves.toBeUndefined();
+    await intent.lasso;
+    expect(openView).toHaveBeenCalledTimes(1);
+  });
+
+  it('still reads the selection if the view fails to open', async () => {
+    const intent = handleButtonPress(ButtonId.LassoCreateCard, {
+      openView: () => Promise.reject(new Error('no view')),
+      readSelection: async onCaptured => {
+        await onCaptured();
+        return {ok: true, text: 'Buy milk'};
+      },
+    });
+    if (intent?.kind !== 'lassoCreateCard') {
+      throw new Error('Expected a lasso intent');
+    }
+    await expect(intent.lasso).resolves.toEqual({ok: true, text: 'Buy milk'});
   });
 
   it('turns a failing reader into a "no selection" result', async () => {
-    const intent = handleButtonPress(ButtonId.LassoCreateCard, () =>
-      Promise.reject(new Error('boom')),
-    );
+    const intent = handleButtonPress(ButtonId.LassoCreateCard, {
+      readSelection: () => Promise.reject(new Error('boom')),
+    });
     if (intent?.kind !== 'lassoCreateCard') {
       throw new Error('Expected a lasso intent');
     }
