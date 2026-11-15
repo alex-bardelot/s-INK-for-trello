@@ -198,12 +198,12 @@ export default function App(): React.JSX.Element {
   // Settings) are read anonymously.
   const client = account?.client ?? session.anonymousClient;
 
-  // Settings opens over the page, from the button of its title bar, and
-  // closes back to it as it was. The connection screen, which Settings
-  // can open, shows over Settings.
+  // Settings opens over the page, from the button of its title bar, at the
+  // page's own category, and closes back to the page as it was. The
+  // connection screen, which Settings can open, shows over Settings.
   const settingsShown = settingsOpen && !connectOpen;
-  const openSettings = () => {
-    setSettingsCategory('general');
+  const openSettings = (category: SettingsCategory) => {
+    setSettingsCategory(category);
     setSettingsOpen(true);
   };
 

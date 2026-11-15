@@ -149,6 +149,8 @@ export function CardDetailScreen({
     <ScreenFrame
       title={boardName}
       onBack={onBack}
+      // The card's Start button follows the Start work settings.
+      settingsCategory="startWork"
       actions={
         <>
           {canEdit && (

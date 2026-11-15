@@ -367,7 +367,10 @@ export function BoardsScreen({
   };
 
   return (
-    <ScreenFrame title={t('boards.title')} hideSettingsButton={linking}>
+    <ScreenFrame
+      title={t('boards.title')}
+      // Hidden while picking what to link a selection to.
+      settingsCategory={linking ? undefined : 'general'}>
       <View
         style={styles.body}
         onLayout={event => setBodyHeight(event.nativeEvent.layout.height)}

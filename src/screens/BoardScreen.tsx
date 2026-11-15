@@ -331,6 +331,7 @@ export function BoardScreen({
       <ScreenFrame
         title={board.starred ? `★ ${board.name}` : board.name}
         onBack={onBack}
+        settingsCategory="boards"
         actions={
           <>
             {focusOn && (

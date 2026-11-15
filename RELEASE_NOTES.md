@@ -3,6 +3,16 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.53.1 — Settings at the page's own category
+
+- The settings button is now only on the navigation pages, and opens
+  Settings at the category of the page it is on:
+  - the boards page opens **General**;
+  - a board opens **Boards** (layout, Focus and Review modes);
+  - a card opens **Start work**, which its **Start** button follows.
+- The waits, the connection page and the New Trello Card steps no
+  longer have it.
+
 ## 0.53.0 — Settings from every page
 
 - Every page of the plugin now has a settings button, a gear in its

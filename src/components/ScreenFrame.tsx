@@ -3,6 +3,7 @@ import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {PluginManager} from 'sn-plugin-lib';
 
 import {useTranslation} from '../i18n';
+import type {SettingsCategory} from '../screens/SettingsScreen';
 import {connectivity, useConnectivity} from '../network/connectivity';
 import {borders, colors, spacing, typography} from '../theme';
 import {CloseIcon} from './CloseIcon';
@@ -29,8 +30,12 @@ export interface ScreenFrameProps {
   flush?: boolean;
   /** Hides the offline button, on a screen that has its own Retry. */
   hideOfflineButton?: boolean;
-  /** Hides the settings button, while the page is in a special mode. */
-  hideSettingsButton?: boolean;
+  /**
+   * Settings category of the page: shows the settings button, which opens
+   * Settings at it. Only the navigation pages (boards, a board, a card)
+   * have one.
+   */
+  settingsCategory?: SettingsCategory;
   /**
    * Shows the title bar of the tablet's own creation dialogs (New Task,
    * New Event) instead: black, Cancel on the left, the title in the
@@ -50,8 +55,8 @@ export interface DialogBar {
 }
 
 /**
- * Common layout of the plugin screens: title bar with the settings button
- * and a close button. While the tablet has no internet, an "Offline"
+ * Common layout of the plugin screens: title bar with a close button, and
+ * the settings button on the navigation pages. While the tablet has no internet, an "Offline"
  * button with a Wi-Fi off sign stands last among the actions: it checks
  * again, and says in a popup that the tablet must be connected if it
  * still is not.
@@ -63,7 +68,7 @@ export function ScreenFrame({
   actions,
   flush,
   hideOfflineButton,
-  hideSettingsButton,
+  settingsCategory,
   dialog,
 }: ScreenFrameProps): React.JSX.Element {
   const {t} = useTranslation();
@@ -122,12 +127,12 @@ export function ScreenFrame({
             )}
           </View>
         )}
-        {openSettings && !hideSettingsButton && (
+        {openSettings && settingsCategory && (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t('settings.open')}
             hitSlop={spacing.md}
-            onPress={openSettings}
+            onPress={() => openSettings(settingsCategory)}
             style={styles.closeButton}>
             {({pressed}) => (
               <GearIcon
