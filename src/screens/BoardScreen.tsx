@@ -52,6 +52,7 @@ import {RefreshIcon} from '../components/RefreshIcon';
 import {Segment, SegmentGroup} from '../components/SegmentedControl';
 import {HEADER_ICON_SIZE, ScreenFrame} from '../components/ScreenFrame';
 import {SmallButton} from '../components/SmallButton';
+import {WaitingBox} from '../components/WaitingBox';
 import {Locale, useTranslation} from '../i18n';
 import {toSessionError} from '../session/trelloSession';
 import {KeyValueStore} from '../storage/keyValueStore';
@@ -65,7 +66,7 @@ import {
 } from '../trello';
 import {borders, colors, spacing, typography} from '../theme';
 import {CardDetailScreen} from './CardDetailScreen';
-import {StatusScreen} from './StatusScreen';
+import {WaitingScreen} from './StatusScreen';
 
 const CARD_GAP = spacing.sm;
 const COLUMN_GAP = spacing.lg;
@@ -322,9 +323,7 @@ export function BoardScreen({
     !initialCardShown &&
     state.status !== 'failed';
   if (awaitingCard) {
-    return (
-      <StatusScreen boxed message={t('inkLink.opening')} onBack={onBack} />
-    );
+    return <WaitingScreen message={t('inkLink.opening')} onBack={onBack} />;
   }
 
   return (
@@ -370,7 +369,7 @@ export function BoardScreen({
           </>
         }>
         {state.status === 'loading' && (
-          <Text style={styles.message}>{t('board.loading')}</Text>
+          <WaitingBox message={t('board.loading')} />
         )}
 
         {state.status === 'failed' && (

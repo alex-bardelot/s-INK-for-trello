@@ -3,6 +3,19 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.52.3 — One waiting box everywhere
+
+- Every wait of the plugin now shows the same box: a framed message in
+  the middle of the page, with three squares that fill in one by one,
+  once a second. Only the message changes:
+  - **Looking for your Trello account…** when the plugin opens;
+  - **Opening the s-INK link…**;
+  - **Loading the board…**;
+  - on the New Trello Card page, **recognizing**, **Loading…** and
+    **Creating the card…** (still over the page).
+- Short waits shown in place, inside a button, a list row or a card's
+  footer, stay as they were.
+
 ## 0.52.2 — Opening message in a box
 
 - **Opening the link…**, shown while an s-INK link opens, now stands in

@@ -21,7 +21,7 @@ import {ConnectScreen} from './screens/ConnectScreen';
 import {CreateCardScreen} from './screens/CreateCardScreen';
 import {OfflineScreen} from './screens/OfflineScreen';
 import {SettingsCategory, SettingsScreen} from './screens/SettingsScreen';
-import {StatusScreen} from './screens/StatusScreen';
+import {StatusScreen, WaitingScreen} from './screens/StatusScreen';
 import {useTrelloSession} from './session/useTrelloSession';
 import {TrelloBoard} from './trello';
 
@@ -190,12 +190,11 @@ export default function App(): React.JSX.Element {
   }, [linkIntent?.requestId, sessionChecked]);
 
   if (state.status === 'checking') {
-    return <StatusScreen message={t('session.checking')} />;
+    return <WaitingScreen message={t('session.checking')} />;
   }
   if (linkStatus === 'opening') {
     return (
-      <StatusScreen
-        boxed
+      <WaitingScreen
         message={t('inkLink.opening')}
         onBack={() => setLinkStatus('idle')}
       />

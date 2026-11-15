@@ -53,6 +53,7 @@ import {BlockIcon, BlockIconKind} from '../components/BlockIcon';
 import {MemberAvatar} from '../components/MemberAvatar';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {SmallButton} from '../components/SmallButton';
+import {WaitingBox} from '../components/WaitingBox';
 import {
   CHIP_BORDER_WIDTH,
   CHIP_HEIGHT,
@@ -101,11 +102,6 @@ type Step =
 
 /** What could fail once the card itself was created. */
 type CreationProblem = 'card.checklistFailed' | 'card.linkFailed';
-
-/** The working popup's squares, one more filled every second. */
-const WORKING_SQUARES = 3;
-const WORKING_TICK_MS = 1000;
-const WORKING_SQUARE_SIZE = 16;
 
 /** Which list the floating picker shows, and where, under its button. */
 type Picker = {
@@ -513,18 +509,14 @@ export function CreateCardScreen({
       // recognition is done.
       return (
         <ScreenFrame title={title}>
-          <View style={styles.popupArea}>
-            <View accessibilityRole="progressbar" style={styles.popup}>
-              <Text style={styles.popupText}>{t('card.recognizing')}</Text>
-            </View>
-          </View>
+          <WaitingBox message={t('card.recognizing')} />
         </ScreenFrame>
       );
 
     case 'loading':
       return (
         <ScreenFrame title={title}>
-          <Text style={styles.message}>{t('card.loading')}</Text>
+          <WaitingBox message={t('card.loading')} />
         </ScreenFrame>
       );
 
@@ -935,10 +927,7 @@ export function CreateCardScreen({
             </View>
           </ScreenFrame>
           {step.kind === 'creating' && (
-            <PopupOverlay>
-              <Text style={styles.popupText}>{t('card.creating')}</Text>
-              <WorkingSquares />
-            </PopupOverlay>
+            <WaitingBox overlay message={t('card.creating')} />
           )}
           {step.kind === 'done' && (
             <PopupOverlay>
@@ -977,31 +966,6 @@ function PopupOverlay({
       <View style={styles.popupArea}>
         <View style={[styles.popup, styles.popupStack]}>{children}</View>
       </View>
-    </View>
-  );
-}
-
-/**
- * Shows that the work goes on: one more square is filled every second,
- * then they start over. Once a second at most, gentle on E Ink.
- */
-function WorkingSquares(): React.JSX.Element {
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    const timer = setInterval(
-      () => setTick(current => (current + 1) % (WORKING_SQUARES + 1)),
-      WORKING_TICK_MS,
-    );
-    return () => clearInterval(timer);
-  }, []);
-  return (
-    <View accessibilityRole="progressbar" style={styles.working}>
-      {Array.from({length: WORKING_SQUARES}, (_, index) => (
-        <View
-          key={index}
-          style={[styles.workingSquare, index < tick && styles.workingFilled]}
-        />
-      ))}
     </View>
   );
 }
@@ -1520,19 +1484,6 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-  },
-  working: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  workingSquare: {
-    width: WORKING_SQUARE_SIZE,
-    height: WORKING_SQUARE_SIZE,
-    borderColor: colors.foreground,
-    borderWidth: borders.width,
-  },
-  workingFilled: {
-    backgroundColor: colors.foreground,
   },
   diagnostics: {
     borderColor: colors.foreground,
