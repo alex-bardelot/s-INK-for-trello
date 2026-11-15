@@ -90,8 +90,8 @@ export interface SettingsScreenProps {
  * Settings that are rarely needed, kept off the boards page. Laid out like
  * the Supernote system settings: categories in a left column, separated by
  * dotted lines, and the selected one's sections on the right. "General"
- * holds the language, the public boards and the Trello account (and where
- * its token is kept); "Boards" the settings of an open board (layout and mode); "Links"
+ * holds the language, the main page shortcuts, the public boards and the
+ * Trello account (and where its token is kept); "Boards" the settings of an open board (layout and mode); "Links"
  * the tool opening s-INK links; "About" the version and the
  * non-affiliation notice.
  */
@@ -181,6 +181,35 @@ export function SettingsScreen({
             <>
               <LanguageSettings store={store} />
 
+              {/* Shortcuts shown on the boards page. */}
+              <Section title={t('settings.mainPage')}>
+                <Switch
+                  label={t('settings.showAddPublicBoard')}
+                  help={t('settings.showAddPublicBoardHelp')}
+                  value={boardsPreferences.showAddPublicBoard}
+                  onChange={showAddPublicBoard =>
+                    onBoardsPreferencesChange({
+                      ...boardsPreferences,
+                      showAddPublicBoard,
+                    })
+                  }
+                />
+                {/* Signed in, the boards page has no connect button. */}
+                {!member && (
+                  <Switch
+                    label={t('settings.showConnectCard')}
+                    help={t('settings.showConnectCardHelp')}
+                    value={boardsPreferences.showConnectCard}
+                    onChange={showConnectCard =>
+                      onBoardsPreferencesChange({
+                        ...boardsPreferences,
+                        showConnectCard,
+                      })
+                    }
+                  />
+                )}
+              </Section>
+
               <Section title={t('settings.publicBoards')}>
                 <PublicBoardsSettings
                   client={client}
@@ -200,20 +229,7 @@ export function SettingsScreen({
                     onDisconnect={onDisconnect}
                   />
                 ) : (
-                  <>
-                    <Switch
-                      label={t('settings.showConnectCard')}
-                      help={t('settings.showConnectCardHelp')}
-                      value={boardsPreferences.showConnectCard}
-                      onChange={showConnectCard =>
-                        onBoardsPreferencesChange({
-                          ...boardsPreferences,
-                          showConnectCard,
-                        })
-                      }
-                    />
-                    <SignedOutCard onConnect={onConnect} />
-                  </>
+                  <SignedOutCard onConnect={onConnect} />
                 )}
               </Section>
             </>
@@ -574,8 +590,8 @@ function AccountCard({
 
 /**
  * No account connected: a way to connect. The "Quick connect button" switch
- * above it hides the "My boards" section (and its connect card) of the
- * boards page, for someone who only reads public boards.
+ * of the Main page section hides the "My boards" section (and its connect
+ * card) of the boards page, for someone who only reads public boards.
  */
 function SignedOutCard({
   onConnect,

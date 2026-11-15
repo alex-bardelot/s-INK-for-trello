@@ -6,7 +6,7 @@ import {Button} from '../components/Button';
 import {Switch} from '../components/Switch';
 import {useTranslation} from '../i18n';
 import {SUPERNOTE_ROADMAP_NAME, TrelloClient} from '../trello';
-import {borders, colors, spacing, typography} from '../theme';
+import {colors, spacing, typography} from '../theme';
 import {AddPublicBoardForm} from './AddPublicBoardForm';
 
 export interface PublicBoardsSettingsProps {
@@ -20,8 +20,8 @@ export interface PublicBoardsSettingsProps {
 
 /**
  * Public boards of the boards page: Supernote's roadmap, which can only be
- * hidden, then the boards the user added, which can be removed, the form
- * adding one, and a switch showing the "+" card on the boards page.
+ * hidden, then the boards the user added, which can be removed, and the
+ * form adding one.
  */
 export function PublicBoardsSettings({
   client,
@@ -60,7 +60,9 @@ export function PublicBoardsSettings({
           </View>
           <Button
             label={t('settings.publicBoardRemove')}
-            onPress={() => onChange(removePublicBoard(preferences, ref.shortLink))}
+            onPress={() =>
+              onChange(removePublicBoard(preferences, ref.shortLink))
+            }
           />
         </View>
       ))}
@@ -79,14 +81,6 @@ export function PublicBoardsSettings({
           onPress={() => setAdding(true)}
         />
       )}
-
-      <View style={styles.separator} />
-      <Switch
-        label={t('settings.showAddPublicBoard')}
-        help={t('settings.showAddPublicBoardHelp')}
-        value={preferences.showAddPublicBoard}
-        onChange={show => onChange({...preferences, showAddPublicBoard: show})}
-      />
     </View>
   );
 }
@@ -122,9 +116,5 @@ const styles = StyleSheet.create({
   small: {
     color: colors.foreground,
     fontSize: typography.small,
-  },
-  separator: {
-    height: borders.width / 2,
-    backgroundColor: colors.foreground,
   },
 });

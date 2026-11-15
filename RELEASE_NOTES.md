@@ -3,6 +3,15 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.41.0 — Main page section in Settings
+
+- Settings > General gets a **Main page** section, after Language. It
+  gathers the **Quick add button** switch (out of Public boards) and,
+  signed out, the **Quick connect button** switch (out of Trello
+  account).
+- Their help texts are shorter, the section title already saying where
+  the buttons are. New `settings.mainPage` string in all locales.
+
 ## 0.40.0 — Language setting
 
 - Settings > General starts with a **Language** section: **System**
