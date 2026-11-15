@@ -88,6 +88,7 @@
   "settings.modeAll": "すべて",
   "settings.boards": "ボード",
   "settings.trello": "Trello",
+  "settings.links": "リンク",
   "settings.about": "このプラグインについて",
   "settings.diagnostics": "診断",
   "settings.version": "バージョン {version}",

@@ -96,6 +96,7 @@ export function SettingsScreen({
 
   const categories: {value: SettingsCategory; label: string}[] = [
     {value: 'boards', label: t('settings.boards')},
+    {value: 'links', label: t('settings.links')},
     {value: 'trello', label: t('settings.trello')},
     {value: 'about', label: t('settings.about')},
     ...(showDiagnostics
@@ -166,9 +167,9 @@ export function SettingsScreen({
               </Section>
 
               <BoardViewSettings store={store} />
-
-              <NoteLinkSettings store={store} />
             </>
+          ) : category === 'links' ? (
+            <NoteLinkSettings store={store} />
           ) : category === 'trello' ? (
             <>
               <Section title={t('settings.account')}>
@@ -208,7 +209,12 @@ export function SettingsScreen({
 }
 
 /** Categories of the left column, like the Supernote system settings. */
-type SettingsCategory = 'boards' | 'trello' | 'about' | 'diagnostics';
+type SettingsCategory =
+  | 'boards'
+  | 'links'
+  | 'trello'
+  | 'about'
+  | 'diagnostics';
 
 /** Name, version and description of the plugin, then the non-affiliation notice. */
 function AboutSettings(): React.JSX.Element {

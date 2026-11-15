@@ -89,6 +89,7 @@
   "settings.modeAll": "Toutes",
   "settings.boards": "Tableaux",
   "settings.trello": "Trello",
+  "settings.links": "Liens",
   "settings.about": "À propos",
   "settings.diagnostics": "Diagnostic",
   "settings.version": "Version {version}",

@@ -3,6 +3,12 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.35.0 — Links category in Settings
+
+- The setting for which tool opens s-INK links in notes (finger, pen or
+  both) moves from Boards to its own **Links** category, between Boards
+  and Trello. New string in all locales.
+
 ## 0.34.0 — Settings split into Boards and Trello
 
 - The General category of Settings is split in two:

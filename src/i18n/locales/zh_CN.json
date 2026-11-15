@@ -88,6 +88,7 @@
   "settings.modeAll": "全部",
   "settings.boards": "看板",
   "settings.trello": "Trello",
+  "settings.links": "链接",
   "settings.about": "关于",
   "settings.diagnostics": "诊断",
   "settings.version": "版本 {version}",

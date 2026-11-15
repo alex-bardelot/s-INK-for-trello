@@ -89,6 +89,7 @@
   "settings.modeAll": "All cards",
   "settings.boards": "Boards",
   "settings.trello": "Trello",
+  "settings.links": "Links",
   "settings.about": "About",
   "settings.diagnostics": "Diagnostics",
   "settings.version": "Version {version}",
