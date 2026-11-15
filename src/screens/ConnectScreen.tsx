@@ -16,10 +16,17 @@ import {ScreenFrame} from '../components/ScreenFrame';
 import {SegmentedControl} from '../components/SegmentedControl';
 import {SmallButton} from '../components/SmallButton';
 import {TranslationKey, useTranslation} from '../i18n';
+import {PluginManager} from 'sn-plugin-lib';
+
 import {logInkLink} from '../inkLink/diagnostics';
 import {isClipboardAvailable, readClipboardText} from '../platform/clipboard';
 import {watchClipboardForToken} from '../session/clipboardTokenWatch';
 import {SessionErrorCode} from '../session/trelloSession';
+import {
+  clearPendingConnection,
+  getPendingConnection,
+  setPendingConnection,
+} from '../relay/pendingConnection';
 import {
   createRelaySession,
   RelaySession,
@@ -95,9 +102,11 @@ export function ConnectScreen({
   onBack,
 }: ConnectScreenProps): React.JSX.Element {
   const {t} = useTranslation();
+  // Back from the browser: same relay session and stay-connected choice.
+  const [resumed] = useState(() => getPendingConnection());
   const [token, setToken] = useState('');
   // Saving the token on the tablet is opt-in: off until the user ticks it.
-  const [remember, setRemember] = useState(false);
+  const [remember, setRemember] = useState(resumed?.remember ?? false);
   const [browserError, setBrowserError] = useState(false);
   const [showAddress, setShowAddress] = useState(false);
   const [revealToken, setRevealToken] = useState(false);
@@ -133,7 +142,9 @@ export function ConnectScreen({
   // Copy-free flow: wait for the token the browser deposits on the relay.
   // A session is single-use, so a new one (and a new QR code) replaces it
   // once it delivered a token or expired.
-  const [relaySession, setRelaySession] = useState(newRelaySession);
+  const [relaySession, setRelaySession] = useState(() =>
+    resumed?.session ? resumed.session : newRelaySession(),
+  );
   useEffect(() => {
     if (!canConnect || !relaySession) {
       return undefined;
@@ -144,10 +155,14 @@ export function ConnectScreen({
       onToken: relayToken => {
         setToken(relayToken);
         setPasteError(null);
+        clearPendingConnection();
         setRelaySession(newRelaySession());
         latest.current.onConnect(relayToken, latest.current.remember);
       },
-      onExpired: () => setRelaySession(newRelaySession()),
+      onExpired: () => {
+        clearPendingConnection();
+        setRelaySession(newRelaySession());
+      },
     });
   }, [canConnect, relaySession]);
 
@@ -158,8 +173,15 @@ export function ConnectScreen({
   // The browser opening is traced in the diagnostics log (host only: the
   // relay address carries the session key). A call that neither opens the
   // browser nor fails would otherwise leave the button looking dead.
+  // The plugin view stays drawn over the browser: it is closed once the
+  // browser opened, and the connection is kept for when s-INK reopens.
   const openUrl = useCallback((url: string) => {
     setBrowserError(false);
+    setPendingConnection({
+      session: relaySession,
+      remember,
+      startedAt: Date.now(),
+    });
     const host = url.replace(/^[a-z]+:\/\/([^/?#]+).*$/i, '$1');
     logInkLink(`browser: opening ${host} (app ${AppState.currentState})`);
     let settled = false;
@@ -175,15 +197,20 @@ export function ConnectScreen({
         logInkLink(
           `browser: opened (${String(result)}, app ${AppState.currentState})`,
         );
+        return PluginManager.closePluginView().catch(closeError => {
+          console.warn('[sINK] Failed to close the plugin view', closeError);
+          logInkLink(`browser: view not closed: ${String(closeError)}`);
+        });
       })
       .catch(openError => {
         settled = true;
         console.warn('[sINK] Failed to open the browser', openError);
         logInkLink(`browser: failed: ${String(openError)}`);
+        clearPendingConnection();
         setBrowserError(true);
       })
       .finally(() => clearTimeout(timeout));
-  }, []);
+  }, [relaySession, remember]);
 
   // Whether the browser really came over the plugin shows in the log.
   useEffect(() => {

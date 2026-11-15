@@ -3,6 +3,16 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.42.3 — The browser comes over the plugin
+
+- **Open in browser** and **Open Trello directly** did open the browser,
+  but the plugin view stayed drawn over it. The view now closes once the
+  system has opened the browser.
+- The connection is kept meanwhile: reopening s-INK goes back to the
+  connection page, with the same relay session (the token the browser
+  deposited is picked up at once) and the same stay-connected choice. It
+  is forgotten once signed in, on Back, or after the relay's 10 minutes.
+
 ## 0.42.2 — Open in browser: feedback and diagnostics
 
 - **Open in browser** (and **Open Trello directly**) no longer look dead
