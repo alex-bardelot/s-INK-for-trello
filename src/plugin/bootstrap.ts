@@ -7,6 +7,7 @@ import {
   captureLassoSelection,
   clearPendingBinding,
 } from '../inkLink/lassoBinding';
+import {logInkLink} from '../inkLink/diagnostics';
 import {inspectLassoSelection} from '../inkLink/lassoInspect';
 import {startInkLinkTaps} from '../inkLink/noteBridge';
 import {refreshButtons, registerButtons} from './buttons';
@@ -74,6 +75,7 @@ export function bootstrapPlugin(): void {
       // The SDK requires buttons to be registered before the listener.
       PluginManager.registerButtonListener({
         onButtonPress: event => {
+          logInkLink(`button ${event.id} pressed`);
           if (event.id === ButtonId.LassoInspect) {
             inspectLassoSelection();
             return;

@@ -5,9 +5,8 @@ import {
   PluginNoteAPI,
 } from 'sn-plugin-lib';
 
-import {i18n} from '../i18n';
 import {logInkLink} from '../inkLink/diagnostics';
-import {ensureFileReadPermission} from './permissions';
+import {hasFileReadPermission} from './permissions';
 
 /** Element types, from `Element.TYPE_*` in the Supernote SDK. */
 const ElementType = {
@@ -245,10 +244,11 @@ function countTypes(elements: LassoElement[]): string {
 export async function readLassoText(
   onCaptured?: () => Promise<void>,
 ): Promise<LassoTextResult> {
-  // getLassoElements is a file read API: without FILE:READ the host rejects it.
-  if (
-    !(await ensureFileReadPermission(i18n.t('card.filePermissionRationale')))
-  ) {
+  logInkLink('card: reading the lasso');
+  // getLassoElements is a file read API: without FILE:READ the host rejects
+  // it. No prompt here: with the view hidden it would never show.
+  if (!(await hasFileReadPermission())) {
+    logInkLink('card: no file read permission, the view will ask');
     return {
       ok: false,
       error: 'permissionDenied',

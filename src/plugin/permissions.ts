@@ -99,3 +99,13 @@ export async function ensureStorageWritePermission(
 export function ensureFileReadPermission(rationale?: string): Promise<boolean> {
   return ensurePermission(Permission.FileRead, rationale);
 }
+
+/**
+ * Whether notes may be read, without asking. The lasso buttons use it:
+ * they run before the view is shown, and a permission prompt asked then
+ * never shows, so the button would wait forever (seen after updates, which
+ * reset the permission). The view asks for it once it is open.
+ */
+export function hasFileReadPermission(): Promise<boolean> {
+  return hasPermission(Permission.FileRead);
+}

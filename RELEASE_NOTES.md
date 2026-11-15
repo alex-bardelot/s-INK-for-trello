@@ -3,6 +3,20 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.49.1 — Lasso buttons no longer hang without note access
+
+- Reported on the tablet after updating to 0.49.0: **New Trello Card** did
+  nothing, and Diagnostics had no `card:` line at all. Updating the plugin
+  seems to reset its permission to read notes; the lasso button then asked
+  for it while the view was still hidden, a prompt that never shows, and
+  waited forever. The same happened after 0.48.0.
+- **New Trello Card** and **Insert Trello Link** now only check the
+  permission, without asking. If it is missing, the view opens at once,
+  asks for it there, and **New Trello Card** says to select the text
+  again once it is allowed.
+- Diagnostics now logs every button press (`button N pressed`) and the
+  start of the lasso reading (`card: reading the lasso`).
+
 ## 0.49.0 — New Trello Card on a single page
 
 - **New Trello Card** no longer asks for a board, then a list, then shows

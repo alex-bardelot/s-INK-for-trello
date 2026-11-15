@@ -14,12 +14,13 @@ jest.mock('sn-plugin-lib', () => ({
   PluginNoteAPI: {getLassoText: () => Promise.resolve({success: true})},
 }));
 jest.mock('../src/plugin/permissions', () => ({
-  ensureFileReadPermission: () => Promise.resolve(true),
+  hasFileReadPermission: jest.fn(),
 }));
 
 import {PluginCommAPI, PluginManager} from 'sn-plugin-lib';
 
 import {RECOGNITION_TIMEOUT_MS, readLassoText} from '../src/plugin/lassoText';
+import {hasFileReadPermission} from '../src/plugin/permissions';
 
 const mockComm = PluginCommAPI as unknown as Record<
   | 'getLassoElements'
@@ -38,6 +39,7 @@ const ok = <T>(result: T) => Promise.resolve({success: true, result});
 
 beforeEach(() => {
   jest.clearAllMocks();
+  (hasFileReadPermission as jest.Mock).mockResolvedValue(true);
   mockComm.getLassoElements.mockReturnValue(ok([{type: 0}, {type: 0}]));
   mockComm.getCurrentFilePath.mockReturnValue(ok('/note.note'));
   mockComm.getCurrentPageNum.mockReturnValue(ok(0));
@@ -78,6 +80,18 @@ describe('readLassoText', () => {
     expect(mockComm.recognizeElements).toHaveBeenCalledTimes(2);
     // Shown again on the result.
     expect(mockManager.showPluginView).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not prompt for the permission with the view hidden', async () => {
+    (hasFileReadPermission as jest.Mock).mockResolvedValue(false);
+    const onCaptured = jest.fn(() => Promise.resolve());
+    await expect(readLassoText(onCaptured)).resolves.toMatchObject({
+      ok: false,
+      error: 'permissionDenied',
+    });
+    expect(mockComm.getLassoElements).not.toHaveBeenCalled();
+    // The caller opens the view anyway, which asks for the permission.
+    expect(onCaptured).not.toHaveBeenCalled();
   });
 
   it('has no time limit with the view hidden', async () => {

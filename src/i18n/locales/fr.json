@@ -171,7 +171,7 @@
   "card.diagnostics": "Diagnostic",
   "card.selectAgain": "Pour réessayer, fermez cette vue, sélectionnez à nouveau le texte au lasso puis appuyez sur « Nouvelle carte Trello ».",
   "card.filePermissionRationale": "s-INK doit lire vos notes pour transformer la sélection au lasso en carte Trello. Choisissez « Toujours autoriser » pour ne plus être sollicité.",
-  "card.filePermissionDenied": "La lecture des notes n’a pas été autorisée : la sélection au lasso ne peut pas être lue. Autorisez l’accès aux fichiers pour s-INK dans les réglages des plugins, puis réessayez.",
+  "card.filePermissionDenied": "s-INK n’a pas encore le droit de lire vos notes : la sélection au lasso n’a pas pu être lue. Autorisez-le quand c’est demandé (ou dans les réglages des plugins), puis sélectionnez à nouveau le texte au lasso.",
   "board.loading": "Chargement du tableau…",
   "board.loadFailed": "Ce tableau n’a pas pu être chargé.",
   "board.noLists": "Ce tableau n’a aucune liste ouverte.",

@@ -1,9 +1,8 @@
 import {useSyncExternalStore} from 'react';
 import {PluginCommAPI, PluginFileAPI, PluginNoteAPI} from 'sn-plugin-lib';
 
-import {i18n} from '../i18n';
 import {FALLBACK_PAGE_SIZE} from '../plugin/lassoText';
-import {ensureFileReadPermission} from '../plugin/permissions';
+import {hasFileReadPermission} from '../plugin/permissions';
 import {logInkLink} from './diagnostics';
 import {boundsOf, PageElement, Rect, unionOf} from './hitTest';
 import {layoutLinkMark, MARK_LABEL_PATTERN} from './linkLayout';
@@ -104,10 +103,10 @@ function recycle(elements: readonly NoteElement[]): void {
 export async function captureLassoSelection(): Promise<boolean> {
   setPending(null);
   try {
-    if (
-      !(await ensureFileReadPermission(i18n.t('card.filePermissionRationale')))
-    ) {
-      logInkLink('bind: no file read permission');
+    // No prompt here: with the view hidden it would never show. The view
+    // asks for the permission once it is open.
+    if (!(await hasFileReadPermission())) {
+      logInkLink('bind: no file read permission, the view will ask');
       return false;
     }
     const response = await PluginCommAPI.getLassoElements();
