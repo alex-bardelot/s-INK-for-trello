@@ -82,6 +82,22 @@ describe('readLassoText', () => {
     expect(mockManager.showPluginView).toHaveBeenCalledTimes(1);
   });
 
+  it('tells where the selection is, to link it to the card', async () => {
+    mockComm.getLassoElements.mockReturnValue(
+      ok([
+        {type: 0, numInPage: 4},
+        {type: 0, numInPage: 7},
+      ]),
+    );
+    mockComm.getCurrentPageNum.mockReturnValue(ok(2));
+    mockComm.recognizeElements.mockReturnValue(ok('Buy milk'));
+    await expect(readLassoText()).resolves.toEqual({
+      ok: true,
+      text: 'Buy milk',
+      selection: {path: '/note.note', page: 2, elements: [4, 7]},
+    });
+  });
+
   it('does not prompt for the permission with the view hidden', async () => {
     (hasFileReadPermission as jest.Mock).mockResolvedValue(false);
     const onCaptured = jest.fn(() => Promise.resolve());

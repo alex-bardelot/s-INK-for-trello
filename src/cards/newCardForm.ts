@@ -37,6 +37,36 @@ export function membersMeFirst<T extends {id: string; fullName: string}>(
   );
 }
 
+/**
+ * The chips shown for labels or members: the suggested ones first, in
+ * their order, then the ones added from the + list, in board order.
+ */
+export function chipIds(
+  all: readonly string[],
+  suggested: readonly string[],
+  selected: readonly string[],
+): string[] {
+  const shown = new Set(suggested);
+  return [
+    ...suggested,
+    ...all.filter(id => selected.includes(id) && !shown.has(id)),
+  ];
+}
+
+/**
+ * Short link of a new card, to link a note to it: given by Trello, or
+ * taken from its short URL (`https://trello.com/c/{shortLink}`).
+ */
+export function cardShortLink(card: {
+  shortLink?: string;
+  shortUrl?: string;
+}): string | null {
+  if (card.shortLink) {
+    return card.shortLink;
+  }
+  return /\/c\/([A-Za-z0-9]+)/.exec(card.shortUrl ?? '')?.[1] ?? null;
+}
+
 /** A checklist item on the form; `key` identifies its row while editing. */
 export interface FormCheckItem {
   key: string;

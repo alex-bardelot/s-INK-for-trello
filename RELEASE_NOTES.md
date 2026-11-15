@@ -3,6 +3,27 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.50.0 — Suggested labels and members, and New card settings
+
+- On the New Trello Card page, **Labels** and **Members** no longer list
+  everything the board has: only the 3 used most on new cards of that
+  board are shown (ties going to the one used last), followed by a
+  **+ Label…** or **+ Member…** button. It opens a list of them all,
+  floating under the button, where a tap adds or removes one; a tap
+  elsewhere, or scrolling, closes it. Those added from the list show as
+  chips too.
+- Labels and members are counted per board each time a card is created,
+  to rank the suggestions.
+- The connected member is assigned to each new card by default; the chip
+  can be removed before creating the card.
+- New **Settings › New card** category:
+  - **Labels and members suggested**: none, 3 or 5;
+  - **Assign me to new cards** (on by default);
+  - **Link the selection to the new card** (off by default): once the
+    card is created, what was circled with the lasso becomes an s-INK
+    link to it, with its line, as with **Insert Trello Link**. The last
+    page says whether the link was made.
+
 ## 0.49.7 — Lighter Title and Description
 
 - On the New Trello Card page, **Title** and **Description** are no

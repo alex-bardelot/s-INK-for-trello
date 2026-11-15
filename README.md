@@ -28,11 +28,15 @@ Other Supernote devices that support plugins may work but are not tested.
   press the button (a "recognizing" popup shows while the handwriting is
   recognized), and a single page shows the card: board and list (the last
   ones used, or the only ones available; a tap opens the picker), labels
-  and members of the board (solid with × once added, dashed with + while
-  available), title, description and checklist, all editable before the
-  card is created. The first line becomes the card title, the rest its
+  and members (the 3 most used on the board as chips, solid with × once
+  added, dashed with + while available, and a button listing them all),
+  title, description and checklist, all editable before the card is
+  created. The first line becomes the card title, the rest its
   description, and every line starting with a square (`☐`, `□`, `[ ]`;
-  ticked: `☑`, `■`, `[x]`) an item of a `Check-list` checklist.
+  ticked: `☑`, `■`, `[x]`) an item of a `Check-list` checklist. Settings ›
+  New card sets how many labels and members are suggested, whether the
+  member is assigned by default, and whether the selection is linked to
+  the new card once created.
 - **Start** button on the cards of boards the member can edit: assigns the
   member, swaps labels (e.g. removes `TODO`, adds `WIP`), moves the card to
   a chosen list and creates a note for it,

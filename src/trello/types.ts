@@ -214,6 +214,8 @@ export interface TrelloCard {
   name: string;
   url: string;
   shortUrl: string;
+  /** Short id used in card URLs (`trello.com/c/{shortLink}/...`). */
+  shortLink?: string;
 }
 
 /** A checklist, as returned by `POST /1/checklists` (without its items). */

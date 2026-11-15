@@ -292,6 +292,24 @@ export async function bindPendingSelection(
   if (!selection) {
     return false;
   }
+  const bound = await bindSelection(selection, target);
+  if (bound) {
+    setPending(null);
+  }
+  return bound;
+}
+
+/**
+ * Writes the link to a card or board in the `userData` of a selection,
+ * draws its mark, then saves the note. Used by Insert Trello Link, and by
+ * New Trello Card for the selection the card was made from.
+ *
+ * @returns `true` if the host accepted the change.
+ */
+export async function bindSelection(
+  selection: PendingBinding,
+  target: InkLinkTarget,
+): Promise<boolean> {
   const link = formatInkLink(target);
   let elements: NoteElement[] = [];
   try {
@@ -360,7 +378,6 @@ export async function bindPendingSelection(
         selection.page
       }${removed}, mark ${mark}, save ${status(saved)}`,
     );
-    setPending(null);
     return true;
   } catch (error) {
     logInkLink(`bind ${link}: ${String(error)}`);

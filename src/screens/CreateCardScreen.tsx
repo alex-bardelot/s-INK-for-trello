@@ -13,12 +13,19 @@ import {labelShade} from '../board/labels';
 import {loadBoardsPreferences} from '../boards/preferences';
 import {addCardChecklist} from '../cards/checklist';
 import {
+  cardShortLink,
   checkItemsToCreate,
+  chipIds,
   defaultChoice,
   FormCheckItem,
   membersMeFirst,
   toggleId,
 } from '../cards/newCardForm';
+import {
+  DEFAULT_NEW_CARD_SETTINGS,
+  loadNewCardSettings,
+  NewCardSettings,
+} from '../cards/newCardSettings';
 import {
   BoardBadge,
   canAddCards,
@@ -34,6 +41,7 @@ import {
   EMPTY_PREFERENCES,
   loadCardPreferences,
   mostUsedBoardId,
+  mostUsedIds,
   rememberCardDestination,
 } from '../cards/preferences';
 import {Button} from '../components/Button';
@@ -44,7 +52,13 @@ import {ScreenFrame} from '../components/ScreenFrame';
 import {SmallButton} from '../components/SmallButton';
 import {ToggleChip} from '../components/ToggleChip';
 import {TranslationKey, useTranslation} from '../i18n';
-import {LassoTextError, LassoTextResult} from '../plugin/lassoText';
+import {logInkLink} from '../inkLink/diagnostics';
+import {bindSelection} from '../inkLink/lassoBinding';
+import {
+  LassoSelection,
+  LassoTextError,
+  LassoTextResult,
+} from '../plugin/lassoText';
 import {SessionErrorCode, toSessionError} from '../session/trelloSession';
 import {KeyValueStore} from '../storage/keyValueStore';
 import {
@@ -74,7 +88,21 @@ type Step =
       card: TrelloCard;
       /** The card exists, but its checklist could not be added. */
       checklistFailed: boolean;
+      /** Whether the lasso selection was linked to the card, if asked. */
+      link: 'off' | 'linked' | 'failed';
     };
+
+/** Which list the floating picker shows, and where, under its button. */
+type Picker = {
+  kind: 'labels' | 'members';
+  /** Position in the form, kept inside it. */
+  left: number;
+  top: number;
+  maxHeight: number;
+};
+
+const PICKER_WIDTH = 440;
+const PICKER_MIN_HEIGHT = 240;
 
 /** Lists, labels and members of the chosen board. */
 type BoardDetails =
@@ -143,7 +171,15 @@ export function CreateCardScreen({
   const [desc, setDesc] = useState('');
   const [items, setItems] = useState<FormCheckItem[]>([]);
   const [createError, setCreateError] = useState<SessionErrorCode | null>(null);
+  const [picker, setPicker] = useState<Picker | null>(null);
   const preferences = useRef<CardPreferences>(EMPTY_PREFERENCES);
+  const settings = useRef<NewCardSettings>(DEFAULT_NEW_CARD_SETTINGS);
+  // Where the card was circled, to link it to the card once created.
+  const selection = useRef<LassoSelection | undefined>(undefined);
+  // The form and the + buttons, to place the floating picker under them.
+  const formRef = useRef<View>(null);
+  const labelsButton = useRef<View>(null);
+  const membersButton = useRef<View>(null);
   // Board whose details are awaited: an older answer is dropped.
   const detailsBoardId = useRef<string | null>(null);
   const nextItemKey = useRef(0);
@@ -192,6 +228,12 @@ export function CreateCardScreen({
           members: membersMeFirst(members, memberId),
         });
         setList(defaultChoice(lists, lastListId));
+        if (
+          settings.current.assignMe &&
+          members.some(member => member.id === memberId)
+        ) {
+          setMemberIds([memberId]);
+        }
       } catch (error) {
         if (detailsBoardId.current !== target.id) {
           return;
@@ -256,11 +298,13 @@ export function CreateCardScreen({
 
   const start = useCallback(async () => {
     setStep({kind: 'recognizing'});
-    const [lassoText, prefs] = await Promise.all([
+    const [lassoText, prefs, loadedSettings] = await Promise.all([
       lasso,
       loadCardPreferences(store),
+      loadNewCardSettings(store),
     ]);
     preferences.current = prefs;
+    settings.current = loadedSettings;
     if (!lassoText.ok) {
       setStep({
         kind: 'noText',
@@ -269,6 +313,7 @@ export function CreateCardScreen({
       });
       return;
     }
+    selection.current = lassoText.selection;
     const split = splitCardText(lassoText.text);
     setName(split.name);
     setDesc(split.desc);
@@ -309,6 +354,7 @@ export function CreateCardScreen({
         preferences.current,
         board.id,
         list.id,
+        {labelIds, memberIds, at: Date.now()},
       );
       // The card exists: a failure here must not offer to create it again.
       let checklistFailed = false;
@@ -318,7 +364,12 @@ export function CreateCardScreen({
         console.warn('[sINK] Failed to add the checklist', error);
         checklistFailed = true;
       }
-      setStep({kind: 'done', board, list, card, checklistFailed});
+      const link = await linkCardToSelection(
+        card,
+        selection.current,
+        settings.current.linkSelection,
+      );
+      setStep({kind: 'done', board, list, card, checklistFailed, link});
     } catch (error) {
       console.warn('[sINK] Failed to create the card', error);
       const code = toSessionError(error);
@@ -374,8 +425,57 @@ export function CreateCardScreen({
     [],
   );
 
+  /** Opens the list of all labels or members under its button. */
+  const openPicker = useCallback(
+    (kind: Picker['kind'], button: React.RefObject<View | null>) => {
+      const form = formRef.current;
+      if (!button.current || !form) {
+        return;
+      }
+      button.current.measureInWindow((bx, by, _bw, bh) =>
+        form.measureInWindow((fx, fy, fw, fh) => {
+          const top = by - fy + bh + spacing.xs;
+          setPicker({
+            kind,
+            left: Math.max(0, Math.min(bx - fx, fw - PICKER_WIDTH)),
+            top,
+            maxHeight: Math.max(PICKER_MIN_HEIGHT, fh - top - spacing.md),
+          });
+        }),
+      );
+    },
+    [],
+  );
+
   const title = t('card.title');
   const backToForm = () => setStep({kind: 'form'});
+
+  const labelContent = (label: TrelloLabel) => (
+    <>
+      <View
+        style={[
+          styles.swatch,
+          {backgroundColor: labelShade(label.color).background},
+        ]}
+      />
+      <Text style={styles.chipText} numberOfLines={1}>
+        {label.name}
+      </Text>
+    </>
+  );
+
+  const memberContent = (member: TrelloBoardMember) => (
+    <>
+      <MemberAvatar
+        initials={member.initials}
+        avatarUrl={member.avatarUrl}
+        size={AVATAR_SIZE}
+      />
+      <Text style={styles.chipText} numberOfLines={1}>
+        {member.fullName}
+      </Text>
+    </>
+  );
 
   switch (step.kind) {
     case 'recognizing':
@@ -507,6 +607,35 @@ export function CreateCardScreen({
       const ready = details?.status === 'ready' ? details : null;
       const missingPlace = !board || !list;
       const missingName = name.trim().length === 0;
+      // The most used labels and members of the board, then those added
+      // from the floating list; all of them are in that list.
+      const count = settings.current.suggestionCount;
+      const pick = <T extends {id: string}>(
+        all: readonly T[],
+        stats: Parameters<typeof mostUsedIds>[0],
+        selected: readonly string[],
+      ): T[] => {
+        const ids = all.map(item => item.id);
+        return chipIds(ids, mostUsedIds(stats, ids, count), selected)
+          .map(id => all.find(item => item.id === id))
+          .filter((item): item is T => !!item);
+      };
+      const shownLabels =
+        ready && board
+          ? pick(
+              ready.labels,
+              preferences.current.labelUseByBoard?.[board.id],
+              labelIds,
+            )
+          : [];
+      const shownMembers =
+        ready && board
+          ? pick(
+              ready.members,
+              preferences.current.memberUseByBoard?.[board.id],
+              memberIds,
+            )
+          : [];
       return (
         <ScreenFrame
           title={title}
@@ -517,213 +646,236 @@ export function CreateCardScreen({
             onConfirm: create,
             confirmDisabled: missingPlace || missingName,
           }}>
-          <ScrollView
-            contentContainerStyle={styles.form}
-            keyboardShouldPersistTaps="handled">
-            {createError && (
-              <Text accessibilityRole="alert" style={styles.error}>
-                {t(SESSION_ERRORS[createError])}
-              </Text>
-            )}
-            {missingPlace ? (
-              <Text style={styles.hint}>{t('card.listRequired')}</Text>
-            ) : missingName ? (
-              <Text style={styles.hint}>{t('card.nameRequired')}</Text>
-            ) : null}
-            <View style={styles.placeBlock}>
-              <View style={styles.placeRow}>
-                <Text style={styles.placeLabel}>{t('card.board')}</Text>
-                <View style={styles.placeValue}>
-                  <Button
-                    primary={!board}
-                    label={board ? board.name : t('card.chooseBoard')}
-                    onPress={() => setStep({kind: 'pickBoard'})}
-                  />
-                </View>
-              </View>
-              <View style={styles.placeRow}>
-                <Text style={styles.placeLabel}>{t('card.list')}</Text>
-                {/* Elbow from under the board down to the list: the list
-                    belongs to the board. */}
-                <View style={styles.connector}>
-                  <View style={styles.connectorGap} />
-                  <View style={styles.connectorElbow} />
-                  <View style={styles.connectorRest} />
-                </View>
-                <View style={styles.connectorDot} />
-                <View style={[styles.placeValue, styles.listValue]}>
-                  {!board ? (
-                    <Button
-                      disabled
-                      label={t('card.chooseListButton')}
-                      onPress={() => {}}
-                    />
-                  ) : details?.status === 'loading' ? (
-                    <Text style={styles.message}>{t('card.loading')}</Text>
-                  ) : ready ? (
-                    <Button
-                      primary={!list}
-                      label={list ? list.name : t('card.chooseListButton')}
-                      onPress={() => setStep({kind: 'pickList'})}
-                    />
-                  ) : null}
-                </View>
-              </View>
-            </View>
-            {board && details?.status === 'failed' && (
-              <View style={styles.inlineError}>
-                <Text accessibilityRole="alert" style={styles.message}>
-                  {t('card.detailsFailed')}
+          <View ref={formRef} collapsable={false} style={styles.formArea}>
+            <ScrollView
+              contentContainerStyle={styles.form}
+              keyboardShouldPersistTaps="handled"
+              // The floating list stays under its button: it closes on scroll.
+              onScrollBeginDrag={() => setPicker(null)}>
+              {createError && (
+                <Text accessibilityRole="alert" style={styles.error}>
+                  {t(SESSION_ERRORS[createError])}
                 </Text>
-                <SmallButton
-                  label={t('common.retry')}
-                  accessibilityLabel={t('common.retry')}
-                  onPress={() => loadBoardDetails(board)}
-                />
+              )}
+              {missingPlace ? (
+                <Text style={styles.hint}>{t('card.listRequired')}</Text>
+              ) : missingName ? (
+                <Text style={styles.hint}>{t('card.nameRequired')}</Text>
+              ) : null}
+              <View style={styles.placeBlock}>
+                <View style={styles.placeRow}>
+                  <Text style={styles.placeLabel}>{t('card.board')}</Text>
+                  <View style={styles.placeValue}>
+                    <Button
+                      primary={!board}
+                      label={board ? board.name : t('card.chooseBoard')}
+                      onPress={() => setStep({kind: 'pickBoard'})}
+                    />
+                  </View>
+                </View>
+                <View style={styles.placeRow}>
+                  <Text style={styles.placeLabel}>{t('card.list')}</Text>
+                  {/* Elbow from under the board down to the list: the list
+                    belongs to the board. */}
+                  <View style={styles.connector}>
+                    <View style={styles.connectorGap} />
+                    <View style={styles.connectorElbow} />
+                    <View style={styles.connectorRest} />
+                  </View>
+                  <View style={styles.connectorDot} />
+                  <View style={[styles.placeValue, styles.listValue]}>
+                    {!board ? (
+                      <Button
+                        disabled
+                        label={t('card.chooseListButton')}
+                        onPress={() => {}}
+                      />
+                    ) : details?.status === 'loading' ? (
+                      <Text style={styles.message}>{t('card.loading')}</Text>
+                    ) : ready ? (
+                      <Button
+                        primary={!list}
+                        label={list ? list.name : t('card.chooseListButton')}
+                        onPress={() => setStep({kind: 'pickList'})}
+                      />
+                    ) : null}
+                  </View>
+                </View>
               </View>
-            )}
-
-            <Section title={t('card.labels')}>
-              {!board ? (
-                <Text style={styles.hint}>{t('card.chooseBoardFirst')}</Text>
-              ) : !ready ? null : ready.labels.length === 0 ? (
-                <Text style={styles.hint}>{t('card.noLabels')}</Text>
-              ) : (
-                <View style={styles.chips}>
-                  {ready.labels.map(label => {
-                    const selected = labelIds.includes(label.id);
-                    return (
-                      <ToggleChip
-                        key={label.id}
-                        selected={selected}
-                        accessibilityLabel={t(
-                          selected ? 'card.remove' : 'card.add',
-                          {name: label.name},
-                        )}
-                        onPress={() =>
-                          setLabelIds(ids => toggleId(ids, label.id))
-                        }>
-                        <View
-                          style={[
-                            styles.swatch,
-                            {
-                              backgroundColor: labelShade(label.color)
-                                .background,
-                            },
-                          ]}
-                        />
-                        <Text style={styles.chipText} numberOfLines={1}>
-                          {label.name}
-                        </Text>
-                      </ToggleChip>
-                    );
-                  })}
-                </View>
-              )}
-            </Section>
-
-            <Section title={t('card.members')}>
-              {!board ? (
-                <Text style={styles.hint}>{t('card.chooseBoardFirst')}</Text>
-              ) : !ready ? null : (
-                <View style={styles.chips}>
-                  {ready.members.map(member => {
-                    const selected = memberIds.includes(member.id);
-                    return (
-                      <ToggleChip
-                        key={member.id}
-                        selected={selected}
-                        accessibilityLabel={t(
-                          selected ? 'card.remove' : 'card.add',
-                          {name: member.fullName},
-                        )}
-                        onPress={() =>
-                          setMemberIds(ids => toggleId(ids, member.id))
-                        }>
-                        <MemberAvatar
-                          initials={member.initials}
-                          avatarUrl={member.avatarUrl}
-                          size={AVATAR_SIZE}
-                        />
-                        <Text style={styles.chipText} numberOfLines={1}>
-                          {member.fullName}
-                        </Text>
-                      </ToggleChip>
-                    );
-                  })}
-                </View>
-              )}
-            </Section>
-
-            <Section plain title={t('card.name')}>
-              <TextInput
-                accessibilityLabel={t('card.name')}
-                multiline
-                onChangeText={setName}
-                style={styles.input}
-                value={name}
-              />
-            </Section>
-
-            <Section plain title={t('card.description')}>
-              <TextInput
-                accessibilityLabel={t('card.description')}
-                multiline
-                onChangeText={setDesc}
-                style={[styles.input, styles.descInput]}
-                textAlignVertical="top"
-                value={desc}
-              />
-            </Section>
-
-            <Section title={t('card.checklist')}>
-              {items.map(item => (
-                <View key={item.key} style={styles.itemRow}>
-                  <Pressable
-                    accessibilityRole="checkbox"
-                    accessibilityLabel={item.name || t('card.item')}
-                    accessibilityState={{checked: item.checked}}
-                    hitSlop={spacing.sm}
-                    onPress={() =>
-                      updateItem(item.key, {checked: !item.checked})
-                    }
-                    style={[styles.box, item.checked && styles.boxChecked]}>
-                    {item.checked && <Text style={styles.boxMark}>✓</Text>}
-                  </Pressable>
-                  <TextInput
-                    accessibilityLabel={t('card.item')}
-                    onChangeText={text => updateItem(item.key, {name: text})}
-                    style={[styles.input, styles.itemInput]}
-                    value={item.name}
+              {board && details?.status === 'failed' && (
+                <View style={styles.inlineError}>
+                  <Text accessibilityRole="alert" style={styles.message}>
+                    {t('card.detailsFailed')}
+                  </Text>
+                  <SmallButton
+                    label={t('common.retry')}
+                    accessibilityLabel={t('common.retry')}
+                    onPress={() => loadBoardDetails(board)}
                   />
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={t('card.remove', {
-                      name: item.name || t('card.item'),
-                    })}
-                    hitSlop={spacing.sm}
-                    onPress={() =>
-                      setItems(current =>
-                        current.filter(other => other.key !== item.key),
-                      )
-                    }
-                    style={styles.box}>
-                    <CloseIcon size={20} color={colors.foreground} />
-                  </Pressable>
                 </View>
-              ))}
-              <SmallButton
-                label={`+ ${t('card.addItem')}`}
-                accessibilityLabel={t('card.addItem')}
-                onPress={() =>
-                  setItems(current => [
-                    ...current,
-                    ...makeItems([{name: '', checked: false}]),
-                  ])
+              )}
+
+              <Section title={t('card.labels')}>
+                {!board ? (
+                  <Text style={styles.hint}>{t('card.chooseBoardFirst')}</Text>
+                ) : !ready ? null : ready.labels.length === 0 ? (
+                  <Text style={styles.hint}>{t('card.noLabels')}</Text>
+                ) : (
+                  <View style={styles.chips}>
+                    {shownLabels.map(label => {
+                      const selected = labelIds.includes(label.id);
+                      return (
+                        <ToggleChip
+                          key={label.id}
+                          selected={selected}
+                          accessibilityLabel={t(
+                            selected ? 'card.remove' : 'card.add',
+                            {name: label.name},
+                          )}
+                          onPress={() =>
+                            setLabelIds(ids => toggleId(ids, label.id))
+                          }>
+                          {labelContent(label)}
+                        </ToggleChip>
+                      );
+                    })}
+                    <PickerButton
+                      buttonRef={labelsButton}
+                      label={t('card.pickLabel')}
+                      onPress={() => openPicker('labels', labelsButton)}
+                    />
+                  </View>
+                )}
+              </Section>
+
+              <Section title={t('card.members')}>
+                {!board ? (
+                  <Text style={styles.hint}>{t('card.chooseBoardFirst')}</Text>
+                ) : !ready ? null : (
+                  <View style={styles.chips}>
+                    {shownMembers.map(member => {
+                      const selected = memberIds.includes(member.id);
+                      return (
+                        <ToggleChip
+                          key={member.id}
+                          selected={selected}
+                          accessibilityLabel={t(
+                            selected ? 'card.remove' : 'card.add',
+                            {name: member.fullName},
+                          )}
+                          onPress={() =>
+                            setMemberIds(ids => toggleId(ids, member.id))
+                          }>
+                          {memberContent(member)}
+                        </ToggleChip>
+                      );
+                    })}
+                    <PickerButton
+                      buttonRef={membersButton}
+                      label={t('card.pickMember')}
+                      onPress={() => openPicker('members', membersButton)}
+                    />
+                  </View>
+                )}
+              </Section>
+
+              <Section plain title={t('card.name')}>
+                <TextInput
+                  accessibilityLabel={t('card.name')}
+                  multiline
+                  onChangeText={setName}
+                  style={styles.input}
+                  value={name}
+                />
+              </Section>
+
+              <Section plain title={t('card.description')}>
+                <TextInput
+                  accessibilityLabel={t('card.description')}
+                  multiline
+                  onChangeText={setDesc}
+                  style={[styles.input, styles.descInput]}
+                  textAlignVertical="top"
+                  value={desc}
+                />
+              </Section>
+
+              <Section title={t('card.checklist')}>
+                {items.map(item => (
+                  <View key={item.key} style={styles.itemRow}>
+                    <Pressable
+                      accessibilityRole="checkbox"
+                      accessibilityLabel={item.name || t('card.item')}
+                      accessibilityState={{checked: item.checked}}
+                      hitSlop={spacing.sm}
+                      onPress={() =>
+                        updateItem(item.key, {checked: !item.checked})
+                      }
+                      style={[styles.box, item.checked && styles.boxChecked]}>
+                      {item.checked && <Text style={styles.boxMark}>✓</Text>}
+                    </Pressable>
+                    <TextInput
+                      accessibilityLabel={t('card.item')}
+                      onChangeText={text => updateItem(item.key, {name: text})}
+                      style={[styles.input, styles.itemInput]}
+                      value={item.name}
+                    />
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={t('card.remove', {
+                        name: item.name || t('card.item'),
+                      })}
+                      hitSlop={spacing.sm}
+                      onPress={() =>
+                        setItems(current =>
+                          current.filter(other => other.key !== item.key),
+                        )
+                      }
+                      style={styles.box}>
+                      <CloseIcon size={20} color={colors.foreground} />
+                    </Pressable>
+                  </View>
+                ))}
+                <SmallButton
+                  label={`+ ${t('card.addItem')}`}
+                  accessibilityLabel={t('card.addItem')}
+                  onPress={() =>
+                    setItems(current => [
+                      ...current,
+                      ...makeItems([{name: '', checked: false}]),
+                    ])
+                  }
+                />
+              </Section>
+            </ScrollView>
+            {picker && ready && (
+              <FloatingPicker
+                picker={picker}
+                closeLabel={t('common.close')}
+                onClose={() => setPicker(null)}
+                rows={
+                  picker.kind === 'labels'
+                    ? ready.labels.map(label => ({
+                        id: label.id,
+                        name: label.name,
+                        selected: labelIds.includes(label.id),
+                        content: labelContent(label),
+                      }))
+                    : ready.members.map(member => ({
+                        id: member.id,
+                        name: member.fullName,
+                        selected: memberIds.includes(member.id),
+                        content: memberContent(member),
+                      }))
+                }
+                onToggle={id =>
+                  picker.kind === 'labels'
+                    ? setLabelIds(ids => toggleId(ids, id))
+                    : setMemberIds(ids => toggleId(ids, id))
                 }
               />
-            </Section>
-          </ScrollView>
+            )}
+          </View>
         </ScreenFrame>
       );
     }
@@ -749,6 +901,14 @@ export function CreateCardScreen({
             {step.checklistFailed && (
               <Text accessibilityRole="alert" style={styles.error}>
                 {t('card.checklistFailed')}
+              </Text>
+            )}
+            {step.link === 'linked' && (
+              <Text style={styles.message}>{t('card.linked')}</Text>
+            )}
+            {step.link === 'failed' && (
+              <Text accessibilityRole="alert" style={styles.error}>
+                {t('card.linkFailed')}
               </Text>
             )}
             <Button primary label={t('common.close')} onPress={close} />
@@ -781,6 +941,132 @@ function Section({
       <View style={styles.sectionBody}>{children}</View>
     </View>
   );
+}
+
+/** The chip after the suggestions that opens the list of all of them. */
+function PickerButton({
+  buttonRef,
+  label,
+  onPress,
+}: {
+  buttonRef: React.RefObject<View | null>;
+  label: string;
+  onPress: () => void;
+}): React.JSX.Element {
+  return (
+    <View ref={buttonRef} collapsable={false}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        hitSlop={spacing.xs}
+        onPress={onPress}
+        style={({pressed}) => [
+          styles.pickerButton,
+          pressed && styles.pickerButtonPressed,
+        ]}>
+        {({pressed}) => (
+          <Text
+            style={[
+              styles.pickerButtonText,
+              pressed && styles.pickerButtonTextPressed,
+            ]}>
+            {`+ ${label}`}
+          </Text>
+        )}
+      </Pressable>
+    </View>
+  );
+}
+
+interface PickerRow {
+  id: string;
+  name: string;
+  selected: boolean;
+  content: React.ReactNode;
+}
+
+/**
+ * List of all the labels or members of the board, floating under the
+ * button that opened it. A tap adds or removes one and leaves it open;
+ * a tap anywhere else closes it.
+ */
+function FloatingPicker({
+  picker,
+  rows,
+  closeLabel,
+  onToggle,
+  onClose,
+}: {
+  picker: Picker;
+  rows: readonly PickerRow[];
+  closeLabel: string;
+  onToggle: (id: string) => void;
+  onClose: () => void;
+}): React.JSX.Element {
+  return (
+    <>
+      <Pressable
+        accessibilityLabel={closeLabel}
+        onPress={onClose}
+        style={StyleSheet.absoluteFill}
+      />
+      <View
+        accessibilityViewIsModal
+        style={[
+          styles.pickerCard,
+          {left: picker.left, top: picker.top, maxHeight: picker.maxHeight},
+        ]}>
+        <ScrollView keyboardShouldPersistTaps="handled">
+          {rows.map(row => (
+            <Pressable
+              key={row.id}
+              accessibilityRole="checkbox"
+              accessibilityLabel={row.name}
+              accessibilityState={{checked: row.selected}}
+              onPress={() => onToggle(row.id)}
+              style={({pressed}) => [
+                styles.pickerRow,
+                pressed && styles.pickerRowPressed,
+              ]}>
+              <View style={[styles.box, row.selected && styles.boxChecked]}>
+                {row.selected && <Text style={styles.boxMark}>✓</Text>}
+              </View>
+              <View style={styles.pickerRowContent}>{row.content}</View>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
+    </>
+  );
+}
+
+/**
+ * Links the lasso selection the card was made from to the new card, when
+ * the setting asks for it, as the Insert Trello Link button does.
+ */
+async function linkCardToSelection(
+  card: TrelloCard,
+  lassoSelection: LassoSelection | undefined,
+  enabled: boolean,
+): Promise<'off' | 'linked' | 'failed'> {
+  if (!enabled || !lassoSelection) {
+    return 'off';
+  }
+  const shortLink = cardShortLink(card);
+  if (!shortLink) {
+    logInkLink('card: no short link to link the selection to');
+    return 'failed';
+  }
+  try {
+    const bound = await bindSelection(lassoSelection, {
+      kind: 'card',
+      shortLink,
+    });
+    return bound ? 'linked' : 'failed';
+  } catch (error) {
+    logInkLink(`card: linking the selection failed: ${String(error)}`);
+    return 'failed';
+  }
 }
 
 /** Board picker input, without the "show all" switch. */
@@ -838,6 +1124,53 @@ const styles = StyleSheet.create({
   form: {
     gap: spacing.lg,
     paddingBottom: spacing.xl,
+  },
+  formArea: {
+    flex: 1,
+  },
+  pickerButton: {
+    borderColor: colors.foreground,
+    borderRadius: 999,
+    borderWidth: borders.width,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    backgroundColor: colors.background,
+  },
+  pickerButtonPressed: {
+    backgroundColor: colors.foreground,
+  },
+  pickerButtonText: {
+    color: colors.foreground,
+    fontSize: typography.body,
+    fontWeight: '700',
+  },
+  pickerButtonTextPressed: {
+    color: colors.background,
+  },
+  pickerCard: {
+    position: 'absolute',
+    width: PICKER_WIDTH,
+    backgroundColor: colors.background,
+    borderColor: colors.foreground,
+    borderRadius: borders.radius,
+    borderWidth: borders.width * 1.5,
+    paddingVertical: spacing.xs,
+  },
+  pickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  pickerRowPressed: {
+    backgroundColor: colors.avatar,
+  },
+  pickerRowContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   message: {
     color: colors.foreground,

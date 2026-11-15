@@ -33,10 +33,23 @@ interface SdkResponse<T> {
 
 interface LassoElement {
   type: number;
+  /** Number of the element on its page, to find it again. */
+  numInPage?: number;
   textBox?: {textContentFull?: string | null} | null;
 }
 
 type Size = {width: number; height: number};
+
+/**
+ * Where the selection was: its note, page and the page numbers of its
+ * elements, which stay valid while the note is not edited. Lets the new
+ * card be linked to it afterwards.
+ */
+export interface LassoSelection {
+  path: string;
+  page: number;
+  elements: readonly number[];
+}
 
 /** Why no text could be taken from the lasso selection. */
 export type LassoTextError =
@@ -45,7 +58,7 @@ export type LassoTextError =
   | 'permissionDenied';
 
 export type LassoTextResult =
-  | {ok: true; text: string}
+  | {ok: true; text: string; selection?: LassoSelection}
   | {ok: false; error: LassoTextError; diagnostics: string};
 
 function asResponse<T>(response: unknown): SdkResponse<T> | null {
@@ -92,22 +105,36 @@ export function recognizedText(response: unknown): string {
   return '';
 }
 
-/** Size of the current page, which handwriting recognition is based on. */
-async function getCurrentPageSize(log: string[]): Promise<Size | null> {
+/** The note and page in front, where the selection is. */
+async function getCurrentPage(
+  log: string[],
+): Promise<{path: string; page: number} | null> {
   try {
     const path = unwrap<string>(await PluginCommAPI.getCurrentFilePath());
     const page = unwrap<number>(await PluginCommAPI.getCurrentPageNum());
     if (path && typeof page === 'number') {
-      const response = await PluginFileAPI.getPageSize(path, page);
-      const size = unwrap<Size>(response);
-      if (size?.width && size.height) {
-        log.push(`page ${page}: ${size.width}x${size.height}`);
-        return size;
-      }
-      log.push(`page size: ${describe(response)}`);
-    } else {
-      log.push(`page: path=${path ? 'yes' : 'no'} num=${page}`);
+      return {path, page};
     }
+    log.push(`page: path=${path ? 'yes' : 'no'} num=${page}`);
+  } catch (error) {
+    log.push(`page threw: ${String(error)}`);
+  }
+  return null;
+}
+
+/** Size of the page, which handwriting recognition is based on. */
+async function getPageSize(
+  {path, page}: {path: string; page: number},
+  log: string[],
+): Promise<Size | null> {
+  try {
+    const response = await PluginFileAPI.getPageSize(path, page);
+    const size = unwrap<Size>(response);
+    if (size?.width && size.height) {
+      log.push(`page ${page}: ${size.width}x${size.height}`);
+      return size;
+    }
+    log.push(`page size: ${describe(response)}`);
   } catch (error) {
     log.push(`page size threw: ${String(error)}`);
   }
@@ -276,8 +303,18 @@ export async function readLassoText(
   const handwritingCandidates = strokes.length > 0 ? strokes : others;
 
   // Read while the note is still in front, before the view is shown.
+  const location = await getCurrentPage(log);
   const pageSize =
-    handwritingCandidates.length > 0 ? await getCurrentPageSize(log) : null;
+    location && handwritingCandidates.length > 0
+      ? await getPageSize(location, log)
+      : null;
+  const numbers = elements
+    .map(element => element.numInPage)
+    .filter((value): value is number => typeof value === 'number');
+  const selection: LassoSelection | undefined =
+    location && numbers.length > 0
+      ? {...location, elements: numbers}
+      : undefined;
   logInkLink(
     `card: captured ${elements.length} elements (${countTypes(elements)})`,
   );
@@ -335,7 +372,7 @@ export async function readLassoText(
 
   const text = [handwriting, ...typed].filter(Boolean).join('\n');
   if (text) {
-    return {ok: true, text};
+    return selection ? {ok: true, text, selection} : {ok: true, text};
   }
   const diagnostics = log.join('\n');
   console.warn('[sINK] No text in the lasso selection\n' + diagnostics);

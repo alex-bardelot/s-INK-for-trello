@@ -55,6 +55,7 @@ import {
 } from '../settings/rapidTaps';
 import {KeyValueStore} from '../storage/keyValueStore';
 import {TrelloClient, TrelloMember} from '../trello';
+import {NewCardSettingsPanel} from './NewCardSettingsPanel';
 import {PublicBoardsSettings} from './PublicBoardsSettings';
 import {StartWorkSettingsPanel} from './StartWorkSettingsPanel';
 import {
@@ -98,7 +99,8 @@ export interface SettingsScreenProps {
  * the Supernote system settings: categories in a left column, separated by
  * dotted lines, and the selected one's sections on the right. "General"
  * holds the main page shortcuts, the public boards, the Trello account (and
- * where its token is kept) and the language; "Board page" the settings of an open board (layout and mode); "Start
+ * where its token is kept) and the language; "Board page" the settings of an open board (layout and mode); "New
+ * card" what the New Trello Card page offers and does; "Start
  * work" what the Start button of a card does; "Links"
  * the tool opening s-INK links; "About" the version and the
  * non-affiliation notice.
@@ -129,6 +131,7 @@ export function SettingsScreen({
   const categories: {value: SettingsCategory; label: string}[] = [
     {value: 'general', label: t('settings.general')},
     {value: 'boards', label: t('settings.boards')},
+    {value: 'newCard', label: t('settings.newCard')},
     {value: 'startWork', label: t('settings.startWork')},
     {value: 'links', label: t('settings.links')},
     {value: 'about', label: t('settings.about')},
@@ -254,6 +257,8 @@ export function SettingsScreen({
 
               <BoardModeSettings store={store} />
             </>
+          ) : category === 'newCard' ? (
+            <NewCardSettingsPanel store={store} />
           ) : category === 'startWork' ? (
             <StartWorkSettingsPanel store={store} />
           ) : category === 'links' ? (
@@ -277,6 +282,7 @@ export function SettingsScreen({
 export type SettingsCategory =
   | 'general'
   | 'boards'
+  | 'newCard'
   | 'startWork'
   | 'links'
   | 'about'
