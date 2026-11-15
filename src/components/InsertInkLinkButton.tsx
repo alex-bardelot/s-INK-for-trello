@@ -5,6 +5,7 @@ import {useTranslation} from '../i18n';
 import {InkLinkTarget} from '../inkLink/inkLink';
 import {bindPendingSelection, usePendingBinding} from '../inkLink/lassoBinding';
 import {closeViewAndSelect, insertInkLink} from '../inkLink/noteBridge';
+import {ChainIcon} from './ChainIcon';
 import {SmallButton} from './SmallButton';
 
 export interface InsertInkLinkButtonProps {
@@ -60,6 +61,7 @@ export function InsertInkLinkButton({
       )}
       disabled={state === 'busy'}
       onPress={link}
+      icon={ChainIcon}
     />
   );
 }

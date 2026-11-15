@@ -1,4 +1,4 @@
-import {planIsEmpty, planStartWork} from '../src/startWork/plan';
+import {cardIsStarted, planIsEmpty, planStartWork} from '../src/startWork/plan';
 import {
   boardNotesDir,
   cardNoteFileName,
@@ -296,6 +296,68 @@ function fakeClient() {
     moveCard: jest.fn(async () => undefined),
   };
 }
+
+describe('cardIsStarted', () => {
+  const started = {
+    idList: 'list-doing',
+    idMembers: [ME],
+    labels: [
+      {id: 'l-wip', name: 'wip'},
+      {id: 'l-bug', name: 'Bug'},
+    ],
+  };
+  const settings = settingsWith({moveToList: true, listName: 'In progress'});
+
+  it('is started once every action is done, the note included', () => {
+    expect(cardIsStarted(started, 'in progress', settings, ME, true)).toBe(
+      true,
+    );
+  });
+
+  it('is not started while one action is left', () => {
+    expect(cardIsStarted(started, 'In progress', settings, ME, false)).toBe(
+      false,
+    );
+    expect(
+      cardIsStarted(
+        {...started, idMembers: []},
+        'In progress',
+        settings,
+        ME,
+        true,
+      ),
+    ).toBe(false);
+    expect(
+      cardIsStarted(
+        {...started, labels: [...started.labels, {id: 'l-todo', name: 'TODO'}]},
+        'In progress',
+        settings,
+        ME,
+        true,
+      ),
+    ).toBe(false);
+    expect(
+      cardIsStarted(
+        {...started, labels: []},
+        'In progress',
+        settings,
+        ME,
+        true,
+      ),
+    ).toBe(false);
+    expect(cardIsStarted(started, 'To do', settings, ME, true)).toBe(false);
+  });
+
+  it('ignores the actions turned off', () => {
+    const off = settingsWith({
+      assignMe: false,
+      removeLabelNames: [],
+      addLabelNames: [],
+      createNote: false,
+    });
+    expect(cardIsStarted(card, 'To do', off, ME, false)).toBe(true);
+  });
+});
 
 describe('applyStartWork', () => {
   it('runs each planned change and reports it', async () => {

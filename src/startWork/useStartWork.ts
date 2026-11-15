@@ -6,7 +6,12 @@ import {TrelloClient} from '../trello/TrelloClient';
 import {TrelloCardDetail} from '../trello/types';
 import {createCardNote, findCardNote, openCardNote} from './cardNote';
 import {fileNameOf} from './noteFiles';
-import {loadStartWorkSettings, startWorkDisabled} from './settings';
+import {cardIsStarted} from './plan';
+import {
+  loadStartWorkSettings,
+  StartWorkSettings,
+  startWorkDisabled,
+} from './settings';
 import {applyStartWork, StartWorkStep} from './startWork';
 
 /** What happened to the card's note when Start ran. */
@@ -33,6 +38,8 @@ export interface StartWorkReport {
 export interface StartWorkControls {
   /** Path of the card's note, once found or created. */
   notePath: string | null;
+  /** Start was already done on the card: it is not offered again. */
+  started: boolean;
   busy: boolean;
   report: StartWorkReport | null;
   start: () => void;
@@ -52,6 +59,7 @@ export function useStartWork({
   card,
   shortLink,
   cardName,
+  listName,
   boardName,
   client,
   store,
@@ -63,6 +71,8 @@ export function useStartWork({
   shortLink: string | undefined;
   /** Name of the card as the board shows it, before its detail loads. */
   cardName: string;
+  /** Name of the card's list, to tell whether Start moved it already. */
+  listName: string;
   /** Names the folder of the card's note. */
   boardName: string;
   client: TrelloClient;
@@ -74,8 +84,35 @@ export function useStartWork({
   const [notePath, setNotePath] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [report, setReport] = useState<StartWorkReport | null>(null);
+  // Read again with each new state of the card, after Start included.
+  const [savedSettings, setSavedSettings] = useState<StartWorkSettings | null>(
+    null,
+  );
+  useEffect(() => {
+    let active = true;
+    loadStartWorkSettings(store).then(
+      loaded => active && setSavedSettings(loaded),
+    );
+    return () => {
+      active = false;
+    };
+  }, [store, card]);
+  const started =
+    !!card &&
+    !!savedSettings &&
+    cardIsStarted(
+      {
+        idList: card.idList,
+        idMembers: card.idMembers ?? [],
+        labels: card.labels ?? [],
+      },
+      card.list?.name ?? listName,
+      savedSettings,
+      memberId,
+      !!notePath,
+    );
 
-  // The Note button shows if the card already has one. Never prompts here,
+  // The Open note button shows if the card already has one. Never prompts here,
   // nor reads every note: a note of a renamed card is found on Start.
   useEffect(() => {
     let active = true;
@@ -210,6 +247,7 @@ export function useStartWork({
 
   return {
     notePath,
+    started,
     busy,
     report,
     start,

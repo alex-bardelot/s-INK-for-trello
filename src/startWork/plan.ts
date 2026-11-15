@@ -101,3 +101,35 @@ export function planIsEmpty(plan: StartWorkPlan): boolean {
     !plan.moveTo
   );
 }
+
+/**
+ * Whether Start was already done on a card, as the settings say it: the
+ * member assigned, none of the labels taken off still on it, all those put
+ * on there, the card in the named list and its note made. Start is then
+ * not offered again. Names are matched without regard to case.
+ *
+ * @param listName - Name of the card's list.
+ * @param hasNote - The card's note was found on the tablet.
+ */
+export function cardIsStarted(
+  card: StartWorkCard,
+  listName: string,
+  settings: StartWorkSettings,
+  memberId: string,
+  hasNote: boolean,
+): boolean {
+  const onCard = new Set(card.labels.map(label => labelKey(label.name ?? '')));
+  const addKeys = settings.addLabelNames.map(labelKey).filter(Boolean);
+  const target = cleanName(settings.listName);
+  return (
+    (!settings.assignMe || !memberId || card.idMembers.includes(memberId)) &&
+    settings.removeLabelNames
+      .map(labelKey)
+      .every(key => addKeys.includes(key) || !onCard.has(key)) &&
+    addKeys.every(key => onCard.has(key)) &&
+    (!settings.moveToList ||
+      !target ||
+      labelKey(listName) === labelKey(target)) &&
+    (!settings.createNote || hasNote)
+  );
+}

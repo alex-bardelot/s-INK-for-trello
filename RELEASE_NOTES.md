@@ -3,6 +3,20 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.56.0 — Card buttons with icons, shown when useful
+
+- The card page's buttons get an icon: a play triangle for **Start**, a
+  page for **Open note** (formerly **Note**), a chain for **Link in
+  note** (on the board page too).
+- **Start** is no longer shown once the card is started: you are
+  assigned, none of the labels to take off is on it, all those to put on
+  are, it is in the named list and its note exists, as far as Settings
+  › Start work asks for each.
+- **Link in note** is no longer shown when the card has a note, which
+  already holds its link: **Open note** stands in its place.
+- The refresh arrow now leaves a clear gap between its head and its
+  tail: the tablet drew its ring closed.
+
 ## 0.55.1 — Start labels from the New card floating list
 
 - In **Settings › Start work**, **Add** now opens the same floating list

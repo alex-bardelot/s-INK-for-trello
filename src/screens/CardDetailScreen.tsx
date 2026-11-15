@@ -24,6 +24,7 @@ import {MemberAvatar} from '../components/MemberAvatar';
 import {RefreshIcon} from '../components/RefreshIcon';
 import {HEADER_ICON_SIZE, ScreenFrame} from '../components/ScreenFrame';
 import {SmallButton} from '../components/SmallButton';
+import {NoteIcon, StartIcon} from '../components/ActionIcons';
 import {TranslationKey, useTranslation} from '../i18n';
 import {toSessionError} from '../session/trelloSession';
 import {StartWorkStep} from '../startWork/startWork';
@@ -137,6 +138,7 @@ export function CardDetailScreen({
     card: state.status === 'loaded' ? state.card : null,
     shortLink: card.shortLink,
     cardName: card.name,
+    listName,
     boardName,
     client,
     store,
@@ -153,25 +155,30 @@ export function CardDetailScreen({
       settingsCategory="startWork"
       actions={
         <>
-          {canEdit && (
+          {/* Not offered again once the card is started, unless running. */}
+          {canEdit && (startWork.busy || !startWork.started) && (
             <SmallButton
               label={t(startWork.busy ? 'startWork.busy' : 'startWork.start')}
               accessibilityLabel={t('startWork.startHint')}
               disabled={startWork.busy || state.status !== 'loaded'}
               onPress={startWork.start}
+              icon={StartIcon}
             />
           )}
-          {startWork.notePath && (
+          {startWork.notePath ? (
             <SmallButton
               label={t('startWork.openNote')}
               accessibilityLabel={t('startWork.openNoteHint')}
               onPress={startWork.openNote}
+              icon={NoteIcon}
+            />
+          ) : (
+            // The card's note already holds a link to it.
+            <InsertInkLinkButton
+              target={{kind: 'card', shortLink: detail.shortLink ?? card.id}}
+              name={detail.name}
             />
           )}
-          <InsertInkLinkButton
-            target={{kind: 'card', shortLink: detail.shortLink ?? card.id}}
-            name={detail.name}
-          />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t('board.refresh')}
@@ -333,6 +340,7 @@ function StartWorkReportView({
             label={t('startWork.openNote')}
             accessibilityLabel={t('startWork.openNoteHint')}
             onPress={onOpenNote}
+            icon={NoteIcon}
           />
         )}
         <SmallButton
