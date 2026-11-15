@@ -3,6 +3,12 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.38.2 — "Quick connect button" option
+
+- In Settings > Trello, signed out, the switch showing the connect card
+  on the boards page is renamed **Quick connect button**, with a short
+  help text. It moves out of the connection card and comes before it.
+
 ## 0.38.1 — "Quick add button" option
 
 - The switch of the Public boards section is renamed **Quick add

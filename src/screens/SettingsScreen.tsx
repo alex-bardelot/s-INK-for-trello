@@ -190,16 +190,20 @@ export function SettingsScreen({
                     onDisconnect={onDisconnect}
                   />
                 ) : (
-                  <SignedOutCard
-                    showConnectCard={boardsPreferences.showConnectCard}
-                    onShowConnectCardChange={showConnectCard =>
-                      onBoardsPreferencesChange({
-                        ...boardsPreferences,
-                        showConnectCard,
-                      })
-                    }
-                    onConnect={onConnect}
-                  />
+                  <>
+                    <Switch
+                      label={t('settings.showConnectCard')}
+                      help={t('settings.showConnectCardHelp')}
+                      value={boardsPreferences.showConnectCard}
+                      onChange={showConnectCard =>
+                        onBoardsPreferencesChange({
+                          ...boardsPreferences,
+                          showConnectCard,
+                        })
+                      }
+                    />
+                    <SignedOutCard onConnect={onConnect} />
+                  </>
                 )}
               </Section>
             </>
@@ -500,17 +504,13 @@ function AccountCard({
 }
 
 /**
- * No account connected: a way to connect, and a switch hiding the "My
- * boards" section (and its connect card) of the boards page, for someone
- * who only reads public boards.
+ * No account connected: a way to connect. The "Quick connect button" switch
+ * above it hides the "My boards" section (and its connect card) of the
+ * boards page, for someone who only reads public boards.
  */
 function SignedOutCard({
-  showConnectCard,
-  onShowConnectCardChange,
   onConnect,
 }: {
-  showConnectCard: boolean;
-  onShowConnectCardChange: (show: boolean) => void;
   onConnect: () => void;
 }): React.JSX.Element {
   const {t} = useTranslation();
@@ -521,13 +521,6 @@ function SignedOutCard({
       </Text>
       <Text style={styles.text}>{t('boards.connectHint')}</Text>
       <Button primary label={t('boards.connectTitle')} onPress={onConnect} />
-      <View style={styles.separator} />
-      <Switch
-        label={t('settings.showConnectCard')}
-        help={t('settings.showConnectCardHelp')}
-        value={showConnectCard}
-        onChange={onShowConnectCardChange}
-      />
     </View>
   );
 }
