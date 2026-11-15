@@ -785,7 +785,11 @@ export function CreateCardScreen({
                 )}
               </Section>
 
-              <Section plain title={t('card.name')}>
+              {/* Ends where the card goes and how it is tagged, before
+                  what it says. */}
+              <View style={styles.separator} />
+
+              <Section title={t('card.name')}>
                 <TextInput
                   accessibilityLabel={t('card.name')}
                   multiline
@@ -795,7 +799,7 @@ export function CreateCardScreen({
                 />
               </Section>
 
-              <Section plain title={t('card.description')}>
+              <Section title={t('card.description')}>
                 <TextInput
                   accessibilityLabel={t('card.description')}
                   multiline
@@ -930,18 +934,14 @@ export function CreateCardScreen({
  */
 function Section({
   title,
-  plain = false,
   children,
 }: {
   title: string;
-  plain?: boolean;
   children: React.ReactNode;
 }): React.JSX.Element {
   return (
     <View style={styles.section}>
-      <Text
-        accessibilityRole="header"
-        style={[styles.sectionTitle, plain && styles.sectionTitlePlain]}>
+      <Text accessibilityRole="header" style={styles.sectionTitle}>
         {title}
       </Text>
       <View style={styles.sectionBody}>{children}</View>
@@ -1276,15 +1276,13 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   sectionTitle: {
-    borderBottomColor: colors.foreground,
-    borderBottomWidth: borders.width,
     color: colors.foreground,
     fontSize: typography.label,
     fontWeight: '700',
-    paddingBottom: spacing.xs,
   },
-  sectionTitlePlain: {
-    borderBottomWidth: 0,
+  separator: {
+    height: borders.width,
+    backgroundColor: colors.foreground,
   },
   sectionBody: {
     gap: spacing.sm,

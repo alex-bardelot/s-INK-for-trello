@@ -3,6 +3,14 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.50.3 — One separator on the New Trello Card page
+
+- The headings of the New Trello Card page (Labels, Members, Checklist)
+  are no longer underlined.
+- A single line now separates where the card goes and how it is tagged
+  (Board, List, Labels, Members) from what it says (Title, Description,
+  Checklist).
+
 ## 0.50.2 — Steady chips on the New Trello Card page
 
 - Label and member chips keep the same size whether added (solid frame,
