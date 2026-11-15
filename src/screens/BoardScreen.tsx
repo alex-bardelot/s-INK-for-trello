@@ -322,7 +322,9 @@ export function BoardScreen({
     !initialCardShown &&
     state.status !== 'failed';
   if (awaitingCard) {
-    return <StatusScreen message={t('inkLink.opening')} onBack={onBack} />;
+    return (
+      <StatusScreen boxed message={t('inkLink.opening')} onBack={onBack} />
+    );
   }
 
   return (

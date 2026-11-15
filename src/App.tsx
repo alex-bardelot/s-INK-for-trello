@@ -195,6 +195,7 @@ export default function App(): React.JSX.Element {
   if (linkStatus === 'opening') {
     return (
       <StatusScreen
+        boxed
         message={t('inkLink.opening')}
         onBack={() => setLinkStatus('idle')}
       />

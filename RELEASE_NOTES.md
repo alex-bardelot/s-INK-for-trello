@@ -3,6 +3,12 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.52.2 — Opening message in a box
+
+- **Opening the link…**, shown while an s-INK link opens, now stands in
+  a small framed box in the middle of the page, like the popups of the
+  New Trello Card page.
+
 ## 0.52.1 — s-INK card links open straight on the card
 
 - Tapping an s-INK link to a card showed its board first, then the card
