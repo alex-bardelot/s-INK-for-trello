@@ -10,10 +10,6 @@ import {PendingBindingBanner} from './components/PendingBindingBanner';
 import {language, loadLanguageChoice, useTranslation} from './i18n';
 import {loadLinkTrigger, setLinkTrigger} from './inkLink/trigger';
 import {useLaunchIntent} from './plugin/launchIntent';
-import {
-  clearPendingConnection,
-  getPendingConnection,
-} from './relay/pendingConnection';
 import {ensureFileReadPermission} from './plugin/permissions';
 import {BoardScreen} from './screens/BoardScreen';
 import {BoardsScreen} from './screens/BoardsScreen';
@@ -53,10 +49,7 @@ export default function App(): React.JSX.Element {
   // connection screen opened over it.
   const [settingsCategory, setSettingsCategory] =
     useState<SettingsCategory>('general');
-  // Back from the browser opened by the connection page: open it again.
-  const [connectOpen, setConnectOpen] = useState(
-    () => getPendingConnection() !== null,
-  );
+  const [connectOpen, setConnectOpen] = useState(false);
   const [boardsPreferences, setBoardsPreferences] = useState(
     DEFAULT_BOARDS_PREFERENCES,
   );
@@ -112,7 +105,6 @@ export default function App(): React.JSX.Element {
   const signedIn = state.status === 'signedIn';
   useEffect(() => {
     if (signedIn) {
-      clearPendingConnection();
       setConnectOpen(false);
     }
   }, [signedIn]);
@@ -195,14 +187,7 @@ export default function App(): React.JSX.Element {
         onConnect={session.connect}
         onRetry={session.retry}
         // Card creation needs an account: there is no page to go back to.
-        onBack={
-          lasso
-            ? undefined
-            : () => {
-                clearPendingConnection();
-                setConnectOpen(false);
-              }
-        }
+        onBack={lasso ? undefined : () => setConnectOpen(false)}
       />
     );
   }

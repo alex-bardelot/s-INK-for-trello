@@ -3,6 +3,12 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.42.4 — The plugin stays open when the browser opens
+
+- Back to the behaviour of 0.42.2: **Open in browser** and **Open Trello
+  directly** no longer close the plugin view, and the connection is no
+  longer kept aside for when s-INK reopens.
+
 ## 0.42.3 — The browser comes over the plugin
 
 - **Open in browser** and **Open Trello directly** did open the browser,
