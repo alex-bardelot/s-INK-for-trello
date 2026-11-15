@@ -65,6 +65,7 @@ import {
 } from '../trello';
 import {borders, colors, spacing, typography} from '../theme';
 import {CardDetailScreen} from './CardDetailScreen';
+import {StatusScreen} from './StatusScreen';
 
 const CARD_GAP = spacing.sm;
 const COLUMN_GAP = spacing.lg;
@@ -311,6 +312,18 @@ export function BoardScreen({
       />
     </View>
   );
+
+  // A card to open over the board: the "opening" message shown while the
+  // link was read stays until the card shows, drawn over the board in the
+  // same frame. Showing the board first made it flash on E Ink.
+  const awaitingCard =
+    openInitialCard &&
+    !!initialCardId &&
+    !initialCardShown &&
+    state.status !== 'failed';
+  if (awaitingCard) {
+    return <StatusScreen message={t('inkLink.opening')} onBack={onBack} />;
+  }
 
   return (
     <View style={styles.screen}>

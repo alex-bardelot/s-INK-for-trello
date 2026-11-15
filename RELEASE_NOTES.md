@@ -3,6 +3,13 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.52.1 — s-INK card links open straight on the card
+
+- Tapping an s-INK link to a card showed its board first, then the card
+  over it: a flash on E Ink. The **Opening the link…** message now stays
+  until the card is ready, which then shows at once; its board is still
+  underneath, for the back button.
+
 ## 0.52.0 — Creation popup, then the card's board
 
 - While the card is being created, the New Trello Card page stays on
