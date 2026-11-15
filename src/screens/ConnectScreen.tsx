@@ -64,7 +64,15 @@ export interface ConnectScreenProps {
   onRetry: () => void;
   /** When set, a back button returns to the boards page. */
   onBack?: () => void;
+  /**
+   * Asks for network access, if not granted yet. Called as soon as the
+   * page opens: waiting for the token on the relay already needs it.
+   */
+  ensureNetwork: () => Promise<boolean>;
 }
+
+/** Network access, asked when the page opens. */
+type NetworkAccess = 'asking' | 'granted' | 'denied';
 
 /** Failures worth retrying without typing the token again. */
 const TRANSIENT_ERRORS: ReadonlySet<SessionErrorCode> = new Set([
@@ -93,8 +101,22 @@ export function ConnectScreen({
   onConnect,
   onRetry,
   onBack,
+  ensureNetwork,
 }: ConnectScreenProps): React.JSX.Element {
   const {t} = useTranslation();
+  const [network, setNetwork] = useState<NetworkAccess>('asking');
+  const askNetwork = useCallback(async () => {
+    setNetwork('asking');
+    const granted = await ensureNetwork();
+    logInkLink(`connect: network access ${granted ? 'granted' : 'denied'}`);
+    setNetwork(granted ? 'granted' : 'denied');
+  }, [ensureNetwork]);
+  // Asked on arrival, before anything on the page needs Trello or the relay.
+  useEffect(() => {
+    askNetwork();
+    // Once per opening of the page.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [token, setToken] = useState('');
   // Saving the token on the tablet is opt-in: off until the user ticks it.
   const [remember, setRemember] = useState(false);
@@ -134,8 +156,9 @@ export function ConnectScreen({
   // A session is single-use, so a new one (and a new QR code) replaces it
   // once it delivered a token or expired.
   const [relaySession, setRelaySession] = useState(newRelaySession);
+  const networkGranted = network === 'granted';
   useEffect(() => {
-    if (!canConnect || !relaySession) {
+    if (!canConnect || !relaySession || !networkGranted) {
       return undefined;
     }
     return watchRelaySession({
@@ -149,7 +172,7 @@ export function ConnectScreen({
       },
       onExpired: () => setRelaySession(newRelaySession()),
     });
-  }, [canConnect, relaySession]);
+  }, [canConnect, relaySession, networkGranted]);
 
   const pageUrl = relaySession?.pageUrl ?? authorizeUrl;
   const typed = token.replace(/\s+/g, '');
@@ -236,6 +259,15 @@ export function ConnectScreen({
         )}
         {error && TRANSIENT_ERRORS.has(error) && (
           <Button label={t('common.retry')} onPress={onRetry} />
+        )}
+        {/* Refused on arrival: said once, unless the error above says it. */}
+        {network === 'denied' && error !== 'permissionDenied' && (
+          <>
+            <Text accessibilityRole="alert" style={styles.error}>
+              {t('error.permissionDenied')}
+            </Text>
+            <Button label={t('common.retry')} onPress={askNetwork} />
+          </>
         )}
 
         {canConnect && (

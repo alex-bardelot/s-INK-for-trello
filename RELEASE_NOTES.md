@@ -3,6 +3,16 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.49.5 — Network access asked on the connection page
+
+- The Trello connection page asks for network access as soon as it
+  opens. It was only asked once a token was entered, while waiting for
+  the token sent back through the QR code already needed the network.
+- The QR code flow starts waiting for the token once access is granted.
+  If it is refused, the page says so, with a **Retry** button that asks
+  again.
+- Diagnostics logs the answer (`connect: network access granted`).
+
 ## 0.49.4 — Only named labels on a new card
 
 - The New Trello Card page no longer offers labels without a name (a

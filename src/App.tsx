@@ -218,6 +218,7 @@ export default function App(): React.JSX.Element {
         error={signedOutError}
         onConnect={session.connect}
         onRetry={session.retry}
+        ensureNetwork={session.ensureNetwork}
         // Card creation needs an account: there is no page to go back to.
         onBack={lasso ? undefined : () => setConnectOpen(false)}
       />
