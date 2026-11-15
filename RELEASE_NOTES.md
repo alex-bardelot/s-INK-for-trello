@@ -3,6 +3,19 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.53.0 — Settings from every page
+
+- Every page of the plugin now has a settings button, a gear in its
+  title bar just before the close button: the boards page, a board, a
+  card, the waits, the connection page, and the New Trello Card steps
+  before the form. The boards page's **Settings** button with a label
+  makes way for it.
+- Settings opens over the page and closes back to it as it was: a board
+  stays at the same lists and card pages, a card being written keeps
+  what was typed.
+- Not on Settings itself, nor on the New Trello Card form, whose title
+  bar is the tablet's dialog bar (Cancel, title, Add).
+
 ## 0.52.3 — One waiting box everywhere
 
 - Every wait of the plugin now shows the same box: a framed message in

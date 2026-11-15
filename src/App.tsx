@@ -1,4 +1,5 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
+import {StyleSheet, View} from 'react-native';
 
 import {
   BoardsPreferences,
@@ -7,6 +8,7 @@ import {
   saveBoardsPreferences,
 } from './boards/preferences';
 import {PendingBindingBanner} from './components/PendingBindingBanner';
+import {SettingsOpenerContext} from './components/settingsOpener';
 import {language, loadLanguageChoice, useTranslation} from './i18n';
 import {loadLinkTrigger, setLinkTrigger} from './inkLink/trigger';
 import {connectivity, useConnectivity} from './network/connectivity';
@@ -23,6 +25,7 @@ import {OfflineScreen} from './screens/OfflineScreen';
 import {SettingsCategory, SettingsScreen} from './screens/SettingsScreen';
 import {StatusScreen, WaitingScreen} from './screens/StatusScreen';
 import {useTrelloSession} from './session/useTrelloSession';
+import {colors} from './theme';
 import {TrelloBoard} from './trello';
 
 /**
@@ -189,131 +192,161 @@ export default function App(): React.JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linkIntent?.requestId, sessionChecked]);
 
-  if (state.status === 'checking') {
-    return <WaitingScreen message={t('session.checking')} />;
-  }
-  if (linkStatus === 'opening') {
-    return (
-      <WaitingScreen
-        message={t('inkLink.opening')}
-        onBack={() => setLinkStatus('idle')}
-      />
-    );
-  }
-  if (linkStatus === 'failed') {
-    return (
-      <StatusScreen
-        message={t('inkLink.openFailed')}
-        onBack={() => setLinkStatus('idle')}
-      />
-    );
-  }
-  if (offline) {
-    return <OfflineScreen onRetry={retry} />;
-  }
   const account = state.status === 'signedIn' ? state : null;
   const lasso = intent.kind === 'lassoCreateCard' ? intent : null;
-
-  if (!account && (lasso || connectOpen || state.status === 'connecting')) {
-    return (
-      <ConnectScreen
-        busy={state.status === 'connecting'}
-        error={signedOutError}
-        onConnect={session.connect}
-        onRetry={session.retry}
-        ensureNetwork={session.ensureNetwork}
-        // Card creation needs an account: there is no page to go back to.
-        onBack={lasso ? undefined : () => setConnectOpen(false)}
-      />
-    );
-  }
-  if (account && lasso) {
-    return (
-      <CreateCardScreen
-        key={lasso.requestId}
-        lasso={lasso.lasso}
-        client={account.client}
-        store={session.settingsStore}
-        memberId={account.member.id}
-        onTokenRejected={session.retry}
-        onCreated={(board, card) => {
-          setSettingsOpen(false);
-          setOpenBoard(board);
-          setLinkedCard({
-            requestId: Date.now(),
-            cardId: card.id,
-            openDetail: false,
-          });
-          // Leaves card creation for the board.
-          openBoardsIntent();
-        }}
-      />
-    );
-  }
-
   // Signed out, public boards (Supernote's roadmap, the ones added in
   // Settings) are read anonymously.
   const client = account?.client ?? session.anonymousClient;
-  if (openBoard) {
+
+  // Settings opens over the page, from the button of its title bar, and
+  // closes back to it as it was. The connection screen, which Settings
+  // can open, shows over Settings.
+  const settingsShown = settingsOpen && !connectOpen;
+  const openSettings = () => {
+    setSettingsCategory('general');
+    setSettingsOpen(true);
+  };
+
+  return (
+    <View style={styles.app}>
+      <SettingsOpenerContext.Provider
+        value={settingsOpen ? null : openSettings}>
+        {renderPage()}
+      </SettingsOpenerContext.Provider>
+      {settingsShown && (
+        <View style={styles.overlay}>
+          <SettingsScreen
+            category={settingsCategory}
+            onCategoryChange={setSettingsCategory}
+            store={session.settingsStore}
+            member={account?.member ?? null}
+            tokenStorage={account?.tokenStorage}
+            saveFailed={account?.saveFailed}
+            client={client}
+            ensureNetwork={session.ensureNetwork}
+            boardsPreferences={boardsPreferences}
+            onBoardsPreferencesChange={updateBoardsPreferences}
+            onRememberChange={session.setRemembered}
+            onDisconnect={() => {
+              setSettingsOpen(false);
+              session.disconnect();
+            }}
+            // The connection screen opens over Settings and comes back to it.
+            onConnect={() => setConnectOpen(true)}
+            onBack={() => setSettingsOpen(false)}
+          />
+        </View>
+      )}
+    </View>
+  );
+
+  /** The page the plugin is on, under Settings when it is open. */
+  function renderPage(): React.JSX.Element {
+    if (state.status === 'checking') {
+      return <WaitingScreen message={t('session.checking')} />;
+    }
+    if (linkStatus === 'opening') {
+      return (
+        <WaitingScreen
+          message={t('inkLink.opening')}
+          onBack={() => setLinkStatus('idle')}
+        />
+      );
+    }
+    if (linkStatus === 'failed') {
+      return (
+        <StatusScreen
+          message={t('inkLink.openFailed')}
+          onBack={() => setLinkStatus('idle')}
+        />
+      );
+    }
+    if (offline) {
+      return <OfflineScreen onRetry={retry} />;
+    }
+    return renderSignedInPage();
+  }
+
+  function renderSignedInPage(): React.JSX.Element {
+    if (!account && (lasso || connectOpen || state.status === 'connecting')) {
+      return (
+        <ConnectScreen
+          busy={state.status === 'connecting'}
+          error={signedOutError}
+          onConnect={session.connect}
+          onRetry={session.retry}
+          ensureNetwork={session.ensureNetwork}
+          // Card creation needs an account: there is no page to go back to.
+          onBack={lasso ? undefined : () => setConnectOpen(false)}
+        />
+      );
+    }
+    if (account && lasso) {
+      return (
+        <CreateCardScreen
+          key={lasso.requestId}
+          lasso={lasso.lasso}
+          client={account.client}
+          store={session.settingsStore}
+          memberId={account.member.id}
+          onTokenRejected={session.retry}
+          onCreated={(board, card) => {
+            setOpenBoard(board);
+            setLinkedCard({
+              requestId: Date.now(),
+              cardId: card.id,
+              openDetail: false,
+            });
+            // Leaves card creation for the board.
+            openBoardsIntent();
+          }}
+        />
+      );
+    }
+
+    if (openBoard) {
+      return (
+        <PendingBindingBanner>
+          <BoardScreen
+            key={`${openBoard.id}:${linkedCard?.requestId ?? 0}`}
+            board={openBoard}
+            client={client}
+            store={session.settingsStore}
+            memberId={account?.member.id ?? ''}
+            initialCardId={linkedCard?.cardId}
+            openInitialCard={linkedCard?.openDetail ?? false}
+            onBack={() => {
+              setOpenBoard(null);
+              setLinkedCard(null);
+            }}
+            onTokenRejected={session.retry}
+          />
+        </PendingBindingBanner>
+      );
+    }
     return (
       <PendingBindingBanner>
-        <BoardScreen
-          key={`${openBoard.id}:${linkedCard?.requestId ?? 0}`}
-          board={openBoard}
+        <BoardsScreen
+          member={account?.member ?? null}
           client={client}
-          store={session.settingsStore}
-          memberId={account?.member.id ?? ''}
-          initialCardId={linkedCard?.cardId}
-          openInitialCard={linkedCard?.openDetail ?? false}
-          onBack={() => {
-            setOpenBoard(null);
-            setLinkedCard(null);
-          }}
+          preferences={boardsPreferences}
+          onPreferencesChange={updateBoardsPreferences}
+          ensureNetwork={session.ensureNetwork}
+          onOpenBoard={setOpenBoard}
+          onConnect={() => setConnectOpen(true)}
           onTokenRejected={session.retry}
         />
       </PendingBindingBanner>
     );
   }
-  if (settingsOpen) {
-    return (
-      <SettingsScreen
-        category={settingsCategory}
-        onCategoryChange={setSettingsCategory}
-        store={session.settingsStore}
-        member={account?.member ?? null}
-        tokenStorage={account?.tokenStorage}
-        saveFailed={account?.saveFailed}
-        client={client}
-        ensureNetwork={session.ensureNetwork}
-        boardsPreferences={boardsPreferences}
-        onBoardsPreferencesChange={updateBoardsPreferences}
-        onRememberChange={session.setRemembered}
-        onDisconnect={() => {
-          setSettingsOpen(false);
-          session.disconnect();
-        }}
-        // The connection screen opens over Settings and comes back to it.
-        onConnect={() => setConnectOpen(true)}
-        onBack={() => setSettingsOpen(false)}
-      />
-    );
-  }
-  return (
-    <PendingBindingBanner>
-      <BoardsScreen
-        member={account?.member ?? null}
-        client={client}
-        preferences={boardsPreferences}
-        onPreferencesChange={updateBoardsPreferences}
-        ensureNetwork={session.ensureNetwork}
-        onOpenBoard={setOpenBoard}
-        onOpenSettings={() => {
-          setSettingsCategory('general');
-          setSettingsOpen(true);
-        }}
-        onConnect={() => setConnectOpen(true)}
-        onTokenRejected={session.retry}
-      />
-    </PendingBindingBanner>
-  );
 }
+
+const styles = StyleSheet.create({
+  app: {
+    flex: 1,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.background,
+  },
+});

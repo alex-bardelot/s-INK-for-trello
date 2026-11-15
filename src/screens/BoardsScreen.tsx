@@ -27,7 +27,6 @@ import {Button} from '../components/Button';
 import {InkLinkTarget} from '../inkLink/inkLink';
 import {usePendingBinding} from '../inkLink/lassoBinding';
 import {useConnectivity} from '../network/connectivity';
-import {GearIcon} from '../components/GearIcon';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {Locale, useTranslation} from '../i18n';
 import {toSessionError} from '../session/trelloSession';
@@ -68,10 +67,6 @@ const ROUND_LOGO_WIDTH = 340;
 /** Width of the small dashed "+" card adding a public board. */
 const ADD_TILE_WIDTH = 64;
 
-function settingsIcon(color: string, background: string): React.ReactNode {
-  return <GearIcon size={24} color={color} holeColor={background} />;
-}
-
 export interface BoardsScreenProps {
   /** The connected member, or `null` when no account is connected yet. */
   member: TrelloMember | null;
@@ -84,7 +79,6 @@ export interface BoardsScreenProps {
   /** Asks for network access; resolves `false` if refused. */
   ensureNetwork: () => Promise<boolean>;
   onOpenBoard: (board: TrelloBoard) => void;
-  onOpenSettings: () => void;
   /** Opens the connection screen (signed out only). */
   onConnect: () => void;
   /** Called when Trello rejects the token while loading. */
@@ -106,7 +100,6 @@ export function BoardsScreen({
   onPreferencesChange,
   ensureNetwork,
   onOpenBoard,
-  onOpenSettings,
   onConnect,
   onTokenRejected,
 }: BoardsScreenProps): React.JSX.Element {
@@ -374,17 +367,7 @@ export function BoardsScreen({
   };
 
   return (
-    <ScreenFrame
-      title={t('boards.title')}
-      actions={
-        linking ? null : (
-          <Button
-            label={t('settings.open')}
-            onPress={onOpenSettings}
-            icon={settingsIcon}
-          />
-        )
-      }>
+    <ScreenFrame title={t('boards.title')} hideSettingsButton={linking}>
       <View
         style={styles.body}
         onLayout={event => setBodyHeight(event.nativeEvent.layout.height)}

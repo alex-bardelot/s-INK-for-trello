@@ -6,6 +6,8 @@ import {useTranslation} from '../i18n';
 import {connectivity, useConnectivity} from '../network/connectivity';
 import {borders, colors, spacing, typography} from '../theme';
 import {CloseIcon} from './CloseIcon';
+import {GearIcon} from './GearIcon';
+import {useSettingsOpener} from './settingsOpener';
 import {OfflineButton, OfflinePopup, useOfflineRetry} from './OfflineButton';
 
 /**
@@ -13,6 +15,8 @@ import {OfflineButton, OfflinePopup, useOfflineRetry} from './OfflineButton';
  * `spacing.sm` around it, like the close button, so they line up.
  */
 export const HEADER_ICON_SIZE = 32;
+/** The gear fills its square more than the close cross: a bit smaller. */
+const SETTINGS_ICON_SIZE = 28;
 
 export interface ScreenFrameProps {
   title: string;
@@ -25,6 +29,8 @@ export interface ScreenFrameProps {
   flush?: boolean;
   /** Hides the offline button, on a screen that has its own Retry. */
   hideOfflineButton?: boolean;
+  /** Hides the settings button, while the page is in a special mode. */
+  hideSettingsButton?: boolean;
   /**
    * Shows the title bar of the tablet's own creation dialogs (New Task,
    * New Event) instead: black, Cancel on the left, the title in the
@@ -44,10 +50,11 @@ export interface DialogBar {
 }
 
 /**
- * Common layout of the plugin screens: title bar with a close button. While
- * the tablet has no internet, an "Offline" button with a Wi-Fi off sign
- * stands last among the actions: it checks again, and says in a popup that
- * the tablet must be connected if it still is not.
+ * Common layout of the plugin screens: title bar with the settings button
+ * and a close button. While the tablet has no internet, an "Offline"
+ * button with a Wi-Fi off sign stands last among the actions: it checks
+ * again, and says in a popup that the tablet must be connected if it
+ * still is not.
  */
 export function ScreenFrame({
   title,
@@ -56,9 +63,11 @@ export function ScreenFrame({
   actions,
   flush,
   hideOfflineButton,
+  hideSettingsButton,
   dialog,
 }: ScreenFrameProps): React.JSX.Element {
   const {t} = useTranslation();
+  const openSettings = useSettingsOpener();
 
   // Arriving on a page while offline checks whether the internet is back:
   // nothing is checked in the background, to spare the battery.
@@ -112,6 +121,22 @@ export function ScreenFrame({
               />
             )}
           </View>
+        )}
+        {openSettings && !hideSettingsButton && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('settings.open')}
+            hitSlop={spacing.md}
+            onPress={openSettings}
+            style={styles.closeButton}>
+            {({pressed}) => (
+              <GearIcon
+                size={SETTINGS_ICON_SIZE}
+                color={colors.foreground}
+                holeColor={pressed ? colors.avatar : colors.background}
+              />
+            )}
+          </Pressable>
         )}
         <Pressable
           accessibilityRole="button"
