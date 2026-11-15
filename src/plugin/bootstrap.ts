@@ -12,7 +12,11 @@ import {inspectLassoSelection} from '../inkLink/lassoInspect';
 import {startInkLinkTaps} from '../inkLink/noteBridge';
 import {refreshButtons, registerButtons} from './buttons';
 import {ButtonId} from './constants';
-import {handleButtonPress, openBoardsIntent} from './launchIntent';
+import {
+  CAPTURE_WAIT_MS,
+  handleButtonPress,
+  openBoardsIntent,
+} from './launchIntent';
 
 const LOG_TAG = '[sINK]';
 /** Longest wait for the host to say the view is open. */
@@ -53,13 +57,27 @@ function onButtonPress(event: {id: number}): void {
   }
   if (event.id === ButtonId.LassoLink) {
     // Read the selection while the lasso is active, then let the user pick
-    // the card or board from the boards view.
+    // the card or board from the boards view. A read that never answers
+    // must not keep the view closed.
     openBoardsIntent();
-    captureLassoSelection().finally(() =>
-      PluginManager.showPluginView().catch(error =>
-        console.warn(`${LOG_TAG} Failed to show the plugin view`, error),
-      ),
-    );
+    let shown = false;
+    const show = (): void => {
+      if (shown) {
+        return;
+      }
+      shown = true;
+      clearTimeout(fallback);
+      showView(event.id);
+    };
+    const fallback = setTimeout(() => {
+      if (!shown) {
+        logInkLink(
+          `bind: lasso not read after ${CAPTURE_WAIT_MS} ms, opening the view`,
+        );
+        show();
+      }
+    }, CAPTURE_WAIT_MS);
+    captureLassoSelection().finally(show);
     return;
   }
   if (event.id === ButtonId.Open) {
@@ -72,10 +90,22 @@ function onButtonPress(event: {id: number}): void {
     // Recognition waits for the view, but not forever.
     openView: () =>
       Promise.race([
-        PluginManager.showPluginView().then(() => {}),
+        showView(event.id),
         new Promise<void>(resolve => setTimeout(resolve, VIEW_OPEN_WAIT_MS)),
       ]),
   });
+}
+
+/** Shows the plugin view for a button, logging the host's answer. */
+function showView(buttonId: number): Promise<void> {
+  logInkLink(`button ${buttonId}: showing the view`);
+  return PluginManager.showPluginView().then(
+    result => logInkLink(`button ${buttonId}: view shown (${String(result)})`),
+    error => {
+      console.warn(`${LOG_TAG} Failed to show the plugin view`, error);
+      logInkLink(`button ${buttonId}: view refused: ${String(error)}`);
+    },
+  );
 }
 
 /**
@@ -87,6 +117,12 @@ function onButtonPress(event: {id: number}): void {
 export function bootstrapPlugin(): void {
   PluginManager.init();
   logInkLink('startup: plugin started');
+
+  // First of all: the lasso buttons only work through this listener. The
+  // SDK keeps it in JavaScript, so it needs no registered button, while
+  // waiting for the host to accept the buttons could leave it missing.
+  PluginManager.registerButtonListener({onButtonPress});
+  logInkLink('startup: button listener ready');
 
   language.setSystemLanguage(getSystemLocale());
 
@@ -111,9 +147,9 @@ export function bootstrapPlugin(): void {
     }
   });
 
-  // Registered right away, in the system language: the listener must not
-  // wait for the language saved in Settings. While it waited, a stalled
-  // read of the settings left the lasso buttons doing nothing.
+  // Registered right away, in the system language: they must not wait for
+  // the language saved in Settings, whose read may stall. The labels are
+  // refreshed once it is applied.
   registerButtons()
     .then(registered =>
       logInkLink(
@@ -125,9 +161,6 @@ export function bootstrapPlugin(): void {
       logInkLink(`startup: button registration failed: ${String(error)}`);
     })
     .finally(() => {
-      // The SDK requires buttons to be registered before the listener.
-      PluginManager.registerButtonListener({onButtonPress});
-      logInkLink('startup: button listener ready');
       buttonsReady = true;
       if (labelsStale) {
         refreshButtonLabels();

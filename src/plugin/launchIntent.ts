@@ -1,5 +1,6 @@
 import {useSyncExternalStore} from 'react';
 
+import {logInkLink} from '../inkLink/diagnostics';
 import type {InkLinkTarget} from '../inkLink/inkLink';
 import {ButtonId} from './constants';
 import {LassoTextResult, readLassoText} from './lassoText';
@@ -45,15 +46,28 @@ let requestCounter = 0;
 const listeners = new Set<Listener>();
 
 /**
+ * Longest wait for the lasso to be captured before the view opens anyway:
+ * a host call that never answers must not leave the button doing nothing.
+ * Best effort, as JavaScript timers may pause while the view is hidden.
+ */
+export const CAPTURE_WAIT_MS = 5000;
+
+/**
  * Reads the selection without ever rejecting. The view is opened when the
- * reader says the lasso is captured, or at the latest when reading ends.
+ * reader says the lasso is captured, after {@link CAPTURE_WAIT_MS} if it
+ * says nothing, or at the latest when reading ends.
  */
 function readSafely(
   read: SelectionReader,
   openView: ViewOpener,
 ): Promise<LassoTextResult> {
   let opened = false;
+  let fallback: ReturnType<typeof setTimeout> | null = null;
   const open = async (): Promise<void> => {
+    if (fallback !== null) {
+      clearTimeout(fallback);
+      fallback = null;
+    }
     if (opened) {
       return;
     }
@@ -64,6 +78,15 @@ function readSafely(
       console.warn('[sINK] Failed to show the plugin view', error);
     }
   };
+  fallback = setTimeout(() => {
+    fallback = null;
+    if (!opened) {
+      logInkLink(
+        `card: lasso not read after ${CAPTURE_WAIT_MS} ms, opening the view`,
+      );
+      open();
+    }
+  }, CAPTURE_WAIT_MS);
   return (async (): Promise<LassoTextResult> => {
     try {
       return await read(open);

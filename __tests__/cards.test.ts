@@ -26,7 +26,11 @@ import {
   rememberCardDestination,
 } from '../src/cards/preferences';
 import {ButtonId} from '../src/plugin/constants';
-import {getLaunchIntent, handleButtonPress} from '../src/plugin/launchIntent';
+import {
+  CAPTURE_WAIT_MS,
+  getLaunchIntent,
+  handleButtonPress,
+} from '../src/plugin/launchIntent';
 import {recognizedText} from '../src/plugin/lassoText';
 import {createMemoryStore} from '../src/storage/keyValueStore';
 import {TrelloBoard, TrelloList} from '../src/trello';
@@ -519,6 +523,23 @@ describe('launch intent', () => {
       throw new Error('Expected a lasso intent');
     }
     await expect(intent.lasso).resolves.toEqual({ok: true, text: 'Buy milk'});
+  });
+
+  it('opens the view anyway when the lasso read never answers', () => {
+    jest.useFakeTimers();
+    try {
+      const openView = jest.fn(() => Promise.resolve());
+      handleButtonPress(ButtonId.LassoCreateCard, {
+        openView,
+        readSelection: () => new Promise(() => {}),
+      });
+      jest.advanceTimersByTime(CAPTURE_WAIT_MS - 1);
+      expect(openView).not.toHaveBeenCalled();
+      jest.advanceTimersByTime(1);
+      expect(openView).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('turns a failing reader into a "no selection" result', async () => {

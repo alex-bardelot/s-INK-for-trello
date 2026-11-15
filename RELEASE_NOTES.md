@@ -3,6 +3,25 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.50.1 — Lasso buttons that always answer
+
+- Reported on the tablet: **New Trello Card** and **Insert Trello Link**
+  did nothing again, after working only now and then for a few versions.
+- The plugin's button listener, which the lasso buttons depend on, is now
+  set up first thing at startup. It no longer waits for the tablet to
+  accept the buttons.
+- Button registrations run one at a time. A language change no longer
+  removes and adds the buttons again when their labels stay the same,
+  and two quick changes can no longer overlap, which could leave a
+  button registered twice or missing.
+- If the lasso selection cannot be read within 5 seconds, the plugin
+  view opens anyway instead of staying closed.
+- Diagnostics keeps the last 30 button presses and what followed
+  (`button`, `card:`, `bind:` lines) apart from the pen releases, which
+  used to push them out of the log while writing. **Clear** empties
+  them; each opening of the view is logged (`showing the view`,
+  `view shown`).
+
 ## 0.50.0 — Suggested labels and members, and New card settings
 
 - On the New Trello Card page, **Labels** and **Members** no longer list

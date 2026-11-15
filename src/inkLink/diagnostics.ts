@@ -7,21 +7,40 @@ import {useSyncExternalStore} from 'react';
  */
 
 const MAX_LINES = 60;
+
 /**
- * Lines of the plugin startup, kept apart so that the taps logged while
- * writing do not push them out: they tell whether the buttons work.
+ * Lines kept apart from the recent ones, so that the pen releases logged
+ * while writing do not push them out. Shown after the recent lines, in
+ * this order.
  */
-const STARTUP_PREFIX = 'startup:';
-const MAX_STARTUP_LINES = 20;
+interface PinnedGroup {
+  prefixes: readonly string[];
+  max: number;
+  /** Whether **Clear** empties the group too. */
+  clearable: boolean;
+  lines: readonly string[];
+}
+
+const PINNED: PinnedGroup[] = [
+  // Button presses and what they led to: they tell why a button did
+  // nothing.
+  {
+    prefixes: ['button ', 'card:', 'bind:'],
+    max: 30,
+    clearable: true,
+    lines: [],
+  },
+  // The plugin startup: it tells whether the buttons can work at all.
+  {prefixes: ['startup:'], max: 20, clearable: false, lines: []},
+];
 
 let lines: readonly string[] = [];
-let startupLines: readonly string[] = [];
-/** What the log shows: recent lines, then the startup ones (oldest last). */
+/** What the log shows: recent lines, then the pinned ones (oldest last). */
 let snapshot: readonly string[] = [];
 const listeners = new Set<() => void>();
 
 function publish(): void {
-  snapshot = [...lines, ...startupLines];
+  snapshot = [...lines, ...PINNED.flatMap(group => group.lines)];
   listeners.forEach(listener => listener());
 }
 
@@ -37,17 +56,25 @@ function timestamp(): string {
 export function logInkLink(message: string): void {
   console.log(`[sINK] link: ${message}`);
   const line = `${timestamp()} ${message}`;
-  if (message.startsWith(STARTUP_PREFIX)) {
-    startupLines = [line, ...startupLines].slice(0, MAX_STARTUP_LINES);
+  const group = PINNED.find(candidate =>
+    candidate.prefixes.some(prefix => message.startsWith(prefix)),
+  );
+  if (group) {
+    group.lines = [line, ...group.lines].slice(0, group.max);
   } else {
     lines = [line, ...lines].slice(0, MAX_LINES);
   }
   publish();
 }
 
-/** Clears the recent lines; the startup ones stay, as they still apply. */
+/** Clears the recent lines and the button ones; the startup ones stay. */
 export function clearInkLinkLog(): void {
   lines = [];
+  PINNED.forEach(group => {
+    if (group.clearable) {
+      group.lines = [];
+    }
+  });
   publish();
 }
 

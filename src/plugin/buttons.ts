@@ -14,17 +14,49 @@ import {
 const ICON_URI = Image.resolveAssetSource(require('../../assets/icon.png')).uri;
 
 /**
- * Registers the s-INK buttons with labels in the active locale:
- * - the toolbar button of NOTE and DOC, which opens the boards view;
- * - the lasso toolbar button of NOTE, shown when the selection contains
- *   handwriting or text, which turns the selection into a Trello card;
- * - the lasso button of NOTE that links the selection to a card or board;
- * - once Diagnostics is unlocked, a diagnostic lasso button of NOTE that
- *   logs the selected elements.
- *
- * @returns `true` if the host accepted every registration.
+ * Every registration with the host goes through this queue, one at a time:
+ * two overlapping unregister/register cycles could leave a button
+ * registered twice, or not at all.
  */
-export async function registerButtons(): Promise<boolean> {
+let queue: Promise<unknown> = Promise.resolve();
+
+function enqueue<T>(task: () => Promise<T>): Promise<T> {
+  const run = queue.then(task, task);
+  queue = run.catch(() => {});
+  return run;
+}
+
+/** Labels and Diagnostics state of the last accepted registration. */
+let registeredKey: string | null = null;
+
+function buttonsKey(): string {
+  return JSON.stringify([
+    i18n.t('button.toolbar.name'),
+    i18n.t('button.lasso.createCard'),
+    i18n.t('button.lasso.link'),
+    i18n.t('button.lasso.inspect'),
+    diagnosticsUnlocked(),
+  ]);
+}
+
+function registerInspect(): Promise<boolean> {
+  return PluginManager.registerButton(ButtonType.Lasso, [AppType.Note], {
+    id: ButtonId.LassoInspect,
+    name: i18n.t('button.lasso.inspect'),
+    icon: ICON_URI,
+    // Only writes to the s-INK log; the view stays closed.
+    showType: ButtonShowType.EventOnly,
+    editDataTypes: [
+      LassoDataType.Stroke,
+      LassoDataType.Text,
+      LassoDataType.Image,
+      LassoDataType.Link,
+    ],
+  });
+}
+
+async function registerAll(): Promise<boolean> {
+  const key = buttonsKey();
   const results = await Promise.all([
     PluginManager.registerButton(
       ButtonType.Toolbar,
@@ -57,11 +89,28 @@ export async function registerButtons(): Promise<boolean> {
       ],
     }),
     diagnosticsUnlocked()
-      ? registerInspectButton()
+      ? registerInspect()
       : // A registration may outlive the run that unlocked it.
         PluginManager.unregisterButton(ButtonId.LassoInspect).then(() => true),
   ]);
-  return results.every(Boolean);
+  const accepted = results.every(Boolean);
+  registeredKey = accepted ? key : null;
+  return accepted;
+}
+
+/**
+ * Registers the s-INK buttons with labels in the active locale:
+ * - the toolbar button of NOTE and DOC, which opens the boards view;
+ * - the lasso toolbar button of NOTE, shown when the selection contains
+ *   handwriting or text, which turns the selection into a Trello card;
+ * - the lasso button of NOTE that links the selection to a card or board;
+ * - once Diagnostics is unlocked, a diagnostic lasso button of NOTE that
+ *   logs the selected elements.
+ *
+ * @returns `true` if the host accepted every registration.
+ */
+export function registerButtons(): Promise<boolean> {
+  return enqueue(registerAll);
 }
 
 /**
@@ -70,34 +119,34 @@ export async function registerButtons(): Promise<boolean> {
  *
  * @returns `true` if the host accepted it.
  */
-export async function registerInspectButton(): Promise<boolean> {
-  return PluginManager.registerButton(ButtonType.Lasso, [AppType.Note], {
-    id: ButtonId.LassoInspect,
-    name: i18n.t('button.lasso.inspect'),
-    icon: ICON_URI,
-    // Only writes to the s-INK log; the view stays closed.
-    showType: ButtonShowType.EventOnly,
-    editDataTypes: [
-      LassoDataType.Stroke,
-      LassoDataType.Text,
-      LassoDataType.Image,
-      LassoDataType.Link,
-    ],
+export function registerInspectButton(): Promise<boolean> {
+  return enqueue(async () => {
+    const accepted = await registerInspect();
+    registeredKey = accepted ? buttonsKey() : null;
+    return accepted;
   });
 }
 
 /**
- * Re-registers the buttons so their labels follow the system language.
- * The SDK exposes no "rename" API, hence the unregister/register cycle.
+ * Re-registers the buttons so their labels follow the language. The SDK
+ * exposes no "rename" API, hence the unregister/register cycle, skipped
+ * when the labels did not change: while it runs, the lasso buttons are
+ * missing from the note app.
  *
- * @returns `true` if the host accepted the new registrations.
+ * @returns `true` if the host accepted the new registrations, or if they
+ *   were already up to date.
  */
-export async function refreshButtons(): Promise<boolean> {
-  await Promise.all([
-    PluginManager.unregisterButton(ButtonId.Open),
-    PluginManager.unregisterButton(ButtonId.LassoCreateCard),
-    PluginManager.unregisterButton(ButtonId.LassoLink),
-    PluginManager.unregisterButton(ButtonId.LassoInspect),
-  ]);
-  return registerButtons();
+export function refreshButtons(): Promise<boolean> {
+  return enqueue(async () => {
+    if (registeredKey === buttonsKey()) {
+      return true;
+    }
+    await Promise.all([
+      PluginManager.unregisterButton(ButtonId.Open),
+      PluginManager.unregisterButton(ButtonId.LassoCreateCard),
+      PluginManager.unregisterButton(ButtonId.LassoLink),
+      PluginManager.unregisterButton(ButtonId.LassoInspect),
+    ]);
+    return registerAll();
+  });
 }
