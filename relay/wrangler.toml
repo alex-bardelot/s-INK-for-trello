@@ -8,13 +8,27 @@ compatibility_date = "2025-10-01"
 [vars]
 TRELLO_API_KEY = "1dd2751a51e6e9b628f86a3063078cb5"
 TRELLO_APP_NAME = "s-INK for Trello"
+# Currency of the funding goal: Ko-fi payments in another one are ignored.
+FUNDING_CURRENCY = "EUR"
 
 # One Durable Object per connection session (a single-message mailbox).
 [[durable_objects.bindings]]
 name = "SESSIONS"
 class_name = "SessionBox"
 
+# A single Durable Object holding the donation total of the funding goal,
+# fed by the Ko-fi webhook. Secrets (set with `npx wrangler secret put`):
+# KOFI_VERIFICATION_TOKEN, from Ko-fi's webhook settings, and
+# FUNDING_ADMIN_TOKEN, to set the total by hand. See README.md.
+[[durable_objects.bindings]]
+name = "FUNDING"
+class_name = "FundingBox"
+
 # SQLite-backed Durable Objects are available on the Workers Free plan.
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["SessionBox"]
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["FundingBox"]

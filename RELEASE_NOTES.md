@@ -3,6 +3,26 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.57.0 — Support s-INK
+
+- New **Settings › Support s-INK** category, before About:
+  - **Your feedback** comes first: bugs, ideas and ratings go through
+    InkHub for now, with a QR code to scan with a phone and an **Open in
+    the browser** button.
+  - **Make a donation** shows the first funding goal, a Supernote Nomad
+    (€528: tablet €402, Heart of Metal 2 pen €102, shipping €24), why
+    it helps (its screen is smaller than the Manta's), a progress bar
+    with the amount raised, and the donation page's QR code.
+  - The amount raised is read from the relay each time the category
+    opens; the last one read is shown offline.
+  - The InkHub and Ko-fi addresses are not set yet: their blocks say the
+    link comes soon.
+- Relay: `GET /api/v1/funding` answers the total raised, fed by the Ko-fi
+  webhook (`POST /api/v1/kofi`, checked with Ko-fi's verification token,
+  each transaction counted once). Only the total is stored, never the
+  donor's name, email or message. `PUT /api/v1/funding` with an admin
+  token sets the total by hand. See relay/README.md, "Funding goal".
+
 ## 0.56.1 — Suggestions counted with − and +
 
 - **Settings › New card › Labels and members suggested** now shows the

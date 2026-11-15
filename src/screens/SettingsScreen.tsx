@@ -57,6 +57,7 @@ import {KeyValueStore} from '../storage/keyValueStore';
 import {TrelloBoard, TrelloClient, TrelloMember} from '../trello';
 import {NewCardSettingsPanel} from './NewCardSettingsPanel';
 import {PublicBoardsSettings} from './PublicBoardsSettings';
+import {SupportSettings} from './SupportSettings';
 import {
   NoteTemplateScreen,
   StartWorkSettingsPanel,
@@ -107,7 +108,8 @@ export interface SettingsScreenProps {
  * where its token is kept) and the language; "Board page" the settings of an open board (layout and mode); "New
  * card" what the New Trello Card page offers and does; "Start
  * work" what the Start button of a card does; "Links"
- * the tool opening s-INK links; "About" the version and the
+ * the tool opening s-INK links; "Support s-INK" feedback (through
+ * InkHub) and donations toward the funding goal; "About" the version and the
  * non-affiliation notice.
  */
 export function SettingsScreen({
@@ -145,6 +147,7 @@ export function SettingsScreen({
     {value: 'newCard', label: t('settings.newCard')},
     {value: 'startWork', label: t('settings.startWork')},
     {value: 'links', label: t('settings.links')},
+    {value: 'support', label: t('settings.support')},
     {value: 'about', label: t('settings.about')},
     ...(showDiagnostics
       ? [
@@ -281,6 +284,8 @@ export function SettingsScreen({
               />
             ) : category === 'links' ? (
               <NoteLinkSettings store={store} />
+            ) : category === 'support' ? (
+              <SupportSettings store={store} ensureNetwork={ensureNetwork} />
             ) : category === 'about' ? (
               <AboutSettings
                 onOpenReleaseNotes={() => setReleaseNotesOpen(true)}
@@ -317,6 +322,7 @@ export type SettingsCategory =
   | 'newCard'
   | 'startWork'
   | 'links'
+  | 'support'
   | 'about'
   | 'diagnostics';
 

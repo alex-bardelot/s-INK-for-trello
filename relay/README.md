@@ -105,9 +105,13 @@ All binary values are written in base64url without padding.
 | `GET /connect/done?s=<id>` | The same page (step 4–5). |
 | `PUT /api/v1/sessions/<id>` | `201` stored · `409` already used · `400` bad message · `413` over 1 KB |
 | `GET /api/v1/sessions/<id>` | `200` the message (erased now) · `204` nothing yet |
+| `GET /api/v1/funding` | `200` `{"raised": 182.5, "currency": "EUR", "updatedAt": 1763200000000}` |
+| `PUT /api/v1/funding` | Sets the total: `{"raised": 182.5}` with `Authorization: Bearer <FUNDING_ADMIN_TOKEN>` · `204` · `401` · `400` |
+| `POST /api/v1/kofi` | The Ko-fi webhook · `200` · `401` wrong verification token · `400` |
 | `GET /` | A one-line description. |
 
-Every answer carries `Cache-Control: no-store`. There is no CORS header:
+Every answer but the funding total carries `Cache-Control: no-store`
+(the total may be cached 5 minutes). There is no CORS header:
 other web sites cannot read the API from a browser (the plugin is not a
 browser, so it is not concerned).
 
@@ -125,6 +129,40 @@ Each session is a [Durable Object](https://developers.cloudflare.com/durable-obj
 Durable Objects are used rather than Workers KV because they are strongly
 consistent: KV may keep answering "not found" for up to a minute after a
 write, which would make the tablet wait for nothing.
+
+## Funding goal
+
+The plugin's **Support s-INK** page shows how much was raised toward the
+current funding goal. The total lives in one more Durable Object
+(`FundingBox` in `src/funding.ts`):
+
+- Ko-fi calls `POST /api/v1/kofi` after each payment. The relay checks the
+  verification token, then adds donations and subscriptions in
+  `FUNDING_CURRENCY` (shop orders and other currencies are not counted).
+  Each Ko-fi transaction is counted once, even if Ko-fi sends it again.
+- Only the total (in cents) and the ids of the transactions already
+  counted are stored. The donor's name, email and message, which Ko-fi
+  sends too, are never stored.
+- A donation received elsewhere, or a refund, is entered by setting the
+  total by hand:
+
+  ```
+  curl -X PUT https://<relay>/api/v1/funding \
+    -H "Authorization: Bearer <FUNDING_ADMIN_TOKEN>" -d '{"raised": 182.5}'
+  ```
+
+To set it up:
+
+1. `npx wrangler secret put KOFI_VERIFICATION_TOKEN`, with the token shown
+   in Ko-fi › Settings › API › Webhooks.
+2. `npx wrangler secret put FUNDING_ADMIN_TOKEN`, with a long random
+   string of your own.
+3. `npx wrangler deploy`, then enter `https://<relay>/api/v1/kofi` as the
+   webhook URL on Ko-fi and send a test. Ko-fi's test payment is counted
+   like a real one: set the total back with the `PUT` above.
+
+Without `KOFI_VERIFICATION_TOKEN` the webhook answers `404`; without
+`FUNDING_ADMIN_TOKEN` the total cannot be set by hand.
 
 ## Security
 
