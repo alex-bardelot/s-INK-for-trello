@@ -57,6 +57,8 @@
   "settings.title": "s-INK for Trello：設定",
   "settings.publicBoards": "公開ボード",
   "settings.roadmapHelp": "Supernote 公式の公開ボードです。非表示にできますが、削除はできません。",
+  "settings.showAddPublicBoard": "ボード一覧の「+」ボタン",
+  "settings.showAddPublicBoardHelp": "ボード一覧から公開ボードを追加します。オフにしても、ここから追加できます。",
   "settings.publicBoardNew": "公開ボードを追加",
   "settings.publicBoardHint": "公開 Trello ボードのリンク（https://trello.com/b/…）または 8 文字の ID",
   "settings.publicBoardPaste": "貼り付け",

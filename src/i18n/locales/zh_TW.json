@@ -57,6 +57,8 @@
   "settings.title": "s-INK for Trello：設定",
   "settings.publicBoards": "公開看板",
   "settings.roadmapHelp": "Supernote 官方公開看板。可以隱藏，但無法刪除。",
+  "settings.showAddPublicBoard": "看板頁面上的「+」按鈕",
+  "settings.showAddPublicBoardHelp": "從看板頁面新增公開看板。關閉後仍可在此處新增。",
   "settings.publicBoardNew": "新增公開看板",
   "settings.publicBoardHint": "公開 Trello 看板的連結（https://trello.com/b/…）或其 8 碼 ID",
   "settings.publicBoardPaste": "貼上",

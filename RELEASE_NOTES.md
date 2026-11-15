@@ -3,6 +3,15 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.38.0 — Option hiding the "+" card on the boards page
+
+- The Public boards section of Settings > Boards ends with a switch,
+  **"+" button on the boards page**, on by default. Turned off, the
+  boards page no longer shows the "+" card after the public boards;
+  they can still be added from the settings. Stored as
+  `showAddPublicBoard` in the boards preferences; new strings in all
+  locales.
+
 ## 0.37.1 — Board mode back in the Boards category
 
 - The board mode is no longer a category of its own: it is the

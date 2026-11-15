@@ -354,6 +354,7 @@ describe('boards preferences', () => {
       showSupernoteRoadmap: false,
       publicBoards: [ref],
       showConnectCard: false,
+      showAddPublicBoard: false,
     };
     await saveBoardsPreferences(store, preferences);
     expect(await loadBoardsPreferences(store)).toEqual(preferences);
@@ -367,12 +368,14 @@ describe('boards preferences', () => {
         showSupernoteRoadmap: 1,
         publicBoards: [ref, {shortLink: 'bad'}, 'x'],
         showConnectCard: 'no',
+        showAddPublicBoard: null,
       }),
     );
     expect(await loadBoardsPreferences(store)).toEqual({
       showSupernoteRoadmap: true,
       publicBoards: [ref],
       showConnectCard: true,
+      showAddPublicBoard: true,
     });
     await store.setItem(BOARDS_PREFERENCES_KEY, 'not json');
     expect(await loadBoardsPreferences(store)).toEqual(

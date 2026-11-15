@@ -256,7 +256,7 @@ export function BoardsScreen({
               signedIn,
               // Picking what to link a selection to is no time to connect.
               showConnect: preferences.showConnectCard && !linking,
-              showAddPublic: !linking,
+              showAddPublic: preferences.showAddPublicBoard && !linking,
               columns,
             }),
             bodyHeight,
@@ -269,6 +269,7 @@ export function BoardsScreen({
       showRoadmap,
       signedIn,
       preferences.showConnectCard,
+      preferences.showAddPublicBoard,
       linking,
       bodyHeight,
     ],

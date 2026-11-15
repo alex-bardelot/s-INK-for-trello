@@ -22,12 +22,18 @@ export interface BoardsPreferences {
    * connect. Someone who only reads public boards can turn it off.
    */
   showConnectCard: boolean;
+  /**
+   * Shows the "+" card after the public boards on the boards page. Public
+   * boards can still be added from the settings when it is off.
+   */
+  showAddPublicBoard: boolean;
 }
 
 export const DEFAULT_BOARDS_PREFERENCES: BoardsPreferences = {
   showSupernoteRoadmap: true,
   publicBoards: [],
   showConnectCard: true,
+  showAddPublicBoard: true,
 };
 
 /** Trello short links are 8 letters or digits. */
@@ -111,6 +117,10 @@ export async function loadBoardsPreferences(
         typeof parsed.showConnectCard === 'boolean'
           ? parsed.showConnectCard
           : DEFAULT_BOARDS_PREFERENCES.showConnectCard,
+      showAddPublicBoard:
+        typeof parsed.showAddPublicBoard === 'boolean'
+          ? parsed.showAddPublicBoard
+          : DEFAULT_BOARDS_PREFERENCES.showAddPublicBoard,
     };
   } catch (error) {
     console.warn('[sINK] Failed to read boards preferences', error);
