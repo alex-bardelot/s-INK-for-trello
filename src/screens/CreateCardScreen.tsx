@@ -655,7 +655,7 @@ export function CreateCardScreen({
               )}
             </Section>
 
-            <Section title={t('card.name')}>
+            <Section plain title={t('card.name')}>
               <TextInput
                 accessibilityLabel={t('card.name')}
                 multiline
@@ -665,7 +665,7 @@ export function CreateCardScreen({
               />
             </Section>
 
-            <Section title={t('card.description')}>
+            <Section plain title={t('card.description')}>
               <TextInput
                 accessibilityLabel={t('card.description')}
                 multiline
@@ -758,17 +758,24 @@ export function CreateCardScreen({
   }
 }
 
-/** A titled block of the form, underlined like the sections of a note. */
+/**
+ * A titled block of the form, underlined like the sections of a note.
+ * `plain` leaves the line out, for a block that is a single framed field.
+ */
 function Section({
   title,
+  plain = false,
   children,
 }: {
   title: string;
+  plain?: boolean;
   children: React.ReactNode;
 }): React.JSX.Element {
   return (
     <View style={styles.section}>
-      <Text accessibilityRole="header" style={styles.sectionTitle}>
+      <Text
+        accessibilityRole="header"
+        style={[styles.sectionTitle, plain && styles.sectionTitlePlain]}>
         {title}
       </Text>
       <View style={styles.sectionBody}>{children}</View>
@@ -930,6 +937,9 @@ const styles = StyleSheet.create({
     fontSize: typography.label,
     fontWeight: '700',
     paddingBottom: spacing.xs,
+  },
+  sectionTitlePlain: {
+    borderBottomWidth: 0,
   },
   sectionBody: {
     gap: spacing.sm,

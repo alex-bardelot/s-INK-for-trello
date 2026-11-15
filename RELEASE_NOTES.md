@@ -3,6 +3,12 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.49.7 — Lighter Title and Description
+
+- On the New Trello Card page, **Title** and **Description** are no
+  longer underlined: the framed field below each one is enough. Labels,
+  Members and Checklist keep their line.
+
 ## 0.49.6 — Lasso buttons registered at once
 
 - Reported on the tablet: **Insert Trello Link** and **New Trello Card**
