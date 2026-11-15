@@ -45,6 +45,8 @@ export function PublicBoardsSettings({
 
       {preferences.publicBoards.map(ref => (
         <View key={ref.shortLink} style={styles.row}>
+          {/* A bullet marks each board as an item of the list. */}
+          <View style={styles.bullet} />
           <View style={styles.texts}>
             <Text style={styles.name} numberOfLines={1}>
               {ref.name}
@@ -76,6 +78,9 @@ export function PublicBoardsSettings({
   );
 }
 
+/** Diameter of the bullet before each public board. */
+const BULLET_SIZE = 12;
+
 const styles = StyleSheet.create({
   container: {
     gap: spacing.md,
@@ -83,8 +88,17 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.sm,
     paddingVertical: spacing.xs,
+  },
+  bullet: {
+    width: BULLET_SIZE,
+    height: BULLET_SIZE,
+    borderRadius: BULLET_SIZE / 2,
+    backgroundColor: colors.foreground,
+    // Centered on the board name, the first line.
+    alignSelf: 'flex-start',
+    marginTop: (typography.label * 1.2 - BULLET_SIZE) / 2,
   },
   texts: {
     flex: 1,

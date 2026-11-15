@@ -3,6 +3,11 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.36.1 — Bullets before the public boards in Settings
+
+- In Settings > Boards, each public board now starts with a small black
+  bullet, centered on its name, so the boards read as items of a list.
+
 ## 0.36.0 — Four lists in landscape, with a tablet preview
 
 - In landscape, the board view can now show **4 lists** side by side.
