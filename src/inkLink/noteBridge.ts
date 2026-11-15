@@ -345,6 +345,12 @@ const SELECTION_MARGIN = 12;
 const LASSO_RETRY_MS = 3000;
 /** Upper bound of lasso attempts, should the host answer at once. */
 const LASSO_MAX_ATTEMPTS = 200;
+/** How long a new selection is watched, to make it again if it goes. */
+const LASSO_WATCH_MS = 2500;
+/** Upper bound of checks while watching, should the host answer at once. */
+const LASSO_MAX_WATCH_CHECKS = 1000;
+/** Times a lost selection is made again: the user may be dropping it. */
+const LASSO_MAX_REDO = 3;
 
 /**
  * Closes the plugin view, then selects a link just placed on the current
@@ -400,7 +406,48 @@ export async function selectInkLink(rect: Rect): Promise<boolean> {
       padded.right,
     )},${Math.round(padded.bottom)}: ${answer} after ${attempts} attempt(s)`,
   );
-  return answer === 'ok';
+  if (answer !== 'ok') {
+    return false;
+  }
+  await keepSelected(padded);
+  return true;
+}
+
+/**
+ * Watches a new selection for a moment and makes it again when it goes:
+ * the lasso was seen on the page, then dropped by itself, probably by the
+ * note app finishing to show the note (or the plugin view going away).
+ * Timers do not fire then, so the host is asked again and again.
+ */
+async function keepSelected(rect: Rect): Promise<void> {
+  const started = Date.now();
+  let checks = 0;
+  let redone = 0;
+  let lostAt: number[] = [];
+  while (
+    Date.now() - started < LASSO_WATCH_MS &&
+    checks < LASSO_MAX_WATCH_CHECKS &&
+    redone < LASSO_MAX_REDO
+  ) {
+    checks += 1;
+    if (await lassoActive()) {
+      continue;
+    }
+    lostAt = [...lostAt, Date.now() - started];
+    redone += 1;
+    try {
+      await PluginCommAPI.lassoElements(rect);
+    } catch (error) {
+      logInkLink(`lasso again: ${String(error)}`);
+    }
+  }
+  logInkLink(
+    `lasso kept: ${checks} check(s) in ${Date.now() - started} ms, ${
+      redone
+        ? `made again ${redone} time(s), lost at ${lostAt.join(', ')} ms`
+        : 'never lost'
+    }, active at the end ${await lassoActive()}`,
+  );
 }
 
 /**

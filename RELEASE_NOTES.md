@@ -3,6 +3,18 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.47.2 — The new link stays selected
+
+- On the tablet, the title of a new card note was selected when the note
+  opened (the log reads `lasso … ok after 1 attempt`), then the selection
+  went away by itself, probably when the note app finished showing the
+  note. A new link or title is now watched for 2.5 seconds after it is
+  selected: when the selection is gone, it is made again, three times at
+  most (the user may be dropping it). Timers do not fire then, so the
+  host is asked again and again.
+- The log tells what happened (`lasso kept: … made again N time(s), lost
+  at … ms`, or `never lost`).
+
 ## 0.47.1 — Card note title lower, and selected
 
 - The title of a card's new note starts at 240 px from the top of the
