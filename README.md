@@ -26,12 +26,13 @@ Other Supernote devices that support plugins may work but are not tested.
   first).
 - **New Trello Card** lasso button in NOTE: circle handwriting or text,
   press the button (a "recognizing" popup shows while the handwriting is
-  recognized), pick a board (favorites, the last used one on top, or all
-  boards on demand), pick a list (the last used one on top), review the
-  recognized title, description and checklist, and create the card. The
-  first line becomes the card title, the rest its description, and every
-  line starting with a square (`☐`, `□`, `[ ]`; ticked: `☑`, `■`, `[x]`)
-  an item of a `Check-list` checklist.
+  recognized), and a single page shows the card: board and list (the last
+  ones used, or the only ones available; a tap opens the picker), labels
+  and members of the board (solid with × once added, dashed with + while
+  available), title, description and checklist, all editable before the
+  card is created. The first line becomes the card title, the rest its
+  description, and every line starting with a square (`☐`, `□`, `[ ]`;
+  ticked: `☑`, `■`, `[x]`) an item of a `Check-list` checklist.
 - **Start** button on the cards of boards the member can edit: assigns the
   member, swaps labels (e.g. removes `TODO`, adds `WIP`), moves the card to
   a chosen list and creates a note for it,

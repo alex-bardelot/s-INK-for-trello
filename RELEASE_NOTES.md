@@ -3,6 +3,26 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.49.0 — New Trello Card on a single page
+
+- **New Trello Card** no longer asks for a board, then a list, then shows
+  what was recognized: once the handwriting is recognized, one page shows
+  the whole card.
+- **Board** and **List** are filled in with the ones used last, or with
+  the only one available; otherwise the button reads "Choose a board" or
+  "Choose a list". A tap on either opens its picker (suggested boards
+  first, as before) and comes back to the card.
+- **Labels** lists the labels of the board: solid with a × once added to
+  the card, dashed with a + while available. A tap adds or removes one.
+- **Members** lists the members of the board the same way, the connected
+  member first.
+- **Title** and **Description** are editable fields.
+- **Checklist** has one row per item: a square to tick it, its text, and a
+  ⊠ to remove it; "+ Add an item" adds a row. Blank rows are not created.
+- Labels and members are sent with the card in the same request. If the
+  card cannot be created, the error shows on the page and nothing typed is
+  lost. A **Cancel** button closes the view.
+
 ## 0.48.2 — Insert Trello Link
 
 - The lasso button **Link to Trello** is renamed **Insert Trello Link**

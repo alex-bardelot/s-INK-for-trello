@@ -100,10 +100,7 @@ export function offerBoards({
           board.id === mostUsedId ||
           board.id === lastUsedId,
       );
-  const ordered = lastUsedFirst(
-    lastUsedFirst(offered, lastUsedId),
-    mostUsedId,
-  );
+  const ordered = lastUsedFirst(lastUsedFirst(offered, lastUsedId), mostUsedId);
   return ordered.map(board => ({
     board,
     badges: [
@@ -208,24 +205,4 @@ export function splitCardText(text: string): CardText {
     name = name.slice(0, TITLE_MAX_LENGTH - 1).trimEnd() + '…';
   }
   return {name, desc, checkItems};
-}
-
-/** Checklist items as edited on the review page: one item per line. */
-export function formatCheckItems(items: readonly CardCheckItem[]): string {
-  return items
-    .map(item => (item.checked ? `☑ ${item.name}` : item.name))
-    .join('\n');
-}
-
-/**
- * Reads back the checklist edited on the review page. Each non-empty line is
- * an item; a line may still start with a square, ticked or not.
- */
-export function parseCheckItemsText(text: string): CardCheckItem[] {
-  return text
-    .replace(/\r\n?/g, '\n')
-    .split('\n')
-    .map(line => line.trim())
-    .filter(Boolean)
-    .map(line => parseCheckItem(line) ?? {name: line, checked: false});
 }

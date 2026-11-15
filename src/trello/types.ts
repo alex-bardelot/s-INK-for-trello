@@ -227,4 +227,8 @@ export interface NewCard {
   idList: string;
   name: string;
   desc?: string;
+  /** Labels of the board to put on the card. */
+  idLabels?: readonly string[];
+  /** Members of the board to assign to the card. */
+  idMembers?: readonly string[];
 }

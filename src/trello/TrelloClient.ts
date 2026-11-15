@@ -240,8 +240,14 @@ export class TrelloClient {
     return card;
   }
 
-  /** Creates a card at the bottom of a list. */
-  createCard({idList, name, desc = ''}: NewCard): Promise<TrelloCard> {
+  /** Creates a card at the bottom of a list, with labels and members. */
+  createCard({
+    idList,
+    name,
+    desc = '',
+    idLabels = [],
+    idMembers = [],
+  }: NewCard): Promise<TrelloCard> {
     return this.request<TrelloCard>('/cards', {
       method: 'POST',
       body: {
@@ -249,6 +255,9 @@ export class TrelloClient {
         name: name.slice(0, CARD_NAME_MAX_LENGTH),
         desc: desc.slice(0, CARD_DESC_MAX_LENGTH),
         pos: 'bottom',
+        // Trello takes both as comma-separated lists of ids.
+        ...(idLabels.length > 0 ? {idLabels: idLabels.join(',')} : {}),
+        ...(idMembers.length > 0 ? {idMembers: idMembers.join(',')} : {}),
       },
     });
   }

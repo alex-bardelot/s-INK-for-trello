@@ -195,6 +195,26 @@ describe('TrelloClient', () => {
     });
   });
 
+  it('creates a card with labels and members', async () => {
+    const fetchImpl = jest
+      .fn()
+      .mockResolvedValue(jsonResponse({id: 'c1', name: 'Buy milk'}));
+    await clientWith(fetchImpl).createCard({
+      idList: 'l1',
+      name: 'Buy milk',
+      idLabels: ['a', 'b'],
+      idMembers: ['m1'],
+    });
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toEqual({
+      idList: 'l1',
+      name: 'Buy milk',
+      desc: '',
+      pos: 'bottom',
+      idLabels: 'a,b',
+      idMembers: 'm1',
+    });
+  });
+
   it('adds a checklist and its items to a card', async () => {
     const fetchImpl = jest
       .fn()

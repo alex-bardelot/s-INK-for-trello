@@ -2,15 +2,19 @@ jest.mock('sn-plugin-lib', () => ({}));
 
 import {
   canAddCards,
-  formatCheckItems,
   hasHiddenBoards,
   isObserverOf,
   offerBoards,
   orderLists,
   parseCheckItem,
-  parseCheckItemsText,
   splitCardText,
 } from '../src/cards/ordering';
+import {
+  checkItemsToCreate,
+  defaultChoice,
+  membersMeFirst,
+  toggleId,
+} from '../src/cards/newCardForm';
 import {
   addCardChecklist,
   NEW_CARD_CHECKLIST_NAME,
@@ -287,18 +291,55 @@ describe('checklist text', () => {
     expect(parseCheckItem('Buy milk')).toBeNull();
     expect(parseCheckItem('[a] Buy milk')).toBeNull();
   });
+});
 
-  it('round-trips through the review page field', () => {
-    const items = [
-      {name: 'Buy me a coffee', checked: false},
-      {name: 'Draft the text', checked: true},
+describe('new card form', () => {
+  const lists = [
+    {id: 'l1', name: 'TODO'},
+    {id: 'l2', name: 'WIP'},
+  ];
+
+  it('fills in the choice used last, if still offered', () => {
+    expect(defaultChoice(lists, 'l2')).toBe(lists[1]);
+  });
+
+  it('fills in the only choice, else leaves it to the user', () => {
+    expect(defaultChoice(lists, 'gone')).toBeNull();
+    expect(defaultChoice(lists, undefined)).toBeNull();
+    expect(defaultChoice([lists[0]], 'gone')).toBe(lists[0]);
+    expect(defaultChoice([], undefined)).toBeNull();
+  });
+
+  it('adds and removes labels or members', () => {
+    expect(toggleId(['a'], 'b')).toEqual(['a', 'b']);
+    expect(toggleId(['a', 'b'], 'a')).toEqual(['b']);
+  });
+
+  it('lists the connected member first, then by name', () => {
+    const members = [
+      {id: 'm3', fullName: 'zoé'},
+      {id: 'm1', fullName: 'Bob'},
+      {id: 'me', fullName: 'Me'},
+      {id: 'm2', fullName: 'alice'},
     ];
-    const text = formatCheckItems(items);
-    expect(text).toBe('Buy me a coffee\n☑ Draft the text');
-    expect(parseCheckItemsText(`${text}\n\n  New item \n☐ Boxed`)).toEqual([
-      ...items,
-      {name: 'New item', checked: false},
-      {name: 'Boxed', checked: false},
+    expect(membersMeFirst(members, 'me').map(m => m.id)).toEqual([
+      'me',
+      'm2',
+      'm1',
+      'm3',
+    ]);
+  });
+
+  it('drops blank checklist rows and trims names', () => {
+    expect(
+      checkItemsToCreate([
+        {key: '0', name: ' Buy milk ', checked: true},
+        {key: '1', name: '   ', checked: false},
+        {key: '2', name: 'Oat', checked: false},
+      ]),
+    ).toEqual([
+      {name: 'Buy milk', checked: true},
+      {name: 'Oat', checked: false},
     ]);
   });
 });
