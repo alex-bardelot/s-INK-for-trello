@@ -3,11 +3,8 @@ import {PluginManager} from 'sn-plugin-lib';
 
 import {useTranslation} from '../i18n';
 import {InkLinkTarget} from '../inkLink/inkLink';
-import {
-  bindPendingSelection,
-  usePendingBinding,
-} from '../inkLink/lassoBinding';
-import {insertInkLink} from '../inkLink/noteBridge';
+import {bindPendingSelection, usePendingBinding} from '../inkLink/lassoBinding';
+import {closeViewAndSelect, insertInkLink} from '../inkLink/noteBridge';
 import {SmallButton} from './SmallButton';
 
 export interface InsertInkLinkButtonProps {
@@ -20,7 +17,8 @@ export interface InsertInkLinkButtonProps {
  * Title bar button that links the current card or board to the note, then
  * closes the plugin view to show it:
  * - after the lasso "Link to Trello" button, it links the selection;
- * - otherwise it places an s-INK link on the current note page.
+ * - otherwise it places an s-INK link in the middle of the current note
+ *   page and selects it with the lasso, so that it can be moved at once.
  */
 export function InsertInkLinkButton({
   target,
@@ -32,14 +30,22 @@ export function InsertInkLinkButton({
 
   const link = useCallback(async () => {
     setState('busy');
-    const done = pending
-      ? await bindPendingSelection(target)
-      : await insertInkLink(target, name);
-    if (done) {
+    if (pending) {
+      if (await bindPendingSelection(target)) {
+        setState('idle');
+        PluginManager.closePluginView().catch(error =>
+          console.warn('[sINK] Failed to close the plugin view', error),
+        );
+      } else {
+        setState('failed');
+      }
+      return;
+    }
+    const rect = await insertInkLink(target, name);
+    if (rect) {
       setState('idle');
-      PluginManager.closePluginView().catch(error =>
-        console.warn('[sINK] Failed to close the plugin view', error),
-      );
+      // The new link is selected with the lasso, ready to be moved.
+      await closeViewAndSelect(rect);
     } else {
       setState('failed');
     }

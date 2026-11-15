@@ -16,6 +16,7 @@ import {
 } from '../src/inkLink/strokeFont';
 import {formatInkLink, parseInkLink} from '../src/inkLink/inkLink';
 import {
+  layoutCenteredLink,
   layoutLink,
   layoutLinkMark,
   layoutTitleLink,
@@ -419,6 +420,17 @@ describe('text size and link layout', () => {
       layout.textRect.top + layout.textRect.bottom,
       -1,
     );
+  });
+
+  it('places a new link in the middle of the page', () => {
+    const bounds = linkBounds(
+      layoutCenteredLink('Mode Focus', 's-INK/c/18yXoDet', 1920, 2560),
+    );
+    expect(bounds.left + bounds.right).toBeCloseTo(1920, -1);
+    expect(bounds.top + bounds.bottom).toBeCloseTo(2560, -1);
+    expect(
+      linkBounds(layoutCenteredLink('x'.repeat(40), 'l', 100, 50)).top,
+    ).toBe(0);
   });
 
   it('centres a note title across the page, near its top', () => {

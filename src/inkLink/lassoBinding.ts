@@ -160,7 +160,6 @@ async function readPage(selection: PendingBinding): Promise<NoteElement[]> {
   return Array.isArray(page) ? page : [];
 }
 
-
 async function createSegment(
   segment: Segment,
   style: typeof MARK_LINE_STYLE,
@@ -306,8 +305,7 @@ export async function bindPendingSelection(
     const wanted = new Set(selection.elements);
     const selected = elements.filter(
       element =>
-        typeof element.numInPage === 'number' &&
-        wanted.has(element.numInPage),
+        typeof element.numInPage === 'number' && wanted.has(element.numInPage),
     );
     if (selected.length === 0) {
       logInkLink(

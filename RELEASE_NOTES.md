@@ -3,6 +3,18 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.46.2 — Link in note: centred and selected
+
+- **Link in note** now places the s-INK link in the middle of the current
+  page (`layoutCenteredLink`) instead of near its top left corner, then
+  closes the plugin view and selects the link with the lasso, so that it
+  can be moved at once wherever it should go.
+- A card note's title that could only be placed once the note was open
+  is selected the same way.
+- The lasso selection lives in `closeViewAndSelect` / `selectInkLink`
+  (`noteBridge.ts`), shared by both; each selection is written to the
+  Diagnostics log (`lasso …` line).
+
 ## 0.46.1 — The title of a card note, centred and selected
 
 - The s-INK link that titles a card's new note is now centred across the

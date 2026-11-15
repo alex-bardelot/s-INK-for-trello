@@ -21,7 +21,7 @@ import {
   Rect,
 } from './hitTest';
 import {
-  layoutLink,
+  layoutCenteredLink,
   layoutTitleLink,
   LINK_FONT_SIZE,
   linkBounds,
@@ -60,9 +60,6 @@ function errorOf(response: unknown): string {
   }
   return `error ${value.error?.code ?? '?'}: ${value.error?.message ?? ''}`;
 }
-
-/** Top left corner of a new link on the page, in screen pixels. */
-const NEW_LINK_ORIGIN = {x: 160, y: 160};
 
 /** The app icon, copied next to the bundle by the build. */
 const ICON_FILE_NAME = 'icon.png';
@@ -263,27 +260,77 @@ async function rewriteUserData(
 }
 
 /**
- * Inserts an s-INK link to a card or board on the current page of the
- * open note: the app icon, then a text box sized to the name and the link.
- * Both elements also hold the link in their `userData`.
+ * Inserts an s-INK link to a card or board in the middle of the current
+ * page of the open note: the app icon, then a text box sized to the name
+ * and the link. Both elements also hold the link in their `userData`.
  *
- * @returns `true` if the host accepted the text box.
+ * @returns The rectangle of the link on the page (screen pixels), to
+ * select it, or `null` if the host refused the text box.
  */
 export async function insertInkLink(
   target: InkLinkTarget,
   name: string,
-): Promise<boolean> {
+): Promise<Rect | null> {
   try {
     const location = await currentPage();
     if (!location) {
       logInkLink('insert: no open note page');
-      return false;
+      return null;
     }
-    return await placeInkLink(target, name, currentNoteDestination(location));
+    const {width, height} = await pageSize(location);
+    const layout = layoutCenteredLink(
+      name,
+      formatInkLink(target),
+      width,
+      height,
+    );
+    return (await placeInkLink(
+      target,
+      name,
+      currentNoteDestination(location),
+      layout,
+    ))
+      ? linkBounds(layout)
+      : null;
   } catch (error) {
     logInkLink(`insert: ${String(error)}`);
-    return false;
+    return null;
   }
+}
+
+/** Space kept around a link when it is selected. */
+const SELECTION_MARGIN = 12;
+
+/** How long the host takes to hide the plugin view before the lasso. */
+const VIEW_CLOSE_DELAY_MS = 300;
+
+/**
+ * Closes the plugin view, then selects a link just placed on the current
+ * page with the lasso, so that it can be moved at once. The view must be
+ * closed first: the host drops the lasso while it shows.
+ */
+export async function closeViewAndSelect(rect: Rect | null): Promise<void> {
+  try {
+    await PluginManager.closePluginView();
+  } catch (error) {
+    logInkLink(`close view: ${String(error)}`);
+  }
+  if (rect) {
+    await new Promise<void>(resolve =>
+      setTimeout(resolve, VIEW_CLOSE_DELAY_MS),
+    );
+    await selectInkLink(rect);
+  }
+}
+
+/** Selects a link of the current page with the lasso, with a small margin. */
+export function selectInkLink(rect: Rect): Promise<boolean> {
+  return lassoRect({
+    left: rect.left - SELECTION_MARGIN,
+    top: rect.top - SELECTION_MARGIN,
+    right: rect.right + SELECTION_MARGIN,
+    bottom: rect.bottom + SELECTION_MARGIN,
+  });
 }
 
 /**
@@ -317,7 +364,7 @@ export async function insertInkLinkInNoteFile(
  * what it holds can be moved at once. The plugin view must be closed: the
  * host drops the lasso while the view shows.
  */
-export async function lassoRect(rect: Rect): Promise<boolean> {
+async function lassoRect(rect: Rect): Promise<boolean> {
   try {
     const response = await PluginCommAPI.lassoElements(rect);
     const ok = (response as SdkResponse<unknown> | null)?.success === true;
@@ -337,7 +384,7 @@ async function placeInkLink(
   target: InkLinkTarget,
   name: string,
   destination: LinkDestination,
-  layout: LinkLayout = layoutLink(name, formatInkLink(target), NEW_LINK_ORIGIN),
+  layout: LinkLayout,
 ): Promise<boolean> {
   const link = formatInkLink(target);
   const {location} = destination;

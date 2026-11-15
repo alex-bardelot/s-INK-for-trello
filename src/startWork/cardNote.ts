@@ -13,7 +13,7 @@ import {Rect} from '../inkLink/hitTest';
 import {
   insertInkLink,
   insertInkLinkInNoteFile,
-  lassoRect,
+  selectInkLink,
 } from '../inkLink/noteBridge';
 import {
   ensureFileReadPermission,
@@ -527,9 +527,6 @@ async function waitForCurrentFile(path: string): Promise<boolean> {
   return false;
 }
 
-/** Space kept around the title when it is selected. */
-const SELECTION_MARGIN = 12;
-
 /** What to do once a new note is open. */
 export interface NewNoteTitle {
   /** The title placed in the file, selected with the lasso. */
@@ -561,21 +558,19 @@ export async function openCardNote(
       const current = await waitForCurrentFile(path);
       if (!current) {
         logInkLink('note: opened note not current, title not selected');
-      } else if (title.missing) {
-        const placed = await insertInkLink(
-          title.missing.target,
-          title.missing.name,
-        );
-        logInkLink(
-          `note: title placed after opening: ${placed ? 'ok' : 'failed'}`,
-        );
-      } else if (title.rect) {
-        await lassoRect({
-          left: title.rect.left - SELECTION_MARGIN,
-          top: title.rect.top - SELECTION_MARGIN,
-          right: title.rect.right + SELECTION_MARGIN,
-          bottom: title.rect.bottom + SELECTION_MARGIN,
-        });
+      } else {
+        // A title the file refused is placed now, in the middle of the page.
+        const rect = title.missing
+          ? await insertInkLink(title.missing.target, title.missing.name)
+          : title.rect;
+        if (title.missing) {
+          logInkLink(
+            `note: title placed after opening: ${rect ? 'ok' : 'failed'}`,
+          );
+        }
+        if (rect) {
+          await selectInkLink(rect);
+        }
       }
     }
     return true;

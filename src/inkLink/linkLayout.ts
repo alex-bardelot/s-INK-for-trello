@@ -112,6 +112,23 @@ export function layoutTitleLink(
   });
 }
 
+/**
+ * Lays a new link out in the middle of the page, where it is easy to find
+ * and to move with the lasso.
+ */
+export function layoutCenteredLink(
+  name: string,
+  link: string,
+  pageWidth: number,
+  pageHeight: number,
+): LinkLayout {
+  const size = linkBounds(layoutLink(name, link, {x: 0, y: 0}));
+  return layoutLink(name, link, {
+    x: Math.max(0, Math.round((pageWidth - size.right) / 2)),
+    y: Math.max(0, Math.round((pageHeight - size.bottom) / 2)),
+  });
+}
+
 /** Rectangle around the icon and the text of a link. */
 export function linkBounds(layout: LinkLayout): Rect {
   return {

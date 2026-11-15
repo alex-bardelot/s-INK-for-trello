@@ -145,7 +145,9 @@ export function describeElement(
   }
   parts.push(`uuid ${shorten(String(element.uuid ?? '?'), 9)}`);
   parts.push(
-    `ud ${element.userData ? JSON.stringify(shorten(element.userData, 40)) : '-'}`,
+    `ud ${
+      element.userData ? JSON.stringify(shorten(element.userData, 40)) : '-'
+    }`,
   );
   if (element.layerNum !== undefined) {
     parts.push(`layer ${element.layerNum}`);
