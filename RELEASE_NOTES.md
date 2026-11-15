@@ -3,6 +3,16 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.55.1 — Start labels from the New card floating list
+
+- In **Settings › Start work**, **Add** now opens the same floating list
+  as the New Trello Card page, under the button: the board's labels with
+  their colors and a checkbox; a tap checks or unchecks one, a tap
+  elsewhere closes the list. The board's labels are read as the page
+  opens.
+- More room between the explanation of the labels and their − and +
+  lines.
+
 ## 0.55.0 — Compact Start labels, picked from the board
 
 - **Settings › Start work › Labels** loses its two switches: the labels

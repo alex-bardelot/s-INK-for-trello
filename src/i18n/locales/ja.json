@@ -240,7 +240,6 @@
   "startWork.labelsHelp": "開始すると、− の後のラベルをカードから外し、+ の後のラベルをボードにあれば付けます。ラベルをタップすると一覧から削除します。ラベルがなければ何も変わりません。",
   "startWork.labelsRemoved": "外すラベル",
   "startWork.labelsAdded": "付けるラベル",
-  "startWork.boardLabels": "{board} のラベル：",
   "startWork.boardNoLabels": "このボードには名前付きのラベルがありません。",
   "startWork.boardLabelsFailed": "ボードのラベルを読み込めませんでした。",
   "startWork.removeName": "{name} を削除",

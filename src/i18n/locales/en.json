@@ -240,7 +240,6 @@
   "startWork.labelsHelp": "Start takes the labels after − off the card, and puts those after + on it if its board has them. Tap a label to take it out of the list; with none, labels are left as they are.",
   "startWork.labelsRemoved": "Labels taken off",
   "startWork.labelsAdded": "Labels put on",
-  "startWork.boardLabels": "Labels of {board}:",
   "startWork.boardNoLabels": "This board has no named labels.",
   "startWork.boardLabelsFailed": "The labels of the board could not be read.",
   "startWork.removeName": "Remove {name}",

@@ -240,7 +240,6 @@
   "startWork.labelsHelp": "開始時，從卡片上移除 − 後的標籤，並在看板有這些標籤時加上 + 後的標籤。輕觸標籤可將其從清單中刪除；沒有標籤時不做變更。",
   "startWork.labelsRemoved": "移除的標籤",
   "startWork.labelsAdded": "加上的標籤",
-  "startWork.boardLabels": "{board} 的標籤：",
   "startWork.boardNoLabels": "此看板沒有已命名的標籤。",
   "startWork.boardLabelsFailed": "無法讀取看板的標籤。",
   "startWork.removeName": "刪除 {name}",

@@ -240,7 +240,6 @@
   "startWork.labelsHelp": "Démarrer retire de la carte les étiquettes après −, et pose celles après + si son tableau les a. Touchez une étiquette pour la retirer de la liste ; sans étiquette, rien ne change.",
   "startWork.labelsRemoved": "Étiquettes retirées",
   "startWork.labelsAdded": "Étiquettes posées",
-  "startWork.boardLabels": "Étiquettes de {board} :",
   "startWork.boardNoLabels": "Ce tableau n'a pas d'étiquette nommée.",
   "startWork.boardLabelsFailed": "Les étiquettes du tableau n'ont pas pu être lues.",
   "startWork.removeName": "Retirer {name}",

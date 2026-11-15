@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
   Image,
   ImageSourcePropType,
@@ -13,10 +13,14 @@ import {
 
 import {Button} from '../components/Button';
 import {CloseIcon} from '../components/CloseIcon';
+import {
+  FloatingPicker,
+  FloatingPickerPosition,
+  measurePickerPosition,
+} from '../components/FloatingPicker';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {SettingsSection} from '../components/SettingsSection';
 import {Switch} from '../components/Switch';
-import {ToggleChip} from '../components/ToggleChip';
 import {WaitingBox} from '../components/WaitingBox';
 import {labelKey} from '../board/focus';
 import {labelShade} from '../board/labels';
@@ -95,38 +99,63 @@ export function StartWorkSettingsPanel({
     [settings, store],
   );
 
-  // The named labels of the board Settings was opened from, read once
-  // **Add** is first pressed.
+  // The named labels of the board Settings was opened from, offered by
+  // **Add** in the floating list of the New Trello Card page.
   const [labelsState, setLabelsState] = useState<BoardLabelsState>({
     status: 'idle',
   });
-  const boardLabels: BoardLabels | null = board
-    ? {
-        boardName: board.name,
-        state: labelsState,
-        load: () => {
-          if (labelsState.status === 'loading') {
-            return;
-          }
-          setLabelsState({status: 'loading'});
-          client
-            .getBoardLabels(board.id)
-            .then(labels =>
-              setLabelsState({
-                status: 'loaded',
-                labels: labels.filter(label => label.name.trim() !== ''),
-              }),
-            )
-            .catch(error => {
-              console.warn('[sINK] Failed to read the board labels', error);
-              setLabelsState({status: 'failed'});
-            });
-        },
-      }
-    : null;
+  const loadLabels = useCallback(() => {
+    if (!board) {
+      return;
+    }
+    setLabelsState({status: 'loading'});
+    client
+      .getBoardLabels(board.id)
+      .then(labels =>
+        setLabelsState({
+          status: 'loaded',
+          labels: labels.filter(label => label.name.trim() !== ''),
+        }),
+      )
+      .catch(error => {
+        console.warn('[sINK] Failed to read the board labels', error);
+        setLabelsState({status: 'failed'});
+      });
+  }, [board, client]);
+  useEffect(() => {
+    loadLabels();
+  }, [loadLabels]);
+
+  // The floating list, drawn over the whole panel under the Add pressed.
+  const areaRef = useRef<View>(null);
+  const [picker, setPicker] = useState<{
+    side: LabelSide;
+    position: FloatingPickerPosition;
+  } | null>(null);
+  const openPicker = (side: LabelSide, button: View) => {
+    if (labelsState.status === 'failed') {
+      loadLabels();
+    }
+    if (areaRef.current) {
+      measurePickerPosition(button, areaRef.current).then(position =>
+        setPicker({side, position}),
+      );
+    }
+  };
+  const namesKey = (side: LabelSide) =>
+    side === 'remove' ? 'removeLabelNames' : 'addLabelNames';
+  const toggleLabel = (side: LabelSide, label: TrelloLabel) => {
+    const names = settings[namesKey(side)];
+    const listed = names.some(name => labelKey(name) === labelKey(label.name));
+    change({
+      [namesKey(side)]: listed
+        ? removeLabelName(names, label.name)
+        : addLabelName(names, label.name),
+    });
+  };
 
   return (
-    <>
+    <View ref={areaRef} collapsable={false}>
       <SettingsSection title={t('settings.startWork')}>
         <Text style={styles.text}>{t('startWork.settingsIntro')}</Text>
       </SettingsSection>
@@ -148,14 +177,18 @@ export function StartWorkSettingsPanel({
             accessibilityLabel={t('startWork.labelsRemoved')}
             names={settings.removeLabelNames}
             onChange={removeLabelNames => change({removeLabelNames})}
-            boardLabels={boardLabels}
+            onPickFromBoard={
+              board ? button => openPicker('remove', button) : undefined
+            }
           />
           <LabelNamesSide
             sign="+"
             accessibilityLabel={t('startWork.labelsAdded')}
             names={settings.addLabelNames}
             onChange={addLabelNames => change({addLabelNames})}
-            boardLabels={boardLabels}
+            onPickFromBoard={
+              board ? button => openPicker('add', button) : undefined
+            }
           />
         </View>
       </SettingsSection>
@@ -192,9 +225,59 @@ export function StartWorkSettingsPanel({
           }
         />
       </SettingsSection>
-    </>
+
+      {picker && (
+        <FloatingPicker
+          position={picker.position}
+          closeLabel={t('common.close')}
+          onClose={() => setPicker(null)}
+          emptyMessage={
+            labelsState.status === 'loaded'
+              ? t('startWork.boardNoLabels')
+              : labelsState.status === 'failed'
+              ? t('startWork.boardLabelsFailed')
+              : t('card.loading')
+          }
+          rows={
+            labelsState.status === 'loaded'
+              ? labelsState.labels.map(label => ({
+                  id: label.id,
+                  name: label.name,
+                  selected: settings[namesKey(picker.side)].some(
+                    name => labelKey(name) === labelKey(label.name),
+                  ),
+                  content: (
+                    <>
+                      <View
+                        style={[
+                          styles.swatch,
+                          {backgroundColor: labelShade(label.color).background},
+                        ]}
+                      />
+                      <Text style={styles.toggleText} numberOfLines={1}>
+                        {label.name}
+                      </Text>
+                    </>
+                  ),
+                }))
+              : []
+          }
+          onToggle={id => {
+            const label =
+              labelsState.status === 'loaded'
+                ? labelsState.labels.find(candidate => candidate.id === id)
+                : undefined;
+            if (label) {
+              toggleLabel(picker.side, label);
+            }
+          }}
+        />
+      )}
+    </View>
   );
 }
+
+type LabelSide = 'remove' | 'add';
 
 interface TemplateOption {
   choice: NoteTemplateChoice;
@@ -503,41 +586,39 @@ type BoardLabelsState =
   | {status: 'idle' | 'loading' | 'failed'}
   | {status: 'loaded'; labels: TrelloLabel[]};
 
-/** The labels of the board Settings was opened from, read on demand. */
-interface BoardLabels {
-  boardName: string;
-  state: BoardLabelsState;
-  load: () => void;
-}
-
 /**
  * One side of the Start labels: a round − (taken off) or + (put on), the
  * label names as chips a tap removes, then a dashed **Add**. Opened from a
- * board, **Add** lists that board's labels, a tap adding or removing one;
- * otherwise it opens a field to type a name.
+ * board, **Add** opens the floating list of that board's labels, as on the
+ * New Trello Card page; otherwise it opens a field to type a name.
  */
 function LabelNamesSide({
   sign,
   accessibilityLabel,
   names,
   onChange,
-  boardLabels,
+  onPickFromBoard,
 }: {
   sign: '−' | '+';
   accessibilityLabel: string;
   names: readonly string[];
   onChange: (names: string[]) => void;
-  boardLabels: BoardLabels | null;
+  /** Opens the board's labels under this Add; unset without a board. */
+  onPickFromBoard?: (button: View) => void;
 }): React.JSX.Element {
   const {t} = useTranslation();
-  const [open, setOpen] = useState(false);
+  const addRef = useRef<View>(null);
+  const [typing, setTyping] = useState(false);
   const [draft, setDraft] = useState('');
 
-  const toggleOpen = () => {
-    if (!open && boardLabels?.state.status === 'idle') {
-      boardLabels.load();
+  const pressAdd = () => {
+    if (onPickFromBoard) {
+      if (addRef.current) {
+        onPickFromBoard(addRef.current);
+      }
+    } else {
+      setTyping(!typing);
     }
-    setOpen(!open);
   };
   const addTyped = () => {
     if (cleanName(draft)) {
@@ -545,7 +626,7 @@ function LabelNamesSide({
     }
     setDraft('');
   };
-  const listed = new Set(names.map(labelKey));
+  const open = typing && !onPickFromBoard;
 
   return (
     <View accessibilityLabel={accessibilityLabel} style={styles.labelSide}>
@@ -575,28 +656,30 @@ function LabelNamesSide({
             )}
           </Pressable>
         ))}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('startWork.addLabel')}
-          accessibilityState={{expanded: open}}
-          onPress={toggleOpen}
-          style={({pressed}) => [
-            styles.addButton,
-            (pressed || open) && styles.pressed,
-          ]}>
-          {({pressed}) => (
-            <Text
-              style={[
-                styles.addButtonText,
-                (pressed || open) && styles.pressedText,
-              ]}>
-              {t('startWork.addLabel')}
-            </Text>
-          )}
-        </Pressable>
+        <View ref={addRef} collapsable={false}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('startWork.addLabel')}
+            accessibilityState={{expanded: open}}
+            onPress={pressAdd}
+            style={({pressed}) => [
+              styles.addButton,
+              (pressed || open) && styles.pressed,
+            ]}>
+            {({pressed}) => (
+              <Text
+                style={[
+                  styles.addButtonText,
+                  (pressed || open) && styles.pressedText,
+                ]}>
+                {t('startWork.addLabel')}
+              </Text>
+            )}
+          </Pressable>
+        </View>
       </View>
 
-      {open && !boardLabels && (
+      {open && (
         <View style={styles.addRow}>
           <TextInput
             accessibilityLabel={t('startWork.labelPlaceholder')}
@@ -619,60 +702,6 @@ function LabelNamesSide({
             disabled={!cleanName(draft)}
             onPress={addTyped}
           />
-        </View>
-      )}
-
-      {open && boardLabels && (
-        <View style={styles.boardLabels}>
-          <Text style={styles.small}>
-            {t('startWork.boardLabels', {board: boardLabels.boardName})}
-          </Text>
-          {boardLabels.state.status === 'loaded' ? (
-            boardLabels.state.labels.length > 0 ? (
-              <View style={styles.chips}>
-                {boardLabels.state.labels.map(label => {
-                  const selected = listed.has(labelKey(label.name));
-                  return (
-                    <ToggleChip
-                      key={label.id}
-                      selected={selected}
-                      accessibilityLabel={t(
-                        selected ? 'card.remove' : 'card.add',
-                        {name: label.name},
-                      )}
-                      onPress={() =>
-                        onChange(
-                          selected
-                            ? removeLabelName(names, label.name)
-                            : addLabelName(names, label.name),
-                        )
-                      }>
-                      <View
-                        style={[
-                          styles.swatch,
-                          {backgroundColor: labelShade(label.color).background},
-                        ]}
-                      />
-                      <Text style={styles.toggleText} numberOfLines={1}>
-                        {label.name}
-                      </Text>
-                    </ToggleChip>
-                  );
-                })}
-              </View>
-            ) : (
-              <Text style={styles.small}>{t('startWork.boardNoLabels')}</Text>
-            )
-          ) : boardLabels.state.status === 'failed' ? (
-            <View style={styles.addRow}>
-              <Text style={styles.small}>
-                {t('startWork.boardLabelsFailed')}
-              </Text>
-              <Button label={t('common.retry')} onPress={boardLabels.load} />
-            </View>
-          ) : (
-            <Text style={styles.small}>{t('card.loading')}</Text>
-          )}
         </View>
       )}
     </View>
@@ -758,6 +787,8 @@ const styles = StyleSheet.create({
   labelSides: {
     flexDirection: 'row',
     gap: spacing.lg,
+    // Room between the explanation and the labels.
+    marginTop: spacing.md,
   },
   labelSide: {
     flex: 1,
@@ -791,9 +822,6 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     fontSize: typography.body,
     fontWeight: '700',
-  },
-  boardLabels: {
-    gap: spacing.sm,
   },
   swatch: {
     width: 22,

@@ -50,6 +50,11 @@ import {Button} from '../components/Button';
 import {ChoiceList} from '../components/ChoiceList';
 import {CloseIcon} from '../components/CloseIcon';
 import {BlockIcon, BlockIconKind} from '../components/BlockIcon';
+import {
+  FloatingPicker,
+  FloatingPickerPosition,
+  measurePickerPosition,
+} from '../components/FloatingPicker';
 import {MemberAvatar} from '../components/MemberAvatar';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {SmallButton} from '../components/SmallButton';
@@ -107,13 +112,8 @@ type CreationProblem = 'card.checklistFailed' | 'card.linkFailed';
 type Picker = {
   kind: 'labels' | 'members';
   /** Position in the form, kept inside it. */
-  left: number;
-  top: number;
-  maxHeight: number;
+  position: FloatingPickerPosition;
 };
-
-const PICKER_WIDTH = 440;
-const PICKER_MIN_HEIGHT = 240;
 
 /** Lists, labels and members of the chosen board. */
 type BoardDetails =
@@ -458,16 +458,8 @@ export function CreateCardScreen({
       if (!button.current || !form) {
         return;
       }
-      button.current.measureInWindow((bx, by, _bw, bh) =>
-        form.measureInWindow((fx, fy, fw, fh) => {
-          const top = by - fy + bh + spacing.xs;
-          setPicker({
-            kind,
-            left: Math.max(0, Math.min(bx - fx, fw - PICKER_WIDTH)),
-            top,
-            maxHeight: Math.max(PICKER_MIN_HEIGHT, fh - top - spacing.md),
-          });
-        }),
+      measurePickerPosition(button.current, form).then(position =>
+        setPicker({kind, position}),
       );
     },
     [],
@@ -899,7 +891,7 @@ export function CreateCardScreen({
               </ScrollView>
               {picker && ready && (
                 <FloatingPicker
-                  picker={picker}
+                  position={picker.position}
                   closeLabel={t('common.close')}
                   onClose={() => setPicker(null)}
                   rows={
@@ -1096,68 +1088,6 @@ function PickerButton({
   );
 }
 
-interface PickerRow {
-  id: string;
-  name: string;
-  selected: boolean;
-  content: React.ReactNode;
-}
-
-/**
- * List of all the labels or members of the board, floating under the
- * button that opened it. A tap adds or removes one and leaves it open;
- * a tap anywhere else closes it.
- */
-function FloatingPicker({
-  picker,
-  rows,
-  closeLabel,
-  onToggle,
-  onClose,
-}: {
-  picker: Picker;
-  rows: readonly PickerRow[];
-  closeLabel: string;
-  onToggle: (id: string) => void;
-  onClose: () => void;
-}): React.JSX.Element {
-  return (
-    <>
-      <Pressable
-        accessibilityLabel={closeLabel}
-        onPress={onClose}
-        style={StyleSheet.absoluteFill}
-      />
-      <View
-        accessibilityViewIsModal
-        style={[
-          styles.pickerCard,
-          {left: picker.left, top: picker.top, maxHeight: picker.maxHeight},
-        ]}>
-        <ScrollView keyboardShouldPersistTaps="handled">
-          {rows.map(row => (
-            <Pressable
-              key={row.id}
-              accessibilityRole="checkbox"
-              accessibilityLabel={row.name}
-              accessibilityState={{checked: row.selected}}
-              onPress={() => onToggle(row.id)}
-              style={({pressed}) => [
-                styles.pickerRow,
-                pressed && styles.pickerRowPressed,
-              ]}>
-              <View style={[styles.box, row.selected && styles.boxChecked]}>
-                {row.selected && <Text style={styles.boxMark}>✓</Text>}
-              </View>
-              <View style={styles.pickerRowContent}>{row.content}</View>
-            </Pressable>
-          ))}
-        </ScrollView>
-      </View>
-    </>
-  );
-}
-
 /**
  * Links the lasso selection the card was made from to the new card, when
  * the setting asks for it, as the Insert Trello Link button does.
@@ -1272,31 +1202,6 @@ const styles = StyleSheet.create({
   },
   pickerButtonTextPressed: {
     color: colors.background,
-  },
-  pickerCard: {
-    position: 'absolute',
-    width: PICKER_WIDTH,
-    backgroundColor: colors.background,
-    borderColor: colors.foreground,
-    borderRadius: borders.radius,
-    borderWidth: borders.width * 1.5,
-    paddingVertical: spacing.xs,
-  },
-  pickerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  pickerRowPressed: {
-    backgroundColor: colors.avatar,
-  },
-  pickerRowContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
   },
   message: {
     color: colors.foreground,
