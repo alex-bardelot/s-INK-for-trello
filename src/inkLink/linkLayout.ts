@@ -93,8 +93,11 @@ export function shortName(name: string): string {
  * box sized to the name and the link, both vertically centered on the
  * taller of the two.
  */
-/** Top of the title of a card's note: just under the page's upper edge. */
-export const TITLE_TOP = 120;
+/**
+ * Top of the title of a card's note, in screen pixels: clear of the note
+ * app's toolbar (about 115 px high on the Manta), which hid it at 120.
+ */
+export const TITLE_TOP = 240;
 
 /**
  * Lays a link out as the title of a page: centred across the page, near

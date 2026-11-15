@@ -3,6 +3,20 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.47.1 — Card note title lower, and selected
+
+- The title of a card's new note starts at 240 px from the top of the
+  page instead of 120, clear of the note app's toolbar (about 115 px
+  high), which it touched.
+- The title was not selected: the log showed "opened note not current"
+  36 s after the note was made, while the wait stops after 5 s. Once
+  `openFile` hands over to the note app, JavaScript timers stop firing,
+  and the wait (a `setTimeout` between checks) only went on at the next
+  touch on the page. The opened note is now awaited by asking the host
+  again and again, without timers, for 5 seconds at most; the log gives
+  the number of checks and the time (`note: current after …`), or the
+  file the host reports as current.
+
 ## 0.47.0 — Card notes sorted by board
 
 - A card's note is now `Note/s-INK for Trello/{board name}/{card name}.note`:

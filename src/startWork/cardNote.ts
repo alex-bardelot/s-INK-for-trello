@@ -52,7 +52,8 @@ const BLANK_TEMPLATE = 'style_white';
 
 /** How long to wait for an opened note to become the current one. */
 const OPEN_TIMEOUT_MS = 5000;
-const OPEN_POLL_MS = 250;
+/** Upper bound of checks, should the host answer at once. */
+const OPEN_MAX_ATTEMPTS = 2000;
 
 function succeeded(response: unknown): boolean {
   const value = response as {success?: boolean; result?: unknown} | null;
@@ -620,21 +621,44 @@ export async function createCardNote(
   }
 }
 
+/**
+ * Waits for an opened note to become the current one. Once `openFile`
+ * hands over to the note app, JavaScript timers stop firing (a wait with
+ * `setTimeout` lasted until the next touch on the page): the host is asked
+ * again and again instead, each call answering on its own, until the
+ * deadline.
+ */
 async function waitForCurrentFile(path: string): Promise<boolean> {
-  const deadline = Date.now() + OPEN_TIMEOUT_MS;
-  while (Date.now() < deadline) {
+  const started = Date.now();
+  let attempts = 0;
+  let current: unknown = null;
+  while (attempts < OPEN_MAX_ATTEMPTS) {
+    attempts += 1;
     try {
       const response = (await PluginCommAPI.getCurrentFilePath()) as {
         result?: unknown;
       } | null;
-      if (response?.result === path) {
+      current = response?.result ?? null;
+      if (current === path) {
+        logInkLink(
+          `note: current after ${attempts} check(s), ${
+            Date.now() - started
+          } ms`,
+        );
         return true;
       }
-    } catch {
-      // Not ready yet.
+    } catch (error) {
+      current = String(error);
     }
-    await new Promise<void>(resolve => setTimeout(resolve, OPEN_POLL_MS));
+    if (Date.now() - started > OPEN_TIMEOUT_MS) {
+      break;
+    }
   }
+  logInkLink(
+    `note: not current after ${attempts} check(s), ${
+      Date.now() - started
+    } ms (current ${String(current)})`,
+  );
   return false;
 }
 
@@ -664,8 +688,6 @@ export async function openCardNote(
       return false;
     }
     let rect: Rect | null = null;
-    // Waited for while the view still shows: JavaScript timers may stop
-    // once it is closed and the plugin goes to the background.
     if (title && (await waitForCurrentFile(path))) {
       // A title the file refused is placed now, in the middle of the page.
       rect = title.missing
