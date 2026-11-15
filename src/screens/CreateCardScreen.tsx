@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import {PluginManager} from 'sn-plugin-lib';
 
+import {labelDisplayName} from '../board/labelNames';
+import {labelShade} from '../board/labels';
 import {loadBoardsPreferences} from '../boards/preferences';
 import {addCardChecklist} from '../cards/checklist';
 import {
@@ -38,7 +40,6 @@ import {
 import {Button} from '../components/Button';
 import {ChoiceList} from '../components/ChoiceList';
 import {CloseIcon} from '../components/CloseIcon';
-import {LabelChip} from '../components/LabelChip';
 import {MemberAvatar} from '../components/MemberAvatar';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {SmallButton} from '../components/SmallButton';
@@ -529,34 +530,44 @@ export function CreateCardScreen({
             ) : missingName ? (
               <Text style={styles.hint}>{t('card.nameRequired')}</Text>
             ) : null}
-            <View style={styles.placeRow}>
-              <Text style={styles.placeLabel}>{t('card.board')}</Text>
-              <View style={styles.placeValue}>
-                <Button
-                  primary={!board}
-                  label={board ? board.name : t('card.chooseBoard')}
-                  onPress={() => setStep({kind: 'pickBoard'})}
-                />
+            <View style={styles.placeBlock}>
+              <View style={styles.placeRow}>
+                <Text style={styles.placeLabel}>{t('card.board')}</Text>
+                <View style={styles.placeValue}>
+                  <Button
+                    primary={!board}
+                    label={board ? board.name : t('card.chooseBoard')}
+                    onPress={() => setStep({kind: 'pickBoard'})}
+                  />
+                </View>
               </View>
-            </View>
-            <View style={styles.placeRow}>
-              <Text style={styles.placeLabel}>{t('card.list')}</Text>
-              <View style={styles.placeValue}>
-                {!board ? (
-                  <Button
-                    disabled
-                    label={t('card.chooseListButton')}
-                    onPress={() => {}}
-                  />
-                ) : details?.status === 'loading' ? (
-                  <Text style={styles.message}>{t('card.loading')}</Text>
-                ) : ready ? (
-                  <Button
-                    primary={!list}
-                    label={list ? list.name : t('card.chooseListButton')}
-                    onPress={() => setStep({kind: 'pickList'})}
-                  />
-                ) : null}
+              <View style={styles.placeRow}>
+                <Text style={styles.placeLabel}>{t('card.list')}</Text>
+                {/* Elbow from under the board down to the list: the list
+                    belongs to the board. */}
+                <View style={styles.connector}>
+                  <View style={styles.connectorGap} />
+                  <View style={styles.connectorElbow} />
+                  <View style={styles.connectorRest} />
+                </View>
+                <View style={styles.connectorDot} />
+                <View style={[styles.placeValue, styles.listValue]}>
+                  {!board ? (
+                    <Button
+                      disabled
+                      label={t('card.chooseListButton')}
+                      onPress={() => {}}
+                    />
+                  ) : details?.status === 'loading' ? (
+                    <Text style={styles.message}>{t('card.loading')}</Text>
+                  ) : ready ? (
+                    <Button
+                      primary={!list}
+                      label={list ? list.name : t('card.chooseListButton')}
+                      onPress={() => setStep({kind: 'pickList'})}
+                    />
+                  ) : null}
+                </View>
               </View>
             </View>
             {board && details?.status === 'failed' && (
@@ -581,7 +592,7 @@ export function CreateCardScreen({
                 <View style={styles.chips}>
                   {ready.labels.map(label => {
                     const selected = labelIds.includes(label.id);
-                    const labelName = label.name || label.color || '';
+                    const labelName = labelDisplayName(label, t);
                     return (
                       <ToggleChip
                         key={label.id}
@@ -593,7 +604,23 @@ export function CreateCardScreen({
                         onPress={() =>
                           setLabelIds(ids => toggleId(ids, label.id))
                         }>
-                        <LabelChip label={label} />
+                        <View
+                          style={[
+                            styles.swatch,
+                            {
+                              backgroundColor: labelShade(label.color)
+                                .background,
+                            },
+                          ]}
+                        />
+                        <Text
+                          style={[
+                            styles.chipText,
+                            !label.name.trim() && styles.chipTextColor,
+                          ]}
+                          numberOfLines={1}>
+                          {labelName}
+                        </Text>
                       </ToggleChip>
                     );
                   })}
@@ -797,6 +824,10 @@ async function loadWritablePublicBoards(
 }
 
 const BOX_SIZE = 36;
+/** Space between the board row and the list row, spanned by the elbow. */
+const PLACE_GAP = spacing.md;
+const PLACE_LABEL_WIDTH = 120;
+const CONNECTOR_DOT = 14;
 
 const styles = StyleSheet.create({
   stack: {
@@ -830,19 +861,68 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginBottom: spacing.md,
   },
+  placeBlock: {
+    gap: PLACE_GAP,
+  },
   placeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
   },
   placeLabel: {
-    width: 120,
+    width: PLACE_LABEL_WIDTH,
+    marginRight: spacing.md,
     color: colors.foreground,
     fontSize: typography.label,
     fontWeight: '700',
   },
   placeValue: {
     flex: 1,
+    alignItems: 'flex-start',
+  },
+  listValue: {
+    marginLeft: spacing.sm,
+  },
+  // Starts under the board button, from its bottom edge (the negative
+  // margin spans the gap between the rows), and turns at the middle of
+  // the list row: gap, then two equal halves of the row.
+  connector: {
+    alignSelf: 'stretch',
+    marginTop: -PLACE_GAP,
+    marginLeft: spacing.lg,
+    width: spacing.xl,
+  },
+  connectorGap: {
+    height: PLACE_GAP,
+    borderLeftColor: colors.foreground,
+    borderLeftWidth: borders.width,
+  },
+  connectorElbow: {
+    flex: 1,
+    borderLeftColor: colors.foreground,
+    borderLeftWidth: borders.width,
+    borderBottomColor: colors.foreground,
+    borderBottomWidth: borders.width,
+  },
+  connectorRest: {
+    flex: 1,
+  },
+  connectorDot: {
+    width: CONNECTOR_DOT,
+    height: CONNECTOR_DOT,
+    // Centered on the end of the line.
+    marginLeft: -CONNECTOR_DOT / 2,
+    borderRadius: CONNECTOR_DOT / 2,
+    backgroundColor: colors.foreground,
+  },
+  swatch: {
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+    borderColor: colors.labelBorder,
+    borderWidth: 1.5,
+  },
+  chipTextColor: {
+    fontStyle: 'italic',
   },
   inlineError: {
     flexDirection: 'row',

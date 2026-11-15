@@ -3,6 +3,16 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.49.3 — Readable labels, and the list hangs from the board
+
+- On the New Trello Card page, label chips drew unnamed labels as dark
+  bars that all looked alike. Each chip now shows a small grey square for
+  its color and its name, or, for an unnamed label, the name of its color
+  in italics ("Green", "Red, dark"…), in every language.
+- **List** is drawn under **Board** with an elbow line from the board
+  down to a dot before the list, as on the paper sketch: the list belongs
+  to the board.
+
 ## 0.49.2 — New Trello Card looks like the tablet's own dialogs
 
 - The card page has the title bar of the tablet's New Task and New Event
