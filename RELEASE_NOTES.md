@@ -3,6 +3,12 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.38.1 — "Quick add button" option
+
+- The switch of the Public boards section is renamed **Quick add
+  button**. Its help text now only says that it shows the button adding
+  a public board on the boards page.
+
 ## 0.38.0 — Option hiding the "+" card on the boards page
 
 - The Public boards section of Settings > Boards ends with a switch,
