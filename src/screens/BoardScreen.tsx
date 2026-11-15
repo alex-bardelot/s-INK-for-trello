@@ -41,6 +41,7 @@ import {
   BindSelectionButton,
 } from '../components/BindSelectionButton';
 import {usePendingBinding} from '../inkLink/lassoBinding';
+import {useConnectivity} from '../network/connectivity';
 import {Checkbox} from '../components/Checkbox';
 import {InsertInkLinkButton} from '../components/InsertInkLinkButton';
 import {LabelChip} from '../components/LabelChip';
@@ -164,6 +165,18 @@ export function BoardScreen({
   useEffect(() => {
     load();
   }, [load]);
+
+  // Offline, the Offline button stands where the refresh button was. Once
+  // the internet is back, a board that failed to load is loaded again.
+  const online = useConnectivity() === 'online';
+  const failed = state.status === 'failed';
+  useEffect(() => {
+    if (online && failed) {
+      load();
+    }
+    // Only on the return of the internet, not on each failure.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [online]);
 
   // A card asked for by an s-INK link opens once, on the first load.
   const [initialCardShown, setInitialCardShown] = useState(false);
@@ -302,14 +315,19 @@ export function BoardScreen({
               target={{kind: 'board', shortLink: board.shortLink || board.id}}
               name={board.name}
             />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('board.refresh')}
-              hitSlop={spacing.md}
-              onPress={load}
-              style={styles.iconButton}>
-              <RefreshIcon size={HEADER_ICON_SIZE} color={colors.foreground} />
-            </Pressable>
+            {online && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t('board.refresh')}
+                hitSlop={spacing.md}
+                onPress={load}
+                style={styles.iconButton}>
+                <RefreshIcon
+                  size={HEADER_ICON_SIZE}
+                  color={colors.foreground}
+                />
+              </Pressable>
+            )}
           </>
         }>
         {state.status === 'loading' && (

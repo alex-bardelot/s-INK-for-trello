@@ -3,10 +3,10 @@ import {Pressable, StyleSheet, Text, View} from 'react-native';
 import {PluginManager} from 'sn-plugin-lib';
 
 import {useTranslation} from '../i18n';
-import {connectivity} from '../network/connectivity';
+import {connectivity, useConnectivity} from '../network/connectivity';
 import {borders, colors, spacing, typography} from '../theme';
 import {CloseIcon} from './CloseIcon';
-import {OfflineBanner} from './OfflineBanner';
+import {OfflineButton, OfflinePopup, useOfflineRetry} from './OfflineButton';
 
 /**
  * Size of the icons of the title bar (close, refresh). Icon buttons put
@@ -23,18 +23,23 @@ export interface ScreenFrameProps {
   actions?: React.ReactNode;
   /** Content without the frame's padding, for screens drawing to its edges. */
   flush?: boolean;
-  /** Hides the offline banner, on a screen that explains it already. */
-  hideOfflineBanner?: boolean;
+  /** Hides the offline button, on a screen that has its own Retry. */
+  hideOfflineButton?: boolean;
 }
 
-/** Common layout of the plugin screens: title bar with a close button. */
+/**
+ * Common layout of the plugin screens: title bar with a close button. While
+ * the tablet has no internet, an "Offline" button with a Wi-Fi off sign
+ * stands last among the actions: it checks again, and says in a popup that
+ * the tablet must be connected if it still is not.
+ */
 export function ScreenFrame({
   title,
   children,
   onBack,
   actions,
   flush,
-  hideOfflineBanner,
+  hideOfflineButton,
 }: ScreenFrameProps): React.JSX.Element {
   const {t} = useTranslation();
 
@@ -43,6 +48,9 @@ export function ScreenFrame({
   useEffect(() => {
     connectivity.pageShown();
   }, []);
+
+  const showOffline = useConnectivity() === 'offline' && !hideOfflineButton;
+  const offline = useOfflineRetry();
 
   const handleClose = useCallback(() => {
     PluginManager.closePluginView().catch(error =>
@@ -66,7 +74,15 @@ export function ScreenFrame({
         <Text accessibilityRole="header" style={styles.title} numberOfLines={1}>
           {title}
         </Text>
-        {actions && <View style={styles.actions}>{actions}</View>}
+        {(actions || showOffline) && (
+          <View style={styles.actions}>
+            {actions}
+            {/* Last, where the board page's refresh button stands. */}
+            {showOffline && (
+              <OfflineButton checking={offline.checking} onPress={offline.retry} />
+            )}
+          </View>
+        )}
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t('common.close')}
@@ -76,8 +92,8 @@ export function ScreenFrame({
           <CloseIcon size={HEADER_ICON_SIZE} color={colors.foreground} />
         </Pressable>
       </View>
-      {!hideOfflineBanner && <OfflineBanner />}
       <View style={[styles.content, flush && styles.flush]}>{children}</View>
+      {offline.failed && <OfflinePopup onClose={offline.dismiss} />}
     </View>
   );
 }

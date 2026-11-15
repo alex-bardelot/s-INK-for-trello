@@ -26,6 +26,7 @@ import {BindSelectionButton} from '../components/BindSelectionButton';
 import {Button} from '../components/Button';
 import {InkLinkTarget} from '../inkLink/inkLink';
 import {usePendingBinding} from '../inkLink/lassoBinding';
+import {useConnectivity} from '../network/connectivity';
 import {GearIcon} from '../components/GearIcon';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {Locale, useTranslation} from '../i18n';
@@ -139,6 +140,16 @@ export function BoardsScreen({
       load();
     }
   }, [load, signedIn]);
+
+  // Once the internet is back, boards that failed to load are loaded again.
+  const online = useConnectivity() === 'online';
+  useEffect(() => {
+    if (online && signedIn && state.status === 'failed') {
+      load();
+    }
+    // Only on the return of the internet, not on each failure.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [online]);
 
   // Public boards (Supernote's roadmap and the ones added in Settings) are
   // not in the user's list: they are read by their short link. Signed in,

@@ -3,6 +3,21 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.44.0 — Offline button in the header
+
+- While the tablet has no internet, an **Offline** button with a Wi-Fi
+  off sign (thin arcs over a dot, crossed out, like the tablet's own Wi-Fi
+  sign) stands in the title bar: next to **Settings** on the boards page,
+  in place of the refresh arrow on a board. It replaces the black strip.
+- Pressing it checks the internet again. If the tablet is still offline, a
+  popup says "Your tablet must be connected to the internet. Turn on its
+  Wi-Fi, then try again." with an **OK** button. The popup is drawn in the
+  page, with no system dialog. **Retry** on the offline page shows it too.
+- Once the internet is back, the button goes away, the refresh arrow comes
+  back, and boards that had failed to load are loaded again by themselves.
+- New `offline.button`, `offline.popupTitle`, `offline.popupMessage` and
+  `common.ok` strings in all locales; the strip's strings are gone.
+
 ## 0.43.2 — No background internet checks
 
 - To spare the battery, the tablet's internet is no longer checked every
