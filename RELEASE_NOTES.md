@@ -3,6 +3,15 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.34.0 — Settings split into Boards and Trello
+
+- The General category of Settings is split in two:
+  - **Boards**: public boards, board view and note links. It opens
+    first.
+  - **Trello**: the account.
+- The `settings.general` string is replaced by `settings.boards` and
+  `settings.trello` in all locales.
+
 ## 0.33.1 — Inspect lasso button only in diagnostic mode
 
 - The **s-INK: Inspect** lasso button is no longer registered at

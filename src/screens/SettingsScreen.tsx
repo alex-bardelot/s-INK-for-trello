@@ -89,13 +89,14 @@ export function SettingsScreen({
   onBack,
 }: SettingsScreenProps): React.JSX.Element {
   const {t} = useTranslation();
-  const [category, setCategory] = useState<SettingsCategory>('general');
+  const [category, setCategory] = useState<SettingsCategory>('boards');
   // Diagnostics is hidden until About is pressed 7 times quickly.
   const [showDiagnostics, setShowDiagnostics] = useState(diagnosticsUnlocked);
   const aboutTaps = useRef(new RapidTapCounter()).current;
 
   const categories: {value: SettingsCategory; label: string}[] = [
-    {value: 'general', label: t('settings.general')},
+    {value: 'boards', label: t('settings.boards')},
+    {value: 'trello', label: t('settings.trello')},
     {value: 'about', label: t('settings.about')},
     ...(showDiagnostics
       ? [
@@ -153,7 +154,7 @@ export function SettingsScreen({
         <ScrollView
           style={styles.panel}
           contentContainerStyle={styles.panelContent}>
-          {category === 'general' ? (
+          {category === 'boards' ? (
             <>
               <Section title={t('settings.publicBoards')}>
                 <PublicBoardsSettings
@@ -167,7 +168,9 @@ export function SettingsScreen({
               <BoardViewSettings store={store} />
 
               <NoteLinkSettings store={store} />
-
+            </>
+          ) : category === 'trello' ? (
+            <>
               <Section title={t('settings.account')}>
                 {member && tokenStorage ? (
                   <AccountCard
@@ -205,7 +208,7 @@ export function SettingsScreen({
 }
 
 /** Categories of the left column, like the Supernote system settings. */
-type SettingsCategory = 'general' | 'about' | 'diagnostics';
+type SettingsCategory = 'boards' | 'trello' | 'about' | 'diagnostics';
 
 /** Name, version and description of the plugin, then the non-affiliation notice. */
 function AboutSettings(): React.JSX.Element {
