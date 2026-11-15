@@ -125,6 +125,30 @@ export function systemTemplateLabel(name: string): string {
   return words ? words.charAt(0).toUpperCase() + words.slice(1) : name;
 }
 
+/** A template identifier reduced to its words: `style_Task-List` → `tasklist`. */
+function templateKey(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/^style_?/, '')
+    .replace(/[^a-z0-9]/g, '');
+}
+
+/**
+ * The identifier of one of the tablet's templates as the tablet spells it:
+ * the same one if listed, else the one with the same words (`style_tasklist`
+ * for `style_task_list`), else `null`.
+ */
+export function matchSystemTemplate(
+  name: string,
+  listed: readonly string[],
+): string | null {
+  if (listed.includes(name)) {
+    return name;
+  }
+  const key = templateKey(name);
+  return listed.find(candidate => templateKey(candidate) === key) ?? null;
+}
+
 /** Last part of a path. */
 export function fileNameOf(path: string): string {
   return path.slice(path.lastIndexOf('/') + 1);

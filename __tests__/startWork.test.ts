@@ -8,6 +8,7 @@ import {
   isNoteFile,
   isTemplateFile,
   legacyCardNotesDir,
+  matchSystemTemplate,
   safeFileName,
   systemTemplateLabel,
   templateFileLabel,
@@ -65,13 +66,14 @@ describe('Start work settings', () => {
       moveToList: false,
       listName: '',
       createNote: true,
-      noteTemplate: {kind: 'blank'},
+      noteTemplate: {kind: 'system', name: 'style_task_list'},
     });
   });
 
   it('keeps the chosen note template and drops broken ones', async () => {
     const store = createMemoryStore();
     for (const noteTemplate of [
+      {kind: 'blank'},
       {kind: 'system', name: 'style_8mm_ruled_line'},
       {
         kind: 'file',
@@ -94,10 +96,22 @@ describe('Start work settings', () => {
         START_WORK_SETTINGS_KEY,
         JSON.stringify({noteTemplate: broken}),
       );
-      expect((await loadStartWorkSettings(store)).noteTemplate).toEqual({
-        kind: 'blank',
-      });
+      expect((await loadStartWorkSettings(store)).noteTemplate).toEqual(
+        DEFAULT_START_WORK_SETTINGS.noteTemplate,
+      );
     }
+  });
+
+  it('finds a tablet template under another spelling', () => {
+    const listed = ['style_white', 'style_tasklist', 'style_8mm_ruled_line'];
+    expect(matchSystemTemplate('style_8mm_ruled_line', listed)).toBe(
+      'style_8mm_ruled_line',
+    );
+    expect(matchSystemTemplate('style_task_list', listed)).toBe(
+      'style_tasklist',
+    );
+    expect(matchSystemTemplate('Task-List', listed)).toBe('style_tasklist');
+    expect(matchSystemTemplate('style_dots', listed)).toBeNull();
   });
 
   it('tells template choices apart', () => {

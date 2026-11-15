@@ -3,6 +3,22 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.54.0 — Note template on a page of its own
+
+- **Settings › Start work › Note template** no longer loads every
+  template: it shows the chosen one, with its preview, and a **Choose
+  another template…** button.
+- That button (or a tap on the preview) opens a page listing the
+  templates: s-INK's blank page, the user's own (PNG images of MyStyle)
+  and the tablet's. A tap picks one; **Use this template** saves it and
+  goes back to Settings, at the same place. The back button leaves
+  without changing it.
+- The default template of card notes is now the tablet's **Task list**,
+  instead of the blank page. Settings already saved keep their choice.
+- A tablet template is found again under another spelling of its name
+  (`style_tasklist` for `style_task_list`), so the default works whatever
+  the tablet calls it.
+
 ## 0.53.1 — Settings at the page's own category
 
 - The settings button is now only on the navigation pages, and opens

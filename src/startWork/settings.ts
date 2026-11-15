@@ -41,6 +41,15 @@ export type NoteTemplateChoice =
 
 export const BLANK_TEMPLATE_CHOICE: NoteTemplateChoice = {kind: 'blank'};
 
+/**
+ * The tablet's "Task list" template, the default background of card notes.
+ * Found again by its readable name if the tablet spells it otherwise.
+ */
+export const TASK_LIST_TEMPLATE_CHOICE: NoteTemplateChoice = {
+  kind: 'system',
+  name: 'style_task_list',
+};
+
 /** Identifies a template choice, to compare two of them. */
 export function templateChoiceKey(choice: NoteTemplateChoice): string {
   switch (choice.kind) {
@@ -53,8 +62,14 @@ export function templateChoiceKey(choice: NoteTemplateChoice): string {
   }
 }
 
-function readTemplateChoice(value: unknown): NoteTemplateChoice {
+function readTemplateChoice(
+  value: unknown,
+  fallback: NoteTemplateChoice,
+): NoteTemplateChoice {
   const choice = value as Partial<Record<string, unknown>> | null;
+  if (choice?.kind === 'blank') {
+    return BLANK_TEMPLATE_CHOICE;
+  }
   if (
     choice?.kind === 'system' &&
     typeof choice.name === 'string' &&
@@ -73,7 +88,7 @@ function readTemplateChoice(value: unknown): NoteTemplateChoice {
       name: typeof choice.name === 'string' ? choice.name : '',
     };
   }
-  return BLANK_TEMPLATE_CHOICE;
+  return fallback;
 }
 
 export const DEFAULT_START_WORK_SETTINGS: StartWorkSettings = {
@@ -86,7 +101,7 @@ export const DEFAULT_START_WORK_SETTINGS: StartWorkSettings = {
   moveToList: false,
   listName: '',
   createNote: true,
-  noteTemplate: BLANK_TEMPLATE_CHOICE,
+  noteTemplate: TASK_LIST_TEMPLATE_CHOICE,
 };
 
 /** Trims a name and cuts it to the length kept. */
@@ -159,7 +174,10 @@ export async function loadStartWorkSettings(
           ? cleanName(parsed.listName)
           : defaults.listName,
       createNote: readBoolean(parsed.createNote, defaults.createNote),
-      noteTemplate: readTemplateChoice(parsed.noteTemplate),
+      noteTemplate: readTemplateChoice(
+        parsed.noteTemplate,
+        defaults.noteTemplate,
+      ),
     };
   } catch (error) {
     console.warn('[sINK] Failed to read the Start work settings', error);

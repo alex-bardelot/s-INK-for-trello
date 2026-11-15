@@ -35,6 +35,7 @@ import {
   isNoteFile,
   isTemplateFile,
   legacyCardNotesDir,
+  matchSystemTemplate,
   MAX_SAME_NAME_NOTES,
 } from './noteFiles';
 import {NoteTemplateChoice} from './settings';
@@ -474,8 +475,15 @@ async function createFromTemplate(
     return {...blank, templateWarning: made.answer};
   }
   if (choice.kind === 'system') {
+    // The name as the tablet spells it (the default Task list is named
+    // without having been listed).
+    const listed = (await listSystemTemplates()).map(template => template.name);
+    const name = matchSystemTemplate(choice.name, listed) ?? choice.name;
+    if (name !== choice.name) {
+      logInkLink(`note: template ${choice.name} found as ${name}`);
+    }
     // The host may take the template's name as it is.
-    const direct = await createNoteFile(path, portrait, [choice.name]);
+    const direct = await createNoteFile(path, portrait, [name]);
     if (direct.created) {
       return {...direct, templateWarning: null};
     }
@@ -487,7 +495,7 @@ async function createFromTemplate(
     return {
       ...blank,
       templateWarning: blank.created
-        ? await applySystemTemplate(path, choice.name)
+        ? await applySystemTemplate(path, name)
         : null,
     };
   }

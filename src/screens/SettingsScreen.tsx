@@ -57,7 +57,10 @@ import {KeyValueStore} from '../storage/keyValueStore';
 import {TrelloClient, TrelloMember} from '../trello';
 import {NewCardSettingsPanel} from './NewCardSettingsPanel';
 import {PublicBoardsSettings} from './PublicBoardsSettings';
-import {StartWorkSettingsPanel} from './StartWorkSettingsPanel';
+import {
+  NoteTemplateScreen,
+  StartWorkSettingsPanel,
+} from './StartWorkSettingsPanel';
 import {
   RELEASE_NOTES,
   ReleaseNotesScreen,
@@ -127,6 +130,11 @@ export function SettingsScreen({
   const aboutTaps = useRef(new RapidTapCounter()).current;
   // Sub page of About listing every release.
   const [releaseNotesOpen, setReleaseNotesOpen] = useState(false);
+  // Sub page of Start work listing the note templates, drawn over Settings
+  // so that it comes back to the same place; the panel then reads the
+  // template chosen there.
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [templateChanges, setTemplateChanges] = useState(0);
 
   const categories: {value: SettingsCategory; label: string}[] = [
     {value: 'general', label: t('settings.general')},
@@ -162,119 +170,138 @@ export function SettingsScreen({
   }
 
   return (
-    <ScreenFrame title={t('settings.title')} onBack={onBack} flush>
-      <View style={styles.layout}>
-        <View accessibilityRole="tablist" style={styles.sidebar}>
-          {categories.map(item => {
-            const selected = item.value === category;
-            return (
-              <React.Fragment key={item.value}>
-                <Pressable
-                  accessibilityRole="tab"
-                  accessibilityState={{selected}}
-                  onPress={() => select(item.value)}
-                  style={styles.category}>
-                  <Text
-                    style={[styles.categoryLabel, selected && styles.bold]}
-                    numberOfLines={1}>
-                    {item.label}
-                  </Text>
-                  <View
-                    style={[
-                      styles.selectionBar,
-                      selected && styles.selectionBarOn,
-                    ]}
-                  />
-                </Pressable>
-                <DottedSeparator />
-              </React.Fragment>
-            );
-          })}
-        </View>
+    <View style={styles.screen}>
+      <ScreenFrame title={t('settings.title')} onBack={onBack} flush>
+        <View style={styles.layout}>
+          <View accessibilityRole="tablist" style={styles.sidebar}>
+            {categories.map(item => {
+              const selected = item.value === category;
+              return (
+                <React.Fragment key={item.value}>
+                  <Pressable
+                    accessibilityRole="tab"
+                    accessibilityState={{selected}}
+                    onPress={() => select(item.value)}
+                    style={styles.category}>
+                    <Text
+                      style={[styles.categoryLabel, selected && styles.bold]}
+                      numberOfLines={1}>
+                      {item.label}
+                    </Text>
+                    <View
+                      style={[
+                        styles.selectionBar,
+                        selected && styles.selectionBarOn,
+                      ]}
+                    />
+                  </Pressable>
+                  <DottedSeparator />
+                </React.Fragment>
+              );
+            })}
+          </View>
 
-        <ScrollView
-          style={styles.panel}
-          contentContainerStyle={styles.panelContent}>
-          {category === 'general' ? (
-            <>
-              {/* Shortcuts shown on the boards page. */}
-              <Section title={t('settings.mainPage')}>
-                <Switch
-                  label={t('settings.showAddPublicBoard')}
-                  help={t('settings.showAddPublicBoardHelp')}
-                  value={boardsPreferences.showAddPublicBoard}
-                  onChange={showAddPublicBoard =>
-                    onBoardsPreferencesChange({
-                      ...boardsPreferences,
-                      showAddPublicBoard,
-                    })
-                  }
-                />
-                {/* Signed in, the boards page has no connect button. */}
-                {!member && (
+          <ScrollView
+            style={styles.panel}
+            contentContainerStyle={styles.panelContent}>
+            {category === 'general' ? (
+              <>
+                {/* Shortcuts shown on the boards page. */}
+                <Section title={t('settings.mainPage')}>
                   <Switch
-                    label={t('settings.showConnectCard')}
-                    help={t('settings.showConnectCardHelp')}
-                    value={boardsPreferences.showConnectCard}
-                    onChange={showConnectCard =>
+                    label={t('settings.showAddPublicBoard')}
+                    help={t('settings.showAddPublicBoardHelp')}
+                    value={boardsPreferences.showAddPublicBoard}
+                    onChange={showAddPublicBoard =>
                       onBoardsPreferencesChange({
                         ...boardsPreferences,
-                        showConnectCard,
+                        showAddPublicBoard,
                       })
                     }
                   />
-                )}
-              </Section>
+                  {/* Signed in, the boards page has no connect button. */}
+                  {!member && (
+                    <Switch
+                      label={t('settings.showConnectCard')}
+                      help={t('settings.showConnectCardHelp')}
+                      value={boardsPreferences.showConnectCard}
+                      onChange={showConnectCard =>
+                        onBoardsPreferencesChange({
+                          ...boardsPreferences,
+                          showConnectCard,
+                        })
+                      }
+                    />
+                  )}
+                </Section>
 
-              <Section title={t('settings.publicBoards')}>
-                <PublicBoardsSettings
-                  client={client}
-                  ensureNetwork={ensureNetwork}
-                  preferences={boardsPreferences}
-                  onChange={onBoardsPreferencesChange}
-                />
-              </Section>
-
-              <Section title={t('settings.account')}>
-                {member && tokenStorage ? (
-                  <AccountCard
-                    member={member}
-                    tokenStorage={tokenStorage}
-                    saveFailed={saveFailed}
-                    onRememberChange={onRememberChange}
-                    onDisconnect={onDisconnect}
+                <Section title={t('settings.publicBoards')}>
+                  <PublicBoardsSettings
+                    client={client}
+                    ensureNetwork={ensureNetwork}
+                    preferences={boardsPreferences}
+                    onChange={onBoardsPreferencesChange}
                   />
-                ) : (
-                  <SignedOutCard onConnect={onConnect} />
-                )}
+                </Section>
+
+                <Section title={t('settings.account')}>
+                  {member && tokenStorage ? (
+                    <AccountCard
+                      member={member}
+                      tokenStorage={tokenStorage}
+                      saveFailed={saveFailed}
+                      onRememberChange={onRememberChange}
+                      onDisconnect={onDisconnect}
+                    />
+                  ) : (
+                    <SignedOutCard onConnect={onConnect} />
+                  )}
+                </Section>
+
+                <LanguageSettings store={store} />
+              </>
+            ) : category === 'boards' ? (
+              <>
+                <BoardLayoutSettings store={store} />
+
+                <BoardModeSettings store={store} />
+              </>
+            ) : category === 'newCard' ? (
+              <NewCardSettingsPanel store={store} />
+            ) : category === 'startWork' ? (
+              <StartWorkSettingsPanel
+                store={store}
+                reloadKey={templateChanges}
+                onBrowseTemplates={() => setTemplatesOpen(true)}
+              />
+            ) : category === 'links' ? (
+              <NoteLinkSettings store={store} />
+            ) : category === 'about' ? (
+              <AboutSettings
+                onOpenReleaseNotes={() => setReleaseNotesOpen(true)}
+              />
+            ) : (
+              <Section title={t('settings.diagnostics')}>
+                <InkLinkDiagnostics />
               </Section>
-
-              <LanguageSettings store={store} />
-            </>
-          ) : category === 'boards' ? (
-            <>
-              <BoardLayoutSettings store={store} />
-
-              <BoardModeSettings store={store} />
-            </>
-          ) : category === 'newCard' ? (
-            <NewCardSettingsPanel store={store} />
-          ) : category === 'startWork' ? (
-            <StartWorkSettingsPanel store={store} />
-          ) : category === 'links' ? (
-            <NoteLinkSettings store={store} />
-          ) : category === 'about' ? (
-            <AboutSettings
-              onOpenReleaseNotes={() => setReleaseNotesOpen(true)}
-            />
-          ) : (
-            <Section title={t('settings.diagnostics')}>
-              <InkLinkDiagnostics />
-            </Section>
-          )}
-        </ScrollView>
-      </View>
-    </ScreenFrame>
+            )}
+          </ScrollView>
+        </View>
+      </ScreenFrame>
+      {templatesOpen && (
+        <View style={styles.subPage}>
+          <NoteTemplateScreen
+            store={store}
+            onBack={changed => {
+              setTemplatesOpen(false);
+              if (changed) {
+                setTemplateChanges(count => count + 1);
+              }
+            }}
+          />
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -703,6 +730,13 @@ function DottedSeparator(): React.JSX.Element {
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+  },
+  subPage: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.background,
+  },
   layout: {
     flex: 1,
     flexDirection: 'row',

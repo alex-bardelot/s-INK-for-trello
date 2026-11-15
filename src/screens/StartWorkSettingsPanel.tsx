@@ -3,6 +3,7 @@ import {
   Image,
   ImageSourcePropType,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -12,8 +13,10 @@ import {
 
 import {Button} from '../components/Button';
 import {CloseIcon} from '../components/CloseIcon';
+import {ScreenFrame} from '../components/ScreenFrame';
 import {SettingsSection} from '../components/SettingsSection';
 import {Switch} from '../components/Switch';
+import {WaitingBox} from '../components/WaitingBox';
 import {useTranslation} from '../i18n';
 import {
   listCustomTemplates,
@@ -35,6 +38,7 @@ import {
 } from '../startWork/settings';
 import {
   CARD_NOTES_FOLDER,
+  matchSystemTemplate,
   systemTemplateLabel,
   templateFileLabel,
   TEMPLATES_FOLDER,
@@ -45,12 +49,19 @@ import {borders, colors, spacing, typography} from '../theme';
 /**
  * "Start work" category of Settings: what the **Start** button of a card
  * does. Each action has its own switch; the labels removed and added, and
- * the list the card moves to, are named here.
+ * the list the card moves to, are named here. The note template is only
+ * shown; it is changed on a page of its own, which lists the templates.
  */
 export function StartWorkSettingsPanel({
   store,
+  reloadKey = 0,
+  onBrowseTemplates,
 }: {
   store: KeyValueStore;
+  /** Changes when the settings were saved elsewhere, to read them again. */
+  reloadKey?: number;
+  /** Opens the page listing the templates, to choose another. */
+  onBrowseTemplates: () => void;
 }): React.JSX.Element {
   const {t} = useTranslation();
   const [settings, setSettings] = useState<StartWorkSettings>(
@@ -63,7 +74,7 @@ export function StartWorkSettingsPanel({
     return () => {
       active = false;
     };
-  }, [store]);
+  }, [store, reloadKey]);
 
   const change = useCallback(
     (patch: Partial<StartWorkSettings>) => {
@@ -142,13 +153,17 @@ export function StartWorkSettingsPanel({
 
       {settings.createNote && (
         <SettingsSection title={t('startWork.templateSection')}>
-          <Text style={styles.small}>
-            {t('startWork.templateHelp', {folder: TEMPLATES_FOLDER})}
-          </Text>
-          <TemplatePicker
-            value={settings.noteTemplate}
-            onChange={noteTemplate => change({noteTemplate})}
-          />
+          <Text style={styles.small}>{t('startWork.templateShortHelp')}</Text>
+          <View style={styles.current}>
+            <CurrentTemplate
+              value={settings.noteTemplate}
+              onPress={onBrowseTemplates}
+            />
+            <Button
+              label={t('startWork.templateBrowse')}
+              onPress={onBrowseTemplates}
+            />
+          </View>
         </SettingsSection>
       )}
     </>
@@ -159,6 +174,143 @@ interface TemplateOption {
   choice: NoteTemplateChoice;
   label: string;
   preview: ImageSourcePropType | null;
+}
+
+/**
+ * The chosen template alone, with its preview: the tablet's templates are
+ * only listed to find this one's picture, none of theirs is loaded.
+ */
+function CurrentTemplate({
+  value,
+  onPress,
+}: {
+  value: NoteTemplateChoice;
+  onPress: () => void;
+}): React.JSX.Element {
+  const {t} = useTranslation();
+  const {width, height} = useWindowDimensions();
+  const portrait = height >= width;
+  const [option, setOption] = useState<TemplateOption | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const show = (next: TemplateOption) => active && setOption(next);
+    switch (value.kind) {
+      case 'blank':
+        show({
+          choice: value,
+          label: t('startWork.templateBlank'),
+          preview:
+            PACKAGED_TEMPLATES[portrait ? 'portrait' : 'landscape'].asset,
+        });
+        break;
+      case 'file':
+        show({
+          choice: value,
+          label: value.name,
+          preview: {uri: `file://${value.path}`},
+        });
+        break;
+      case 'system':
+        show({
+          choice: value,
+          label: systemTemplateLabel(value.name),
+          preview: null,
+        });
+        listSystemTemplates().then(system => {
+          const name = matchSystemTemplate(
+            value.name,
+            system.map(template => template.name),
+          );
+          const found = system.find(template => template.name === name);
+          const uri = found && (portrait ? found.vUri : found.hUri);
+          if (found) {
+            show({
+              choice: value,
+              label: systemTemplateLabel(found.name),
+              preview: uri ? {uri} : null,
+            });
+          }
+        });
+        break;
+    }
+    return () => {
+      active = false;
+    };
+  }, [portrait, t, value]);
+
+  return option ? (
+    <TemplateTile
+      option={option}
+      portrait={portrait}
+      selected={false}
+      onPress={onPress}
+    />
+  ) : (
+    <View />
+  );
+}
+
+/**
+ * Page of Settings listing the templates of card notes: a tap picks one,
+ * **Use this template** saves it and goes back to Settings.
+ */
+export function NoteTemplateScreen({
+  store,
+  onBack,
+}: {
+  store: KeyValueStore;
+  /** Goes back to Settings, saying whether another template was saved. */
+  onBack: (changed: boolean) => void;
+}): React.JSX.Element {
+  const {t} = useTranslation();
+  const [settings, setSettings] = useState<StartWorkSettings | null>(null);
+  const [draft, setDraft] = useState<NoteTemplateChoice | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    loadStartWorkSettings(store).then(loaded => {
+      if (active) {
+        setSettings(loaded);
+        setDraft(loaded.noteTemplate);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [store]);
+
+  const unchanged =
+    !settings ||
+    !draft ||
+    templateChoiceKey(draft) === templateChoiceKey(settings.noteTemplate);
+  const confirm = async () => {
+    if (settings && draft) {
+      await saveStartWorkSettings(store, {...settings, noteTemplate: draft});
+    }
+    onBack(true);
+  };
+
+  return (
+    <ScreenFrame
+      title={t('startWork.templateSection')}
+      onBack={() => onBack(false)}
+      actions={
+        <Button
+          primary
+          disabled={unchanged}
+          label={t('startWork.templateChoose')}
+          onPress={confirm}
+        />
+      }>
+      <ScrollView contentContainerStyle={styles.templatePage}>
+        <Text style={styles.small}>
+          {t('startWork.templateHelp', {folder: TEMPLATES_FOLDER})}
+        </Text>
+        {draft && <TemplatePicker value={draft} onChange={setDraft} />}
+      </ScrollView>
+    </ScreenFrame>
+  );
 }
 
 type TemplateList =
@@ -247,7 +399,7 @@ function TemplatePicker({
     <View style={styles.templates}>
       {tiles([blank])}
       {list.status === 'loading' ? (
-        <Text style={styles.small}>{t('startWork.templateLoading')}</Text>
+        <WaitingBox message={t('startWork.templateLoading')} />
       ) : (
         <>
           <Text style={styles.groupTitle}>{t('startWork.templateCustom')}</Text>
@@ -497,6 +649,15 @@ const styles = StyleSheet.create({
   },
   templates: {
     gap: spacing.md,
+  },
+  current: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+  },
+  templatePage: {
+    gap: spacing.md,
+    paddingBottom: spacing.xl,
   },
   groupTitle: {
     color: colors.foreground,
