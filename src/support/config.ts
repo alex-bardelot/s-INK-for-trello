@@ -10,7 +10,7 @@ import {TRELLO_RELAY_URL} from '../trello/config';
 export const INKHUB_URL = '';
 
 /** Donation page (Ko-fi). */
-export const DONATION_URL = '';
+export const DONATION_URL = 'https://ko-fi.com/alexandrebardelot';
 
 /**
  * Total raised, kept by the relay from the Ko-fi webhook (see

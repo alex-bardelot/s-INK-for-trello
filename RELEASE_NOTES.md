@@ -3,6 +3,12 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.57.1 — Ko-fi donation page
+
+- **Settings › Support s-INK › Make a donation** now shows the QR code
+  and the **Open in the browser** button of the Ko-fi page,
+  `ko-fi.com/alexandrebardelot`, instead of "Link coming soon".
+
 ## 0.57.0 — Support s-INK
 
 - New **Settings › Support s-INK** category, before About:
