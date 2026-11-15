@@ -1,6 +1,7 @@
 import React from 'react';
 import {Pressable, StyleSheet, Text, View} from 'react-native';
 
+import {useTranslation} from '../i18n';
 import {borders, colors, spacing, typography} from '../theme';
 
 export interface SwitchProps {
@@ -12,9 +13,10 @@ export interface SwitchProps {
 }
 
 /**
- * Settings row with an on/off switch at its end: a pill-shaped track, filled
- * black when on, with its knob at the matching end. The whole row is
- * pressable and nothing is animated, for E Ink.
+ * Settings row with an on/off switch at its end: "ON" or "OFF", then a
+ * pill-shaped track, filled black when on, with its knob at the matching
+ * end, like the Supernote system settings. The whole row is pressable and
+ * nothing is animated, for E Ink.
  */
 export function Switch({
   label,
@@ -22,6 +24,7 @@ export function Switch({
   value,
   onChange,
 }: SwitchProps): React.JSX.Element {
+  const {t} = useTranslation();
   return (
     <Pressable
       accessibilityRole="switch"
@@ -33,6 +36,8 @@ export function Switch({
         <Text style={styles.label}>{label}</Text>
         {help && <Text style={styles.help}>{help}</Text>}
       </View>
+      {/* ON / OFF before the track, like the Supernote system settings. */}
+      <Text style={styles.state}>{t(value ? 'common.on' : 'common.off')}</Text>
       <View style={[styles.track, value && styles.trackOn]}>
         <View style={[styles.knob, value && styles.knobOn]} />
       </View>
@@ -61,6 +66,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   help: {
+    color: colors.foreground,
+    fontSize: typography.small,
+  },
+  state: {
     color: colors.foreground,
     fontSize: typography.small,
   },

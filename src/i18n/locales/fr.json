@@ -2,6 +2,8 @@
   "app.name": "s-INK for Trello®",
   "button.toolbar.name": "s-INK for Trello",
   "common.close": "Fermer",
+  "common.on": "ON",
+  "common.off": "OFF",
   "common.retry": "Réessayer",
   "common.cancel": "Annuler",
   "session.checking": "Recherche de votre compte Trello…",

@@ -2,6 +2,8 @@
   "app.name": "s-INK for Trello®",
   "button.toolbar.name": "s-INK for Trello",
   "common.close": "閉じる",
+  "common.on": "オン",
+  "common.off": "オフ",
   "common.retry": "再試行",
   "common.cancel": "キャンセル",
   "session.checking": "Trello アカウントを確認しています…",

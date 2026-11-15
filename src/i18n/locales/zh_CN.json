@@ -2,6 +2,8 @@
   "app.name": "s-INK for Trello®",
   "button.toolbar.name": "s-INK for Trello",
   "common.close": "关闭",
+  "common.on": "开",
+  "common.off": "关",
   "common.retry": "重试",
   "common.cancel": "取消",
   "session.checking": "正在查找您的 Trello 账户…",

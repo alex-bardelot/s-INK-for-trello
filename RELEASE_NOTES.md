@@ -3,6 +3,12 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.42.1 — ON / OFF on the switches
+
+- Like the Supernote system settings, every switch shows **ON** or
+  **OFF** just before its track. New `common.on` and `common.off`
+  strings in all locales.
+
 ## 0.42.0 — Release notes in Settings > About
 
 - Settings > About shows a **What's new** section with the latest
