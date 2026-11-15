@@ -25,6 +25,7 @@ import {Button} from '../components/Button';
 import {MemberAvatar} from '../components/MemberAvatar';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {SegmentedControl, SegmentGroup} from '../components/SegmentedControl';
+import {SettingsSection} from '../components/SettingsSection';
 import {SmallButton} from '../components/SmallButton';
 import {clearInkLinkLog, useInkLinkLog} from '../inkLink/diagnostics';
 import {
@@ -55,6 +56,7 @@ import {
 import {KeyValueStore} from '../storage/keyValueStore';
 import {TrelloClient, TrelloMember} from '../trello';
 import {PublicBoardsSettings} from './PublicBoardsSettings';
+import {StartWorkSettingsPanel} from './StartWorkSettingsPanel';
 import {
   RELEASE_NOTES,
   ReleaseNotesScreen,
@@ -96,7 +98,8 @@ export interface SettingsScreenProps {
  * the Supernote system settings: categories in a left column, separated by
  * dotted lines, and the selected one's sections on the right. "General"
  * holds the main page shortcuts, the public boards, the Trello account (and
- * where its token is kept) and the language; "Board page" the settings of an open board (layout and mode); "Links"
+ * where its token is kept) and the language; "Board page" the settings of an open board (layout and mode); "Start
+ * work" what the Start button of a card does; "Links"
  * the tool opening s-INK links; "About" the version and the
  * non-affiliation notice.
  */
@@ -126,6 +129,7 @@ export function SettingsScreen({
   const categories: {value: SettingsCategory; label: string}[] = [
     {value: 'general', label: t('settings.general')},
     {value: 'boards', label: t('settings.boards')},
+    {value: 'startWork', label: t('settings.startWork')},
     {value: 'links', label: t('settings.links')},
     {value: 'about', label: t('settings.about')},
     ...(showDiagnostics
@@ -250,6 +254,8 @@ export function SettingsScreen({
 
               <BoardModeSettings store={store} />
             </>
+          ) : category === 'startWork' ? (
+            <StartWorkSettingsPanel store={store} />
           ) : category === 'links' ? (
             <NoteLinkSettings store={store} />
           ) : category === 'about' ? (
@@ -271,6 +277,7 @@ export function SettingsScreen({
 export type SettingsCategory =
   | 'general'
   | 'boards'
+  | 'startWork'
   | 'links'
   | 'about'
   | 'diagnostics';
@@ -668,22 +675,7 @@ function Confirmation({
   );
 }
 
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}): React.JSX.Element {
-  return (
-    <View style={styles.section}>
-      <Text accessibilityRole="header" style={styles.sectionTitle}>
-        {title}
-      </Text>
-      {children}
-    </View>
-  );
-}
+const Section = SettingsSection;
 
 const SIDEBAR_WIDTH = 240;
 const DOT_SIZE = 2;
@@ -747,19 +739,6 @@ const styles = StyleSheet.create({
   },
   panelContent: {
     padding: spacing.lg,
-  },
-  section: {
-    gap: spacing.sm,
-    marginBottom: spacing.xl,
-  },
-  sectionTitle: {
-    color: colors.foreground,
-    fontSize: typography.label,
-    fontWeight: '700',
-    borderBottomColor: colors.foreground,
-    borderBottomWidth: borders.width / 2,
-    paddingBottom: spacing.xs,
-    marginBottom: spacing.xs,
   },
   text: {
     color: colors.foreground,

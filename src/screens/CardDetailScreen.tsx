@@ -26,6 +26,13 @@ import {HEADER_ICON_SIZE, ScreenFrame} from '../components/ScreenFrame';
 import {SmallButton} from '../components/SmallButton';
 import {TranslationKey, useTranslation} from '../i18n';
 import {toSessionError} from '../session/trelloSession';
+import {StartWorkStep} from '../startWork/startWork';
+import {
+  NoteOutcome,
+  StartWorkReport,
+  useStartWork,
+} from '../startWork/useStartWork';
+import {KeyValueStore} from '../storage/keyValueStore';
 import {TrelloClient} from '../trello/TrelloClient';
 import {
   TrelloBoardCard,
@@ -57,6 +64,12 @@ export interface CardDetailScreenProps {
   /** Members of the board, used when the card's own are not returned. */
   members: ReadonlyMap<string, TrelloBoardMember>;
   client: TrelloClient;
+  /** Where the Start work settings are kept. */
+  store: KeyValueStore;
+  /** Id of the signed-in member, assigned by Start. */
+  memberId: string;
+  /** The member may edit the board's cards: Start is offered. */
+  canEdit: boolean;
   onBack: () => void;
   /** Called when Trello rejects the token while loading. */
   onTokenRejected: () => void;
@@ -73,25 +86,44 @@ export function CardDetailScreen({
   listName,
   members,
   client,
+  store,
+  memberId,
+  canEdit,
   onBack,
   onTokenRejected,
 }: CardDetailScreenProps): React.JSX.Element {
   const {t} = useTranslation();
   const [state, setState] = useState<DetailState>({status: 'loading'});
 
-  const load = useCallback(async () => {
-    setState({status: 'loading'});
-    try {
-      setState({status: 'loaded', card: await client.getCardDetail(card.id)});
-    } catch (error) {
-      console.warn('[sINK] Failed to load card', error);
-      if (toSessionError(error) === 'invalidToken') {
-        onTokenRejected();
-        return;
+  // Counts the loads, so that the pages are measured again for new content.
+  const [version, setVersion] = useState(0);
+
+  const fetchDetail = useCallback(
+    async (quiet: boolean) => {
+      if (!quiet) {
+        setState({status: 'loading'});
       }
-      setState({status: 'failed'});
-    }
-  }, [card.id, client, onTokenRejected]);
+      try {
+        const loaded = await client.getCardDetail(card.id);
+        setVersion(current => current + 1);
+        setState({status: 'loaded', card: loaded});
+      } catch (error) {
+        console.warn('[sINK] Failed to load card', error);
+        if (toSessionError(error) === 'invalidToken') {
+          onTokenRejected();
+          return;
+        }
+        // A failed quiet reload keeps the card shown.
+        if (!quiet) {
+          setState({status: 'failed'});
+        }
+      }
+    },
+    [card.id, client, onTokenRejected],
+  );
+  const load = useCallback(() => fetchDetail(false), [fetchDetail]);
+  // After Start, the card stays shown until its new state comes.
+  const reloadQuietly = useCallback(() => fetchDetail(true), [fetchDetail]);
 
   useEffect(() => {
     load();
@@ -101,12 +133,37 @@ export function CardDetailScreen({
   const detail: TrelloCardDetail =
     state.status === 'loaded' ? state.card : fromBoardCard(card);
 
+  const startWork = useStartWork({
+    card: state.status === 'loaded' ? state.card : null,
+    shortLink: card.shortLink,
+    client,
+    store,
+    memberId,
+    onChanged: reloadQuietly,
+    onTokenRejected,
+  });
+
   return (
     <ScreenFrame
       title={boardName}
       onBack={onBack}
       actions={
         <>
+          {canEdit && (
+            <SmallButton
+              label={t(startWork.busy ? 'startWork.busy' : 'startWork.start')}
+              accessibilityLabel={t('startWork.startHint')}
+              disabled={startWork.busy || state.status !== 'loaded'}
+              onPress={startWork.start}
+            />
+          )}
+          {startWork.notePath && (
+            <SmallButton
+              label={t('startWork.openNote')}
+              accessibilityLabel={t('startWork.openNoteHint')}
+              onPress={startWork.openNote}
+            />
+          )}
           <InsertInkLinkButton
             target={{kind: 'card', shortLink: detail.shortLink ?? card.id}}
             name={detail.name}
@@ -121,9 +178,17 @@ export function CardDetailScreen({
           </Pressable>
         </>
       }>
+      {startWork.report && (
+        <StartWorkReportView
+          report={startWork.report}
+          notePath={startWork.notePath}
+          onOpenNote={startWork.openNote}
+          onClose={startWork.dismissReport}
+        />
+      )}
       <DetailPages
         // Pages are measured again for new content.
-        key={state.status}
+        key={`${state.status}:${version}`}
         card={detail}
         listName={detail.list?.name ?? listName}
         members={cardMembers(detail, members)}
@@ -161,6 +226,118 @@ function fromBoardCard(card: TrelloBoardCard): TrelloCardDetail {
     labels: card.labels ?? [],
     idMembers: card.idMembers ?? [],
   };
+}
+
+/** One line of the Start report, in the user's language. */
+function describeStep(
+  step: StartWorkStep,
+  t: ReturnType<typeof useTranslation>['t'],
+): string {
+  switch (step.kind) {
+    case 'assign':
+      return t(step.ok ? 'startWork.stepAssign' : 'startWork.stepAssignFailed');
+    case 'removeLabel':
+      return t(
+        step.ok
+          ? 'startWork.stepRemoveLabel'
+          : 'startWork.stepRemoveLabelFailed',
+        {name: step.name},
+      );
+    case 'addLabel':
+      return t(
+        step.ok ? 'startWork.stepAddLabel' : 'startWork.stepAddLabelFailed',
+        {name: step.name},
+      );
+    case 'createLabel':
+      return t(
+        step.ok
+          ? 'startWork.stepCreateLabel'
+          : 'startWork.stepCreateLabelFailed',
+        {name: step.name},
+      );
+    case 'move':
+      return t(step.ok ? 'startWork.stepMove' : 'startWork.stepMoveFailed', {
+        name: step.name,
+      });
+    case 'missingList':
+      return t('startWork.stepMissingList', {name: step.name});
+    case 'boardUnreadable':
+      return t('startWork.stepBoardUnreadable');
+    case 'nothingToChange':
+      return t('startWork.stepNothing');
+  }
+}
+
+function describeNote(
+  note: NoteOutcome,
+  t: ReturnType<typeof useTranslation>['t'],
+): string {
+  switch (note.kind) {
+    case 'created':
+      return t('startWork.noteCreated', {file: note.fileName});
+    case 'found':
+      return t('startWork.noteFound', {file: note.fileName});
+    case 'failed':
+      return t('startWork.noteFailed');
+    case 'openFailed':
+      return t('startWork.noteOpenFailed');
+  }
+}
+
+/**
+ * What Start did, framed above the card: shown when something went wrong
+ * or no note was opened. The card's note can be opened from it.
+ */
+function StartWorkReportView({
+  report,
+  notePath,
+  onOpenNote,
+  onClose,
+}: {
+  report: StartWorkReport;
+  notePath: string | null;
+  onOpenNote: () => void;
+  onClose: () => void;
+}): React.JSX.Element {
+  const {t} = useTranslation();
+  const lines = report.disabled
+    ? [t('startWork.allDisabled')]
+    : [
+        ...report.steps.map(step => describeStep(step, t)),
+        ...(report.note ? [describeNote(report.note, t)] : []),
+      ];
+  return (
+    <View accessibilityRole="alert" style={styles.report}>
+      <Text style={styles.reportTitle}>
+        {t(
+          report.disabled
+            ? 'settings.startWork'
+            : report.failed
+            ? 'startWork.reportFailed'
+            : 'startWork.reportDone',
+        )}
+      </Text>
+      {lines.map((line, index) => (
+        <Text key={index} style={styles.message}>
+          {`• ${line}`}
+        </Text>
+      ))}
+      <View style={styles.reportActions}>
+        {notePath && !report.disabled && (
+          <SmallButton
+            label={t('startWork.openNote')}
+            accessibilityLabel={t('startWork.openNoteHint')}
+            onPress={onOpenNote}
+          />
+        )}
+        <SmallButton
+          label={t('common.ok')}
+          accessibilityLabel={t('common.ok')}
+          onPress={onClose}
+        />
+      </View>
+    </View>
+  );
 }
 
 interface DetailPagesProps {
@@ -482,6 +659,25 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     padding: spacing.sm,
+  },
+  report: {
+    gap: spacing.xs,
+    borderColor: colors.foreground,
+    borderWidth: borders.width,
+    borderRadius: borders.radius,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  reportTitle: {
+    color: colors.foreground,
+    fontSize: typography.label,
+    fontWeight: '700',
+  },
+  reportActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.md,
+    marginTop: spacing.sm,
   },
   message: {
     color: colors.foreground,

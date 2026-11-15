@@ -35,6 +35,7 @@ import {
 import {BoardPreferences, loadBoardPreferences} from '../board/preferences';
 import {useTwoFingerSwipe} from '../board/useTwoFingerSwipe';
 import {formatCardDate} from '../cards/detail';
+import {canAddCards} from '../cards/ordering';
 import {
   BIND_TAB_HEIGHT,
   BIND_TAB_ROOM,
@@ -282,6 +283,10 @@ export function BoardScreen({
         listName={lists.find(list => list.id === openCard.idList)?.name ?? ''}
         members={state.members}
         client={client}
+        store={store}
+        memberId={memberId}
+        // Start changes the card: only for members who may edit the board.
+        canEdit={!!memberId && canAddCards(board, memberId, false)}
         onBack={closeCard}
         onTokenRejected={onTokenRejected}
       />

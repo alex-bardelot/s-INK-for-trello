@@ -109,12 +109,65 @@ async function createElement(
   return element;
 }
 
+/**
+ * Note page a link is placed on: the page shown in the note app, or a page
+ * of a note file that is not open (a card's new note).
+ */
+interface LinkDestination {
+  location: {path: string; page: number};
+  insert(element: Record<string, any>): Promise<unknown>;
+  read(): Promise<PageElement[] | null>;
+  modify(elements: PageElement[]): Promise<unknown>;
+  save(): Promise<unknown>;
+}
+
+const currentNoteDestination = (location: {
+  path: string;
+  page: number;
+}): LinkDestination => ({
+  location,
+  insert: element => PluginCommAPI.insertPageElements([element], location.page),
+  read: async () => (await readPageElements())?.elements ?? null,
+  modify: elements =>
+    PluginCommAPI.modifyPageElements(elements as any[], location.page),
+  save: () => PluginNoteAPI.saveCurrentNote(),
+});
+
+const noteFileDestination = (location: {
+  path: string;
+  page: number;
+}): LinkDestination => ({
+  location,
+  insert: element =>
+    PluginFileAPI.insertElements(location.path, location.page, [element]),
+  read: async () => {
+    const response = await PluginFileAPI.getElements(
+      location.page,
+      location.path,
+    );
+    const elements = unwrap<PageElement[]>(response);
+    if (!Array.isArray(elements)) {
+      logInkLink(`insert: getElements ${errorOf(response)}`);
+      return null;
+    }
+    return elements;
+  },
+  modify: elements =>
+    PluginFileAPI.modifyElements(
+      location.path,
+      location.page,
+      elements as any[],
+    ),
+  // The file is written by each call: there is no open note to save.
+  save: async () => ({success: true}),
+});
+
 async function insertElement(
   element: Record<string, any>,
-  page: number,
+  destination: LinkDestination,
   what: string,
 ): Promise<boolean> {
-  const inserted = await PluginCommAPI.insertPageElements([element], page);
+  const inserted = await destination.insert(element);
   const ok = (inserted as SdkResponse<unknown> | null)?.success === true;
   if (!ok) {
     logInkLink(`insert ${what}: ${errorOf(inserted)}`);
@@ -126,8 +179,9 @@ async function insertElement(
 async function insertIcon(
   link: string,
   rect: Rect,
-  location: {path: string; page: number},
+  destination: LinkDestination,
 ): Promise<string> {
+  const {location} = destination;
   const dir = await PluginManager.getPluginDirPath();
   if (!dir) {
     return 'no plugin dir';
@@ -144,12 +198,14 @@ async function insertIcon(
     picturePath: `${dir.replace(/\/+$/, '')}/${ICON_FILE_NAME}`,
     rect: convertRect(rect, point => PointUtils.androidPoint2Emr(point, size)),
   };
-  return (await insertElement(element, location.page, 'icon'))
-    ? 'ok'
-    : 'failed';
+  return (await insertElement(element, destination, 'icon')) ? 'ok' : 'failed';
 }
 
-function close(a: Rect | null | undefined, b: Rect, tolerance: number): boolean {
+function close(
+  a: Rect | null | undefined,
+  b: Rect,
+  tolerance: number,
+): boolean {
   return (
     !!a &&
     Math.abs(a.left - b.left) <= tolerance &&
@@ -168,17 +224,17 @@ async function rewriteUserData(
   link: string,
   text: string,
   iconRect: Rect,
-  location: {path: string; page: number},
+  destination: LinkDestination,
 ): Promise<string> {
-  const page = await readPageElements();
-  if (!page) {
+  const elements = await destination.read();
+  if (!elements) {
     return 'page not read';
   }
-  const size = await pageSize(location);
+  const size = await pageSize(destination.location);
   const icon = convertRect(iconRect, point =>
     PointUtils.androidPoint2Emr(point, size),
   );
-  const inserted = page.elements.filter(
+  const inserted = elements.filter(
     element =>
       element.userData !== link &&
       ((element.type === NoteElementType.Text &&
@@ -191,15 +247,12 @@ async function rewriteUserData(
     inserted.forEach(element => {
       element.userData = link;
     });
-    const modified = await PluginCommAPI.modifyPageElements(
-      inserted as any[],
-      location.page,
-    );
+    const modified = await destination.modify(inserted);
     result += `, modify ${
       (modified as SdkResponse<unknown>)?.success ? 'ok' : errorOf(modified)
     }`;
   }
-  recycle(page.elements);
+  recycle(elements);
   return result;
 }
 
@@ -214,49 +267,78 @@ export async function insertInkLink(
   target: InkLinkTarget,
   name: string,
 ): Promise<boolean> {
-  const link = formatInkLink(target);
   try {
     const location = await currentPage();
     if (!location) {
       logInkLink('insert: no open note page');
       return false;
     }
-    const layout = layoutLink(name, link, NEW_LINK_ORIGIN);
-    const element = await createElement(NoteElementType.Text);
-    if (!element) {
-      return false;
-    }
-    element.userData = link;
-    element.pageNum = location.page;
-    element.textBox = {
-      ...(element.textBox ?? {}),
-      textContentFull: layout.text,
-      textRect: layout.textRect,
-      fontSize: LINK_FONT_SIZE,
-    };
-    if (!(await insertElement(element, location.page, 'text'))) {
-      return false;
-    }
-    const icon = await insertIcon(link, layout.iconRect, location);
-    const userData = await rewriteUserData(
-      link,
-      layout.text,
-      layout.iconRect,
-      location,
-    ).catch(error => String(error));
-    const saved = await PluginNoteAPI.saveCurrentNote();
-    logInkLink(
-      `insert: ${link} on page ${
-        location.page
-      }, icon ${icon}, userData ${userData}, save ${
-        (saved as SdkResponse<unknown>)?.success ? 'ok' : errorOf(saved)
-      }`,
-    );
-    return true;
+    return await placeInkLink(target, name, currentNoteDestination(location));
   } catch (error) {
     logInkLink(`insert: ${String(error)}`);
     return false;
   }
+}
+
+/**
+ * Places an s-INK link at the top of a page of a note file that is not
+ * open, as its title: used for the note created for a card.
+ *
+ * @returns `true` if the host accepted the text box.
+ */
+export async function insertInkLinkInNoteFile(
+  path: string,
+  page: number,
+  target: InkLinkTarget,
+  name: string,
+): Promise<boolean> {
+  try {
+    return await placeInkLink(target, name, noteFileDestination({path, page}));
+  } catch (error) {
+    logInkLink(`insert in ${path}: ${String(error)}`);
+    return false;
+  }
+}
+
+async function placeInkLink(
+  target: InkLinkTarget,
+  name: string,
+  destination: LinkDestination,
+): Promise<boolean> {
+  const link = formatInkLink(target);
+  const {location} = destination;
+  const layout = layoutLink(name, link, NEW_LINK_ORIGIN);
+  const element = await createElement(NoteElementType.Text);
+  if (!element) {
+    return false;
+  }
+  element.userData = link;
+  element.pageNum = location.page;
+  element.textBox = {
+    ...(element.textBox ?? {}),
+    textContentFull: layout.text,
+    textRect: layout.textRect,
+    fontSize: LINK_FONT_SIZE,
+  };
+  if (!(await insertElement(element, destination, 'text'))) {
+    return false;
+  }
+  const icon = await insertIcon(link, layout.iconRect, destination);
+  const userData = await rewriteUserData(
+    link,
+    layout.text,
+    layout.iconRect,
+    destination,
+  ).catch(error => String(error));
+  const saved = await destination.save();
+  logInkLink(
+    `insert: ${link} in ${location.path} page ${
+      location.page
+    }, icon ${icon}, userData ${userData}, save ${
+      (saved as SdkResponse<unknown>)?.success ? 'ok' : errorOf(saved)
+    }`,
+  );
+  return true;
 }
 
 async function readPageElements(): Promise<{
@@ -366,7 +448,9 @@ async function handleTap(x: number, y: number): Promise<void> {
     // With a lasso selection, taps go to the lasso toolbar (its "Link to
     // Trello" button may lie over a link): they open nothing.
     if (await lassoActive()) {
-      logInkLink(`tap ${Math.round(x)},${Math.round(y)}: lasso active, ignored`);
+      logInkLink(
+        `tap ${Math.round(x)},${Math.round(y)}: lasso active, ignored`,
+      );
       return;
     }
     const page = await readPageElements();
@@ -381,10 +465,12 @@ async function handleTap(x: number, y: number): Promise<void> {
     const links = mergeInkLinks(
       findInkLinks(
         elements,
-      size
-        ? rect =>
-            convertRect(rect, point => PointUtils.emrPoint2Android(point, size))
-        : undefined,
+        size
+          ? rect =>
+              convertRect(rect, point =>
+                PointUtils.emrPoint2Android(point, size),
+              )
+          : undefined,
       ),
     );
     logNativeLinks(elements);

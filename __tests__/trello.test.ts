@@ -194,4 +194,45 @@ describe('TrelloClient', () => {
       pos: 'bottom',
     });
   });
+
+  it('reads the labels of a board', async () => {
+    const fetchImpl = jest
+      .fn()
+      .mockResolvedValue(jsonResponse([{id: 'l1', name: 'WIP', color: null}]));
+    const labels = await clientWith(fetchImpl).getBoardLabels('b1');
+    expect(labels.map(label => label.name)).toEqual(['WIP']);
+    expect(fetchImpl.mock.calls[0][0]).toBe(
+      'https://api.trello.com/1/boards/b1/labels?fields=name%2Ccolor&limit=1000',
+    );
+  });
+
+  it('changes the members, labels and list of a card', async () => {
+    const fetchImpl = jest.fn().mockResolvedValue(jsonResponse({}));
+    const client = clientWith(fetchImpl);
+    await client.addCardMember('c1', 'm1');
+    await client.addCardLabel('c1', 'l1');
+    await client.removeCardLabel('c1', 'l2');
+    await client.createCardLabel('c1', 'Doing');
+    await client.moveCard('c1', 'list2');
+    const calls = fetchImpl.mock.calls.map(([url, init]) => [
+      init.method,
+      url,
+      init.body ? JSON.parse(init.body) : undefined,
+    ]);
+    expect(calls).toEqual([
+      ['POST', 'https://api.trello.com/1/cards/c1/idMembers', {value: 'm1'}],
+      ['POST', 'https://api.trello.com/1/cards/c1/idLabels', {value: 'l1'}],
+      ['DELETE', 'https://api.trello.com/1/cards/c1/idLabels/l2', undefined],
+      [
+        'POST',
+        'https://api.trello.com/1/cards/c1/labels',
+        {name: 'Doing', color: null},
+      ],
+      [
+        'PUT',
+        'https://api.trello.com/1/cards/c1',
+        {idList: 'list2', pos: 'top'},
+      ],
+    ]);
+  });
 });

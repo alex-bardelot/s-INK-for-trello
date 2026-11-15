@@ -3,6 +3,41 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.45.0 — Start work on a card
+
+- A **Start** button in the title bar of a card begins work on it. It is
+  only offered on boards the member can edit (not as an observer, nor on
+  public boards they do not belong to).
+- What Start does is set in a new **Start work** category of Settings,
+  each action with its own switch:
+  - **Assign me to the card**, if the member is not on it yet;
+  - **Remove labels** and **Add labels**, each with its own list of label
+    names (`TODO` removed and `WIP` added by default), edited as chips that
+    are tapped to take them out, and a field to add one. Names are matched
+    without regard to case; a label the board does not have is created on
+    it, without a color; a label both removed and added stays;
+  - **Move the card** to the top of the list of a given name (off, and no
+    list, by default);
+  - **Create a note**: a note for the card in the `Note/s-INK` folder of
+    the tablet, named after the card and ending with its short link
+    (`Fix the login [AbC123xy].note`), with the card's s-INK link at the
+    top of its first page as a title.
+- Each Trello change is its own request: one failing does not stop the
+  others. When all went well, the note opens at once; otherwise a report
+  on the card lists what was done and what failed (a list name missing
+  from the board, for one), with a button to open the note.
+- A **Note** button on the card opens its note again. Notes are found by
+  the short link at the end of their name, so a renamed card keeps its
+  note. Looking for it never asks for a permission.
+- New `TrelloClient` calls: `getBoardLabels`, `addCardMember`,
+  `addCardLabel`, `removeCardLabel`, `createCardLabel` and `moveCard`;
+  the card detail now carries its `idBoard`.
+- s-INK links can now be placed in a note file that is not open
+  (`insertInkLinkInNoteFile`); if the host refuses, the title is placed
+  once the note is open. Note creation steps are written to the
+  Diagnostics log (`note:` lines).
+- New `startWork.*` and `settings.startWork` strings in all locales.
+
 ## 0.44.2 — Offline button: the icon alone
 
 - The **Offline** button of the title bar is now the light Wi-Fi sign

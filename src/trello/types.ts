@@ -179,6 +179,8 @@ export interface TrelloCardDetail {
   id: string;
   name: string;
   desc: string;
+  /** Board of the card; absent until the detail is loaded. */
+  idBoard?: string;
   idList: string;
   url: string;
   shortUrl: string;

@@ -9,6 +9,7 @@ import {
   TrelloCard,
   TrelloCardDetail,
   TrelloCardLocation,
+  TrelloLabel,
   TrelloList,
   TrelloMember,
   TrelloOrganization,
@@ -46,7 +47,9 @@ const BOARD_CARD_FIELDS =
   'name,idList,pos,due,dueComplete,badges,labels,idMembers,shortLink';
 const BOARD_MEMBER_FIELDS = 'fullName,initials,username,avatarUrl';
 const CARD_DETAIL_FIELDS =
-  'name,desc,idList,url,shortUrl,shortLink,start,due,dueComplete,dateLastActivity,labels,idMembers';
+  'name,desc,idBoard,idList,url,shortUrl,shortLink,start,due,dueComplete,dateLastActivity,labels,idMembers';
+/** Labels read from a board (Trello's maximum). */
+const BOARD_LABELS_LIMIT = 1000;
 /** Comments shown on the card detail page, newest first. */
 export const CARD_COMMENTS_LIMIT = 20;
 const ORGANIZATION_FIELDS = 'displayName,name,logoUrl,logoHash';
@@ -244,6 +247,63 @@ export class TrelloClient {
         desc: desc.slice(0, CARD_DESC_MAX_LENGTH),
         pos: 'bottom',
       },
+    });
+  }
+
+  /** Returns the labels of a board, named or not. */
+  async getBoardLabels(boardId: string): Promise<TrelloLabel[]> {
+    const labels = await this.request<TrelloLabel[]>(
+      `/boards/${encodeURIComponent(boardId)}/labels`,
+      {query: {fields: 'name,color', limit: BOARD_LABELS_LIMIT}},
+    );
+    if (!Array.isArray(labels)) {
+      throw new TrelloApiError('invalidResponse', 'Expected a list of labels');
+    }
+    return labels;
+  }
+
+  /** Adds a member to a card. */
+  async addCardMember(cardId: string, memberId: string): Promise<void> {
+    await this.request<unknown>(
+      `/cards/${encodeURIComponent(cardId)}/idMembers`,
+      {method: 'POST', body: {value: memberId}},
+    );
+  }
+
+  /** Puts a label of the board on a card. */
+  async addCardLabel(cardId: string, labelId: string): Promise<void> {
+    await this.request<unknown>(
+      `/cards/${encodeURIComponent(cardId)}/idLabels`,
+      {method: 'POST', body: {value: labelId}},
+    );
+  }
+
+  /** Takes a label off a card; the label stays on the board. */
+  async removeCardLabel(cardId: string, labelId: string): Promise<void> {
+    await this.request<unknown>(
+      `/cards/${encodeURIComponent(cardId)}/idLabels/${encodeURIComponent(
+        labelId,
+      )}`,
+      {method: 'DELETE'},
+    );
+  }
+
+  /**
+   * Creates a label on the card's board, without a color, and puts it on
+   * the card.
+   */
+  createCardLabel(cardId: string, name: string): Promise<TrelloLabel> {
+    return this.request<TrelloLabel>(
+      `/cards/${encodeURIComponent(cardId)}/labels`,
+      {method: 'POST', body: {name, color: null}},
+    );
+  }
+
+  /** Moves a card to the top of a list of the same board. */
+  async moveCard(cardId: string, listId: string): Promise<void> {
+    await this.request<unknown>(`/cards/${encodeURIComponent(cardId)}`, {
+      method: 'PUT',
+      body: {idList: listId, pos: 'top'},
     });
   }
 

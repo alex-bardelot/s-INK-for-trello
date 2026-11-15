@@ -29,6 +29,11 @@ Other Supernote devices that support plugins may work but are not tested.
   boards on demand), pick a list (the last used one on top), review the
   recognized title and description, and create the card. The first line
   becomes the card title, the rest its description.
+- **Start** button on the cards of boards the member can edit: assigns the
+  member, swaps labels (e.g. removes `TODO`, adds `WIP`), moves the card to
+  a chosen list and creates a note for it in `Note/s-INK`, titled with an
+  s-INK link to the card. Each action is set, or turned off, in
+  Settings > Start work; the card's **Note** button opens its note again.
 - UI in English, French, Japanese, Simplified Chinese and Traditional
   Chinese. By default it follows the tablet's system language (unsupported
   languages fall back to English); Settings > General > Language can fix
