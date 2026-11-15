@@ -3,6 +3,23 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.46.3 — Link icon drawn, lasso without timers
+
+- The s-INK icon before a link was accepted by the tablet but not drawn:
+  its picture was the copy next to the bundle, in the plugin host's
+  private folder, which the note app likely cannot read. The icon is now
+  copied once to the shared `Note/s-INK` folder (`.s-INK-icon.png`,
+  hidden by its dot) and placed from there; the private copy stays the
+  fallback. The copy is written to the Diagnostics log (`icon:` line) and
+  the icon's path to the `insert:` line.
+- Selecting a new link with the lasso no longer waits with `setTimeout`
+  once the plugin view is closed: JavaScript timers may stop while the
+  plugin is in the background. The lasso is asked again until the host
+  accepts it, for 3 seconds at most, and the `lasso` line of the log
+  gives the number of attempts.
+- A card's new note is awaited while the plugin view still shows; the
+  view is closed only then, before its title is selected.
+
 ## 0.46.2 — Link in note: centred and selected
 
 - **Link in note** now places the s-INK link in the middle of the current

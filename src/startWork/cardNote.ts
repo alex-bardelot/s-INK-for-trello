@@ -12,8 +12,8 @@ import {InkLinkTarget} from '../inkLink/inkLink';
 import {Rect} from '../inkLink/hitTest';
 import {
   insertInkLink,
+  closeViewAndSelect,
   insertInkLinkInNoteFile,
-  selectInkLink,
 } from '../inkLink/noteBridge';
 import {
   ensureFileReadPermission,
@@ -552,27 +552,25 @@ export async function openCardNote(
       logInkLink(`note: openFile ${path}: ${describe(opened)}`);
       return false;
     }
-    // The host drops the lasso while the plugin view shows: close it first.
-    await PluginManager.closePluginView();
-    if (title) {
-      const current = await waitForCurrentFile(path);
-      if (!current) {
-        logInkLink('note: opened note not current, title not selected');
-      } else {
-        // A title the file refused is placed now, in the middle of the page.
-        const rect = title.missing
-          ? await insertInkLink(title.missing.target, title.missing.name)
-          : title.rect;
-        if (title.missing) {
-          logInkLink(
-            `note: title placed after opening: ${rect ? 'ok' : 'failed'}`,
-          );
-        }
-        if (rect) {
-          await selectInkLink(rect);
-        }
+    let rect: Rect | null = null;
+    // Waited for while the view still shows: JavaScript timers may stop
+    // once it is closed and the plugin goes to the background.
+    if (title && (await waitForCurrentFile(path))) {
+      // A title the file refused is placed now, in the middle of the page.
+      rect = title.missing
+        ? await insertInkLink(title.missing.target, title.missing.name)
+        : title.rect;
+      if (title.missing) {
+        logInkLink(
+          `note: title placed after opening: ${rect ? 'ok' : 'failed'}`,
+        );
       }
+    } else if (title) {
+      logInkLink('note: opened note not current, title not selected');
     }
+    // The host drops the lasso while the plugin view shows: the view is
+    // closed before the title is selected.
+    await closeViewAndSelect(rect);
     return true;
   } catch (error) {
     logInkLink(`note: open ${path}: ${String(error)}`);

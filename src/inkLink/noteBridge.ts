@@ -1,4 +1,5 @@
 import {
+  FileUtils,
   PluginCommAPI,
   PluginFileAPI,
   PluginManager,
@@ -9,7 +10,8 @@ import {
 
 import {FALLBACK_PAGE_SIZE} from '../plugin/lassoText';
 import {openInkLinkIntent} from '../plugin/launchIntent';
-import {Permission} from '../plugin/permissions';
+import {ensurePermission, Permission} from '../plugin/permissions';
+import {cardNotesDir} from '../startWork/noteFiles';
 import {logInkLink} from './diagnostics';
 import {clearPendingBinding} from './lassoBinding';
 import {
@@ -185,8 +187,8 @@ async function insertIcon(
   destination: LinkDestination,
 ): Promise<string> {
   const {location} = destination;
-  const dir = await PluginManager.getPluginDirPath();
-  if (!dir) {
+  const picturePath = await sharedIconPath();
+  if (!picturePath) {
     return 'no plugin dir';
   }
   const element = await createElement(NoteElementType.Picture);
@@ -198,10 +200,48 @@ async function insertIcon(
   element.pageNum = location.page;
   element.picture = {
     ...(element.picture ?? {}),
-    picturePath: `${dir.replace(/\/+$/, '')}/${ICON_FILE_NAME}`,
+    picturePath,
     rect: convertRect(rect, point => PointUtils.androidPoint2Emr(point, size)),
   };
-  return (await insertElement(element, destination, 'icon')) ? 'ok' : 'failed';
+  return (await insertElement(element, destination, 'icon'))
+    ? `ok (${picturePath})`
+    : 'failed';
+}
+
+/** Name of the icon's copy next to the card notes, hidden by its dot. */
+const SHARED_ICON_NAME = '.s-INK-icon.png';
+
+/**
+ * Path of the app icon for the note app. The copy next to the bundle lies
+ * in the plugin host's private folder, which the note app may not read
+ * (the icon was accepted but not drawn): it is copied once to the shared
+ * `Note/s-INK` folder. Falls back on the private copy.
+ */
+async function sharedIconPath(): Promise<string | null> {
+  const dir = await PluginManager.getPluginDirPath();
+  if (!dir) {
+    return null;
+  }
+  const source = `${dir.replace(/\/+$/, '')}/${ICON_FILE_NAME}`;
+  try {
+    const notesDir = cardNotesDir(await FileUtils.getExportPath());
+    const shared = `${notesDir}/${SHARED_ICON_NAME}`;
+    if (await FileUtils.exists(shared)) {
+      return shared;
+    }
+    if (!(await ensurePermission(Permission.FileWrite))) {
+      logInkLink('icon: no write permission, private copy used');
+      return source;
+    }
+    await FileUtils.makeDir(notesDir);
+    const copied = await FileUtils.copyFile(source, shared);
+    const exists = await FileUtils.exists(shared);
+    logInkLink(`icon: copy to ${shared}: ${copied}, exists ${exists}`);
+    return exists ? shared : source;
+  } catch (error) {
+    logInkLink(`icon: copy failed (${String(error)}), private copy used`);
+    return source;
+  }
 }
 
 function close(
@@ -301,8 +341,10 @@ export async function insertInkLink(
 /** Space kept around a link when it is selected. */
 const SELECTION_MARGIN = 12;
 
-/** How long the host takes to hide the plugin view before the lasso. */
-const VIEW_CLOSE_DELAY_MS = 300;
+/** How long the lasso is asked again while the plugin view goes away. */
+const LASSO_RETRY_MS = 3000;
+/** Upper bound of lasso attempts, should the host answer at once. */
+const LASSO_MAX_ATTEMPTS = 200;
 
 /**
  * Closes the plugin view, then selects a link just placed on the current
@@ -316,21 +358,49 @@ export async function closeViewAndSelect(rect: Rect | null): Promise<void> {
     logInkLink(`close view: ${String(error)}`);
   }
   if (rect) {
-    await new Promise<void>(resolve =>
-      setTimeout(resolve, VIEW_CLOSE_DELAY_MS),
-    );
     await selectInkLink(rect);
   }
 }
 
-/** Selects a link of the current page with the lasso, with a small margin. */
-export function selectInkLink(rect: Rect): Promise<boolean> {
-  return lassoRect({
+/**
+ * Selects a link of the current page with the lasso, with a small margin.
+ * Called once the plugin view is closed, when JavaScript timers may no
+ * longer fire (the plugin is in the background): instead of waiting with
+ * `setTimeout`, the lasso is asked again until it succeeds or the time is
+ * up, each attempt being a call to the host.
+ */
+export async function selectInkLink(rect: Rect): Promise<boolean> {
+  const padded = {
     left: rect.left - SELECTION_MARGIN,
     top: rect.top - SELECTION_MARGIN,
     right: rect.right + SELECTION_MARGIN,
     bottom: rect.bottom + SELECTION_MARGIN,
-  });
+  };
+  const deadline = Date.now() + LASSO_RETRY_MS;
+  let attempts = 0;
+  let answer = '';
+  while (attempts < LASSO_MAX_ATTEMPTS) {
+    attempts += 1;
+    try {
+      const response = await PluginCommAPI.lassoElements(padded);
+      if ((response as SdkResponse<unknown> | null)?.success === true) {
+        answer = 'ok';
+        break;
+      }
+      answer = errorOf(response);
+    } catch (error) {
+      answer = String(error);
+    }
+    if (Date.now() > deadline) {
+      break;
+    }
+  }
+  logInkLink(
+    `lasso ${Math.round(padded.left)},${Math.round(padded.top)}-${Math.round(
+      padded.right,
+    )},${Math.round(padded.bottom)}: ${answer} after ${attempts} attempt(s)`,
+  );
+  return answer === 'ok';
 }
 
 /**
@@ -356,27 +426,6 @@ export async function insertInkLinkInNoteFile(
   } catch (error) {
     logInkLink(`insert in ${path}: ${String(error)}`);
     return null;
-  }
-}
-
-/**
- * Selects a rectangle of the current note page with the lasso, so that
- * what it holds can be moved at once. The plugin view must be closed: the
- * host drops the lasso while the view shows.
- */
-async function lassoRect(rect: Rect): Promise<boolean> {
-  try {
-    const response = await PluginCommAPI.lassoElements(rect);
-    const ok = (response as SdkResponse<unknown> | null)?.success === true;
-    logInkLink(
-      `lasso ${Math.round(rect.left)},${Math.round(rect.top)}-${Math.round(
-        rect.right,
-      )},${Math.round(rect.bottom)}: ${ok ? 'ok' : errorOf(response)}`,
-    );
-    return ok;
-  } catch (error) {
-    logInkLink(`lasso: ${String(error)}`);
-    return false;
   }
 }
 
