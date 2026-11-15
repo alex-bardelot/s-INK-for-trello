@@ -8,13 +8,14 @@ import {Button} from './Button';
 import {WifiOffIcon} from './WifiOffIcon';
 
 /**
- * Size of the Wi-Fi off sign: a little more than the Settings gear (24),
- * since its thin arcs weigh less than the solid gear.
+ * Size of the Wi-Fi sign: a little more than the Settings gear (24),
+ * since its thin grey arcs weigh less than the solid gear.
  */
 const ICON_SIZE = 30;
 
-function wifiOffIcon(color: string, background: string): React.ReactNode {
-  return <WifiOffIcon size={ICON_SIZE} color={color} background={background} />;
+/** Always the light grey sign, pressed or not, like the tablet's. */
+function wifiOffIcon(): React.ReactNode {
+  return <WifiOffIcon size={ICON_SIZE} />;
 }
 
 /**
@@ -94,11 +95,7 @@ export function OfflinePopup({
       {/* Taps on the card itself do not close it. */}
       <Pressable style={styles.card} onPress={() => {}}>
         <View style={styles.header}>
-          <WifiOffIcon
-            size={ICON_SIZE * 2}
-            color={colors.foreground}
-            background={colors.background}
-          />
+          <WifiOffIcon size={ICON_SIZE * 2} />
           <Text accessibilityRole="header" style={styles.title}>
             {t('offline.popupTitle')}
           </Text>

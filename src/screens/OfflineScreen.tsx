@@ -26,11 +26,7 @@ export function OfflineScreen({onRetry}: OfflineScreenProps): React.JSX.Element 
   return (
     <ScreenFrame title={t('app.name')} hideOfflineButton>
       <View style={styles.center}>
-        <WifiOffIcon
-          size={64}
-          color={colors.foreground}
-          background={colors.background}
-        />
+        <WifiOffIcon size={64} />
         <Text accessibilityRole="header" style={styles.title}>
           {t('offline.title')}
         </Text>

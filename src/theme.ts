@@ -14,6 +14,8 @@ export const colors = {
   labelBorder: '#8A8A8A',
   /** Fallback disc behind member initials. */
   avatar: '#D0D0D0',
+  /** Light Wi-Fi sign while offline, like the tablet's own when Wi-Fi is off. */
+  wifiOff: '#8A8A8A',
 } as const;
 
 export const spacing = {

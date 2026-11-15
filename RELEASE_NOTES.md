@@ -3,6 +3,13 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.44.1 — Light Wi-Fi sign
+
+- The **Offline** button, the offline popup and the offline page show the
+  Wi-Fi sign like the tablet does when its Wi-Fi is off: the three thin
+  arcs and the dot in light grey (new `colors.wifiOff`), no longer
+  crossed out.
+
 ## 0.44.0 — Offline button in the header
 
 - While the tablet has no internet, an **Offline** button with a Wi-Fi
