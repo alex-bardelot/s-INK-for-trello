@@ -2,6 +2,7 @@ import {Image} from 'react-native';
 import {PluginManager} from 'sn-plugin-lib';
 
 import {i18n} from '../i18n';
+import {diagnosticsUnlocked} from '../settings/rapidTaps';
 import {
   AppType,
   ButtonId,
@@ -18,7 +19,8 @@ const ICON_URI = Image.resolveAssetSource(require('../../assets/icon.png')).uri;
  * - the lasso toolbar button of NOTE, shown when the selection contains
  *   handwriting or text, which turns the selection into a Trello card;
  * - the lasso button of NOTE that links the selection to a card or board;
- * - a diagnostic lasso button of NOTE that logs the selected elements.
+ * - once Diagnostics is unlocked, a diagnostic lasso button of NOTE that
+ *   logs the selected elements.
  *
  * @returns `true` if the host accepted every registration.
  */
@@ -54,21 +56,34 @@ export async function registerButtons(): Promise<boolean> {
         LassoDataType.Geometry,
       ],
     }),
-    PluginManager.registerButton(ButtonType.Lasso, [AppType.Note], {
-      id: ButtonId.LassoInspect,
-      name: i18n.t('button.lasso.inspect'),
-      icon: ICON_URI,
-      // Only writes to the s-INK log; the view stays closed.
-      showType: ButtonShowType.EventOnly,
-      editDataTypes: [
-        LassoDataType.Stroke,
-        LassoDataType.Text,
-        LassoDataType.Image,
-        LassoDataType.Link,
-      ],
-    }),
+    diagnosticsUnlocked()
+      ? registerInspectButton()
+      : // A registration may outlive the run that unlocked it.
+        PluginManager.unregisterButton(ButtonId.LassoInspect).then(() => true),
   ]);
   return results.every(Boolean);
+}
+
+/**
+ * Registers the diagnostic lasso button "s-INK: Inspect", shown only once
+ * the Diagnostics category of Settings is unlocked.
+ *
+ * @returns `true` if the host accepted it.
+ */
+export async function registerInspectButton(): Promise<boolean> {
+  return PluginManager.registerButton(ButtonType.Lasso, [AppType.Note], {
+    id: ButtonId.LassoInspect,
+    name: i18n.t('button.lasso.inspect'),
+    icon: ICON_URI,
+    // Only writes to the s-INK log; the view stays closed.
+    showType: ButtonShowType.EventOnly,
+    editDataTypes: [
+      LassoDataType.Stroke,
+      LassoDataType.Text,
+      LassoDataType.Image,
+      LassoDataType.Link,
+    ],
+  });
 }
 
 /**

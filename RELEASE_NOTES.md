@@ -3,6 +3,14 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.33.1 — Inspect lasso button only in diagnostic mode
+
+- The **s-INK: Inspect** lasso button is no longer registered at
+  startup. It appears once the Diagnostics category is unlocked (7 quick
+  presses on About), and is removed again at the next start.
+- Unlocking registers the button right away. A change of system
+  language keeps it only while diagnostics is unlocked.
+
 ## 0.33.0 — Hidden Diagnostics category in Settings
 
 - The s-INK link log moves from About to a **Diagnostics** category of

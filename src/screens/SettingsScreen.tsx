@@ -31,6 +31,7 @@ import {
 import {Switch} from '../components/Switch';
 import {BoardsPreferences} from '../boards/preferences';
 import {useTranslation} from '../i18n';
+import {registerInspectButton} from '../plugin/buttons';
 import {TokenStorage} from '../session/trelloSession';
 import {
   diagnosticsUnlocked,
@@ -110,6 +111,9 @@ export function SettingsScreen({
     setCategory(value);
     if (value === 'about' && !showDiagnostics && aboutTaps.tap()) {
       unlockDiagnostics();
+      registerInspectButton().catch(error =>
+        console.warn('[sINK] Failed to show the Inspect button', error),
+      );
       setShowDiagnostics(true);
       setCategory('diagnostics');
     }
