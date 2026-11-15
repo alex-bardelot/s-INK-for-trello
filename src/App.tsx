@@ -15,7 +15,7 @@ import {BoardScreen} from './screens/BoardScreen';
 import {BoardsScreen} from './screens/BoardsScreen';
 import {ConnectScreen} from './screens/ConnectScreen';
 import {CreateCardScreen} from './screens/CreateCardScreen';
-import {SettingsScreen} from './screens/SettingsScreen';
+import {SettingsCategory, SettingsScreen} from './screens/SettingsScreen';
 import {StatusScreen} from './screens/StatusScreen';
 import {useTrelloSession} from './session/useTrelloSession';
 import {TrelloBoard} from './trello';
@@ -45,6 +45,10 @@ export default function App(): React.JSX.Element {
     'idle',
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Kept here so that Settings comes back to the same category after the
+  // connection screen opened over it.
+  const [settingsCategory, setSettingsCategory] =
+    useState<SettingsCategory>('boards');
   const [connectOpen, setConnectOpen] = useState(false);
   const [boardsPreferences, setBoardsPreferences] = useState(
     DEFAULT_BOARDS_PREFERENCES,
@@ -221,6 +225,8 @@ export default function App(): React.JSX.Element {
   if (settingsOpen) {
     return (
       <SettingsScreen
+        category={settingsCategory}
+        onCategoryChange={setSettingsCategory}
         store={session.settingsStore}
         member={account?.member ?? null}
         tokenStorage={account?.tokenStorage}
@@ -249,7 +255,10 @@ export default function App(): React.JSX.Element {
         onPreferencesChange={updateBoardsPreferences}
         ensureNetwork={session.ensureNetwork}
         onOpenBoard={setOpenBoard}
-        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenSettings={() => {
+          setSettingsCategory('boards');
+          setSettingsOpen(true);
+        }}
         onConnect={() => setConnectOpen(true)}
         onTokenRejected={session.retry}
       />

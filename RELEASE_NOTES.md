@@ -3,6 +3,13 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.38.3 — Settings come back to the Trello category after connecting
+
+- Connecting from Settings > Trello no longer brings Settings back to
+  the Boards category: the selected category is kept by `App`, so the
+  connection screen returns to Trello. Opening Settings from the boards
+  page still starts on Boards.
+
 ## 0.38.2 — "Quick connect button" option
 
 - In Settings > Trello, signed out, the switch showing the connect card

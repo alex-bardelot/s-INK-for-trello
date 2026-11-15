@@ -52,6 +52,12 @@ import {borders, colors, spacing, typography} from '../theme';
 const AVATAR_SIZE = 64;
 
 export interface SettingsScreenProps {
+  /**
+   * Selected category, kept by the parent so that it survives the
+   * connection screen opening over Settings.
+   */
+  category: SettingsCategory;
+  onCategoryChange: (category: SettingsCategory) => void;
   /** Where the board view settings are kept. */
   store: KeyValueStore;
   /** The connected member; without one, the account section offers to connect. */
@@ -81,6 +87,8 @@ export interface SettingsScreenProps {
  * its token is kept); "About" the version and the non-affiliation notice.
  */
 export function SettingsScreen({
+  category,
+  onCategoryChange: setCategory,
   store,
   member,
   tokenStorage,
@@ -95,7 +103,6 @@ export function SettingsScreen({
   onBack,
 }: SettingsScreenProps): React.JSX.Element {
   const {t} = useTranslation();
-  const [category, setCategory] = useState<SettingsCategory>('boards');
   // Diagnostics is hidden until About is pressed 7 times quickly.
   const [showDiagnostics, setShowDiagnostics] = useState(diagnosticsUnlocked);
   const aboutTaps = useRef(new RapidTapCounter()).current;
@@ -221,7 +228,7 @@ export function SettingsScreen({
 }
 
 /** Categories of the left column, like the Supernote system settings. */
-type SettingsCategory =
+export type SettingsCategory =
   | 'boards'
   | 'links'
   | 'trello'
