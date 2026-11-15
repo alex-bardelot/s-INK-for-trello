@@ -75,11 +75,10 @@ export interface SettingsScreenProps {
 /**
  * Settings that are rarely needed, kept off the boards page. Laid out like
  * the Supernote system settings: categories in a left column, separated by
- * dotted lines, and the selected one's settings on the right. "Boards"
- * holds the public boards and the board layouts; "Board mode" the mode
- * boards open in; "Links" the tool opening s-INK links; "Trello" the
- * connected account (and where its token is kept); "About" the version and
- * the non-affiliation notice.
+ * dotted lines, and the selected one's sections on the right. "Boards"
+ * holds the public boards, board layouts and board mode sections; "Links"
+ * the tool opening s-INK links; "Trello" the connected account (and where
+ * its token is kept); "About" the version and the non-affiliation notice.
  */
 export function SettingsScreen({
   store,
@@ -103,7 +102,6 @@ export function SettingsScreen({
 
   const categories: {value: SettingsCategory; label: string}[] = [
     {value: 'boards', label: t('settings.boards')},
-    {value: 'mode', label: t('settings.boardMode')},
     {value: 'links', label: t('settings.links')},
     {value: 'trello', label: t('settings.trello')},
     {value: 'about', label: t('settings.about')},
@@ -175,9 +173,9 @@ export function SettingsScreen({
               </Section>
 
               <BoardLayoutSettings store={store} />
+
+              <BoardModeSettings store={store} />
             </>
-          ) : category === 'mode' ? (
-            <BoardModeSettings store={store} />
           ) : category === 'links' ? (
             <NoteLinkSettings store={store} />
           ) : category === 'trello' ? (
@@ -221,7 +219,6 @@ export function SettingsScreen({
 /** Categories of the left column, like the Supernote system settings. */
 type SettingsCategory =
   | 'boards'
-  | 'mode'
   | 'links'
   | 'trello'
   | 'about'

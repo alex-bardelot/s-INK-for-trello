@@ -3,6 +3,11 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.37.1 — Board mode back in the Boards category
+
+- The board mode is no longer a category of its own: it is the
+  **Board mode** section of the Boards category, after Board layouts.
+
 ## 0.37.0 — Board layouts and a Board mode category in Settings
 
 - In Settings > Boards, the Supernote Roadmap gets the same bullet as
