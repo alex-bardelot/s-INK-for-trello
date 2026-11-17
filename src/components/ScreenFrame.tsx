@@ -43,6 +43,8 @@ export interface ScreenFrameProps {
    * offline buttons are then left out.
    */
   dialog?: DialogBar;
+  /** Popup of the page, drawn over the whole of it, title bar included. */
+  overlay?: React.ReactNode;
 }
 
 /** The two actions of a dialog title bar. */
@@ -70,6 +72,7 @@ export function ScreenFrame({
   hideOfflineButton,
   settingsCategory,
   dialog,
+  overlay,
 }: ScreenFrameProps): React.JSX.Element {
   const {t} = useTranslation();
   const openSettings = useSettingsOpener();
@@ -94,6 +97,7 @@ export function ScreenFrame({
       <View style={styles.container}>
         <DialogHeader title={title} bar={dialog} />
         <View style={[styles.content, flush && styles.flush]}>{children}</View>
+        {overlay}
         {offline.failed && <OfflinePopup onClose={offline.dismiss} />}
       </View>
     );
@@ -153,6 +157,7 @@ export function ScreenFrame({
         </Pressable>
       </View>
       <View style={[styles.content, flush && styles.flush]}>{children}</View>
+      {overlay}
       {offline.failed && <OfflinePopup onClose={offline.dismiss} />}
     </View>
   );

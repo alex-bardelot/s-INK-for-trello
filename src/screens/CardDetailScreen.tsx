@@ -18,15 +18,18 @@ import {
   formatCardDate,
   paginateBlocks,
 } from '../cards/detail';
+import {Button} from '../components/Button';
 import {InsertInkLinkButton} from '../components/InsertInkLinkButton';
 import {LabelChip} from '../components/LabelChip';
 import {MemberAvatar} from '../components/MemberAvatar';
+import {Popup} from '../components/Popup';
 import {RefreshIcon} from '../components/RefreshIcon';
 import {HEADER_ICON_SIZE, ScreenFrame} from '../components/ScreenFrame';
 import {SmallButton} from '../components/SmallButton';
 import {NoteIcon, StartIcon} from '../components/ActionIcons';
 import {TranslationKey, useTranslation} from '../i18n';
 import {toSessionError} from '../session/trelloSession';
+import {StartWorkPreviewStep} from '../startWork/plan';
 import {StartWorkStep} from '../startWork/startWork';
 import {
   NoteOutcome,
@@ -147,12 +150,31 @@ export function CardDetailScreen({
     onTokenRejected,
   });
 
+  // What Start is about to do is listed first, to be confirmed or cancelled.
+  // With nothing to list (every action turned off), it runs and says so.
+  const [confirming, setConfirming] = useState(false);
+  const askStart = () =>
+    startWork.preview.length > 0 ? setConfirming(true) : startWork.start();
+  const confirmStart = () => {
+    setConfirming(false);
+    startWork.start();
+  };
+
   return (
     <ScreenFrame
       title={boardName}
       onBack={onBack}
       // The card's Start button follows the Start work settings.
       settingsCategory="startWork"
+      overlay={
+        confirming && (
+          <StartWorkConfirmPopup
+            steps={startWork.preview}
+            onCancel={() => setConfirming(false)}
+            onConfirm={confirmStart}
+          />
+        )
+      }
       actions={
         <>
           {/* Not offered again once the card is started, unless running. */}
@@ -161,7 +183,7 @@ export function CardDetailScreen({
               label={t(startWork.busy ? 'startWork.busy' : 'startWork.start')}
               accessibilityLabel={t('startWork.startHint')}
               disabled={startWork.busy || state.status !== 'loaded'}
-              onPress={startWork.start}
+              onPress={askStart}
               icon={StartIcon}
             />
           )}
@@ -237,6 +259,64 @@ function fromBoardCard(card: TrelloBoardCard): TrelloCardDetail {
     labels: card.labels ?? [],
     idMembers: card.idMembers ?? [],
   };
+}
+
+/** One step Start is about to take, in the user's language. */
+function describePreviewStep(
+  step: StartWorkPreviewStep,
+  t: ReturnType<typeof useTranslation>['t'],
+): string {
+  switch (step.kind) {
+    case 'assign':
+      return t('startWork.previewAssign');
+    case 'removeLabel':
+      return t('startWork.previewRemoveLabel', {name: step.name});
+    case 'addLabel':
+      return t('startWork.previewAddLabel', {name: step.name});
+    case 'move':
+      return t('startWork.previewMove', {name: step.name});
+    case 'createNote':
+      return t('startWork.previewCreateNote');
+    case 'openNote':
+      return t('startWork.previewOpenNote');
+  }
+}
+
+/**
+ * Asks before Start runs: lists what it is about to do on the card, with
+ * Cancel and Start work.
+ */
+function StartWorkConfirmPopup({
+  steps,
+  onCancel,
+  onConfirm,
+}: {
+  steps: readonly StartWorkPreviewStep[];
+  onCancel: () => void;
+  onConfirm: () => void;
+}): React.JSX.Element {
+  const {t} = useTranslation();
+  return (
+    <Popup
+      title={t('startWork.confirmTitle')}
+      onClose={onCancel}
+      actions={
+        <>
+          <Button label={t('common.cancel')} onPress={onCancel} />
+          <Button primary label={t('startWork.start')} onPress={onConfirm} />
+        </>
+      }>
+      <Text style={styles.popupText}>{t('startWork.confirmIntro')}</Text>
+      <View style={styles.popupSteps}>
+        {steps.map((step, index) => (
+          <Text key={index} style={styles.popupText}>
+            {`→ ${describePreviewStep(step, t)}`}
+          </Text>
+        ))}
+      </View>
+      <Text style={styles.popupHint}>{t('startWork.confirmSettings')}</Text>
+    </Popup>
+  );
 }
 
 /** One line of the Start report, in the user's language. */
@@ -695,6 +775,18 @@ const styles = StyleSheet.create({
   message: {
     color: colors.foreground,
     fontSize: typography.body,
+  },
+  popupText: {
+    color: colors.foreground,
+    fontSize: typography.label,
+  },
+  popupSteps: {
+    gap: spacing.xs,
+    marginLeft: spacing.sm,
+  },
+  popupHint: {
+    color: colors.foreground,
+    fontSize: typography.small,
   },
   failure: {
     gap: spacing.md,

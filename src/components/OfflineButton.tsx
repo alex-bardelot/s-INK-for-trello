@@ -1,10 +1,11 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
-import {Pressable, StyleSheet, Text, View} from 'react-native';
+import {Pressable, StyleSheet, Text} from 'react-native';
 
 import {useTranslation} from '../i18n';
 import {connectivity} from '../network/connectivity';
-import {borders, colors, spacing, typography} from '../theme';
+import {colors, spacing, typography} from '../theme';
 import {Button} from './Button';
+import {Popup} from './Popup';
 import {WifiOffIcon} from './WifiOffIcon';
 
 /**
@@ -91,26 +92,15 @@ export function OfflinePopup({
 }): React.JSX.Element {
   const {t} = useTranslation();
   return (
-    <Pressable
-      accessibilityViewIsModal
-      style={styles.backdrop}
-      onPress={onClose}>
-      {/* Taps on the card itself do not close it. */}
-      <Pressable style={styles.card} onPress={() => {}}>
-        <View style={styles.header}>
-          <WifiOffIcon size={ICON_SIZE * 2} />
-          <Text accessibilityRole="header" style={styles.title}>
-            {t('offline.popupTitle')}
-          </Text>
-        </View>
-        <Text accessibilityRole="alert" style={styles.message}>
-          {t('offline.popupMessage')}
-        </Text>
-        <View style={styles.actions}>
-          <Button primary label={t('common.ok')} onPress={onClose} />
-        </View>
-      </Pressable>
-    </Pressable>
+    <Popup
+      title={t('offline.popupTitle')}
+      icon={<WifiOffIcon size={ICON_SIZE * 2} />}
+      onClose={onClose}
+      actions={<Button primary label={t('common.ok')} onPress={onClose} />}>
+      <Text accessibilityRole="alert" style={styles.message}>
+        {t('offline.popupMessage')}
+      </Text>
+    </Popup>
   );
 }
 
@@ -118,40 +108,8 @@ const styles = StyleSheet.create({
   iconButton: {
     padding: spacing.sm,
   },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xl,
-    // Faded page behind, without the grey e-ink renders poorly.
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-  },
-  card: {
-    maxWidth: 560,
-    width: '100%',
-    gap: spacing.md,
-    backgroundColor: colors.background,
-    borderColor: colors.foreground,
-    borderWidth: borders.width * 2,
-    borderRadius: borders.radius * 2,
-    padding: spacing.lg,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  title: {
-    flex: 1,
-    color: colors.foreground,
-    fontSize: typography.heading,
-    fontWeight: '700',
-  },
   message: {
     color: colors.foreground,
     fontSize: typography.label,
-  },
-  actions: {
-    alignItems: 'flex-end',
   },
 });

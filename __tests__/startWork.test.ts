@@ -1,4 +1,9 @@
-import {cardIsStarted, planIsEmpty, planStartWork} from '../src/startWork/plan';
+import {
+  cardIsStarted,
+  planIsEmpty,
+  planStartWork,
+  previewStartWork,
+} from '../src/startWork/plan';
 import {
   boardNotesDir,
   cardNoteFileName,
@@ -356,6 +361,53 @@ describe('cardIsStarted', () => {
       createNote: false,
     });
     expect(cardIsStarted(card, 'To do', off, ME, false)).toBe(true);
+  });
+});
+
+describe('previewStartWork', () => {
+  it('lists the steps Start is about to take, in its order', () => {
+    const settings = settingsWith({moveToList: true, listName: ' In progress '});
+    expect(previewStartWork(card, 'To do', settings, ME, false)).toEqual([
+      {kind: 'assign'},
+      {kind: 'removeLabel', name: 'todo'},
+      {kind: 'addLabel', name: 'WIP'},
+      {kind: 'move', name: 'In progress'},
+      {kind: 'createNote'},
+    ]);
+  });
+
+  it('leaves out what is already done, and opens a note found', () => {
+    const done = {
+      idList: 'list-doing',
+      idMembers: [ME],
+      labels: [{id: 'l-wip', name: 'wip'}],
+    };
+    const settings = settingsWith({moveToList: true, listName: 'In progress'});
+    expect(previewStartWork(done, 'in progress', settings, ME, true)).toEqual(
+      [{kind: 'openNote'}],
+    );
+  });
+
+  it('keeps a label both taken off and put on, and skips turned off steps', () => {
+    const settings = settingsWith({
+      assignMe: false,
+      removeLabelNames: ['Bug'],
+      addLabelNames: ['bug'],
+      createNote: false,
+    });
+    expect(previewStartWork(card, 'To do', settings, ME, false)).toEqual([]);
+  });
+
+  it('lists a label even if the board may lack it', () => {
+    const settings = settingsWith({
+      assignMe: false,
+      removeLabelNames: [],
+      addLabelNames: ['Urgent'],
+      createNote: false,
+    });
+    expect(previewStartWork(card, 'To do', settings, ME, false)).toEqual([
+      {kind: 'addLabel', name: 'Urgent'},
+    ]);
   });
 });
 

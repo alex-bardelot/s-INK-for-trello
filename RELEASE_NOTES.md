@@ -3,6 +3,21 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.59.0 — Start work asks first
+
+- The card's **Start** button is now called **Start work**, like its
+  Settings category (in French, both are now **Commencer le travail**
+  instead of **Démarrer**). The report afterwards says "Work started".
+- Before it runs, **Start work** opens a popup listing the steps it is
+  about to take on this card: assign you, take off or put on each label
+  by name, move the card to the list, create (or open) its note. Steps
+  already done, or turned off, are left out. **Cancel** closes the popup
+  without changing anything; **Start work** runs them.
+- The text at the top of **Settings › Start work** now explains when to
+  use the button, where it is, and lists its steps with arrows, then says
+  that a step turned off is skipped and that the steps are confirmed
+  before they run.
+
 ## 0.58.2 — Nomad goal at €480
 
 - The **Support s-INK** funding goal is now €480: the Nomad €402 and the

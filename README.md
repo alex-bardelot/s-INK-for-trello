@@ -37,7 +37,8 @@ Other Supernote devices that support plugins may work but are not tested.
   New card sets how many labels and members are suggested, whether the
   member is assigned by default, and whether the selection is linked to
   the new card once created.
-- **Start** button on the cards of boards the member can edit: assigns the
+- **Start work** button on the cards of boards the member can edit, which
+  lists its steps in a popup to confirm before it runs: assigns the
   member, swaps labels (e.g. removes `TODO`, adds `WIP`), moves the card to
   a chosen list and creates a note for it,
   `Note/s-INK for Trello/{board name}/{card name}.note`, titled with an

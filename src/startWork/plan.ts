@@ -102,6 +102,71 @@ export function planIsEmpty(plan: StartWorkPlan): boolean {
   );
 }
 
+/** One step Start is about to take, listed before it runs. */
+export type StartWorkPreviewStep =
+  | {kind: 'assign'}
+  | {kind: 'removeLabel'; name: string}
+  | {kind: 'addLabel'; name: string}
+  | {kind: 'move'; name: string}
+  | {kind: 'createNote'}
+  | {kind: 'openNote'};
+
+/**
+ * What Start is about to do on a card, from the card and the settings
+ * alone, to be confirmed before it runs: the board is not read, so a label
+ * or list the board lacks is still listed (the report says so afterwards).
+ * Steps with nothing to change are left out, in the order Start takes them.
+ *
+ * @param listName - Name of the card's list.
+ * @param hasNote - The card's note was found: Start opens it again.
+ */
+export function previewStartWork(
+  card: StartWorkCard,
+  listName: string,
+  settings: StartWorkSettings,
+  memberId: string,
+  hasNote: boolean,
+): StartWorkPreviewStep[] {
+  const steps: StartWorkPreviewStep[] = [];
+  if (settings.assignMe && !!memberId && !card.idMembers.includes(memberId)) {
+    steps.push({kind: 'assign'});
+  }
+
+  const addKeys = new Set(settings.addLabelNames.map(labelKey));
+  for (const label of card.labels) {
+    const key = labelKey(label.name ?? '');
+    if (
+      key &&
+      !addKeys.has(key) &&
+      settings.removeLabelNames.some(name => labelKey(name) === key)
+    ) {
+      steps.push({kind: 'removeLabel', name: label.name});
+    }
+  }
+  const onCard = new Set(card.labels.map(label => labelKey(label.name ?? '')));
+  for (const name of settings.addLabelNames) {
+    const key = labelKey(name);
+    if (key && !onCard.has(key)) {
+      onCard.add(key);
+      steps.push({kind: 'addLabel', name: name.trim()});
+    }
+  }
+
+  const target = cleanName(settings.listName);
+  if (
+    settings.moveToList &&
+    target &&
+    labelKey(listName) !== labelKey(target)
+  ) {
+    steps.push({kind: 'move', name: target});
+  }
+
+  if (settings.createNote) {
+    steps.push({kind: hasNote ? 'openNote' : 'createNote'});
+  }
+  return steps;
+}
+
 /**
  * Whether Start was already done on a card, as the settings say it: the
  * member assigned, none of the labels taken off still on it, all those put

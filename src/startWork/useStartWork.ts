@@ -6,7 +6,12 @@ import {TrelloClient} from '../trello/TrelloClient';
 import {TrelloCardDetail} from '../trello/types';
 import {createCardNote, findCardNote, openCardNote} from './cardNote';
 import {fileNameOf} from './noteFiles';
-import {cardIsStarted} from './plan';
+import {
+  cardIsStarted,
+  previewStartWork,
+  StartWorkCard,
+  StartWorkPreviewStep,
+} from './plan';
 import {
   loadStartWorkSettings,
   StartWorkSettings,
@@ -40,6 +45,8 @@ export interface StartWorkControls {
   notePath: string | null;
   /** Start was already done on the card: it is not offered again. */
   started: boolean;
+  /** What Start is about to do, confirmed before it runs. */
+  preview: StartWorkPreviewStep[];
   busy: boolean;
   report: StartWorkReport | null;
   start: () => void;
@@ -97,20 +104,26 @@ export function useStartWork({
       active = false;
     };
   }, [store, card]);
+  const current: StartWorkCard | null = card && {
+    idList: card.idList,
+    idMembers: card.idMembers ?? [],
+    labels: card.labels ?? [],
+  };
+  const currentList = card?.list?.name ?? listName;
   const started =
-    !!card &&
+    !!current &&
     !!savedSettings &&
-    cardIsStarted(
-      {
-        idList: card.idList,
-        idMembers: card.idMembers ?? [],
-        labels: card.labels ?? [],
-      },
-      card.list?.name ?? listName,
-      savedSettings,
-      memberId,
-      !!notePath,
-    );
+    cardIsStarted(current, currentList, savedSettings, memberId, !!notePath);
+  const preview =
+    current && savedSettings
+      ? previewStartWork(
+          current,
+          currentList,
+          savedSettings,
+          memberId,
+          !!notePath,
+        )
+      : [];
 
   // The Open note button shows if the card already has one. Never prompts here,
   // nor reads every note: a note of a renamed card is found on Start.
@@ -248,6 +261,7 @@ export function useStartWork({
   return {
     notePath,
     started,
+    preview,
     busy,
     report,
     start,
