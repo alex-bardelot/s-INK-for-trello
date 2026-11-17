@@ -261,6 +261,7 @@ describe('TrelloClient', () => {
     await client.removeCardLabel('c1', 'l2');
     await client.createCardLabel('c1', 'Doing');
     await client.moveCard('c1', 'list2');
+    await client.archiveCard('c1');
     const calls = fetchImpl.mock.calls.map(([url, init]) => [
       init.method,
       url,
@@ -280,6 +281,7 @@ describe('TrelloClient', () => {
         'https://api.trello.com/1/cards/c1',
         {idList: 'list2', pos: 'top'},
       ],
+      ['PUT', 'https://api.trello.com/1/cards/c1', {closed: true}],
     ]);
   });
 });

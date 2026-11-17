@@ -1,7 +1,7 @@
 import React, {useCallback, useState} from 'react';
 import {PluginManager} from 'sn-plugin-lib';
 
-import {useTranslation} from '../i18n';
+import {TranslationKey, useTranslation} from '../i18n';
 import {InkLinkTarget} from '../inkLink/inkLink';
 import {bindPendingSelection, usePendingBinding} from '../inkLink/lassoBinding';
 import {closeViewAndSelect, insertInkLink} from '../inkLink/noteBridge';
@@ -14,18 +14,28 @@ export interface InsertInkLinkButtonProps {
   name: string;
 }
 
+export interface InkLinkAction {
+  /** Links the target, then closes the plugin view to show the note. */
+  link: () => Promise<void>;
+  busy: boolean;
+  /** Words of the action: link the lasso selection, or link in the note. */
+  label: TranslationKey;
+  hint: TranslationKey;
+}
+
 /**
- * Title bar button that links the current card or board to the note, then
- * closes the plugin view to show it:
+ * Links a card or board to the note, then closes the plugin view to show
+ * it:
  * - after the lasso "Insert Trello Link" button, it links the selection;
  * - otherwise it places an s-INK link in the middle of the current note
  *   page and selects it with the lasso, so that it can be moved at once.
+ *
+ * The label reads "Link failed" after a failure, until the next try.
  */
-export function InsertInkLinkButton({
-  target,
-  name,
-}: InsertInkLinkButtonProps): React.JSX.Element {
-  const {t} = useTranslation();
+export function useInkLinkAction(
+  target: InkLinkTarget,
+  name: string,
+): InkLinkAction {
   const pending = usePendingBinding();
   const [state, setState] = useState<'idle' | 'busy' | 'failed'>('idle');
 
@@ -52,15 +62,32 @@ export function InsertInkLinkButton({
     }
   }, [name, pending, target]);
 
-  const label = pending ? 'inkLink.bindSelection' : 'inkLink.insert';
+  return {
+    link,
+    busy: state === 'busy',
+    label:
+      state === 'failed'
+        ? 'inkLink.insertFailed'
+        : pending
+        ? 'inkLink.bindSelection'
+        : 'inkLink.insert',
+    hint: pending ? 'inkLink.bindSelectionHint' : 'inkLink.insertHint',
+  };
+}
+
+/** Title bar button that links the current card or board to the note. */
+export function InsertInkLinkButton({
+  target,
+  name,
+}: InsertInkLinkButtonProps): React.JSX.Element {
+  const {t} = useTranslation();
+  const action = useInkLinkAction(target, name);
   return (
     <SmallButton
-      label={t(state === 'failed' ? 'inkLink.insertFailed' : label)}
-      accessibilityLabel={t(
-        pending ? 'inkLink.bindSelectionHint' : 'inkLink.insertHint',
-      )}
-      disabled={state === 'busy'}
-      onPress={link}
+      label={t(action.label)}
+      accessibilityLabel={t(action.hint)}
+      disabled={action.busy}
+      onPress={action.link}
       icon={ChainIcon}
     />
   );

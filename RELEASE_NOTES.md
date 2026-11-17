@@ -3,6 +3,22 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.60.0 — Card menu on the board
+
+- A long press on a card of the board opens its menu, beside the card:
+  on its right when there is room, else on its left. A tap beside the
+  menu closes it. It works in every mode: All, Focus and Review.
+- The menu lists the card's actions, each with its icon:
+  - **Open** shows the card's page, as a tap on the card does;
+  - **Start work** opens the card's page and lists the Start work steps
+    to confirm at once (unless the card is already started);
+  - **Link in note** places an s-INK link to the card in the current note
+    page, or links the lasso selection waiting to be linked;
+  - **Archive** asks to confirm, with the card's name, then archives the
+    card on Trello and loads the board again, still shown meanwhile. When
+    Trello refuses, the popup says so and stays open.
+- **Start work** and **Archive** are only offered on boards you may edit.
+
 ## 0.59.13 — Labels and members on one row
 
 - On the card page, the card's labels and its members share one row:

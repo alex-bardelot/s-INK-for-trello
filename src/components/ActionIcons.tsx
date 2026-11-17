@@ -74,6 +74,115 @@ export function NoteIcon({size, color}: ActionIconProps): React.JSX.Element {
   );
 }
 
+/** "Open": the four corners of a frame, the usual "open in full" sign. */
+export function OpenIcon({size, color}: ActionIconProps): React.JSX.Element {
+  const stroke = Math.max(2, Math.round(iconStroke(size) * 0.8));
+  const arm = Math.round(size * 0.34);
+  const inset = Math.round(size * 0.08);
+  const corner = {width: arm, height: arm, borderColor: color};
+  return (
+    <View
+      style={[styles.box, {width: size, height: size}]}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants">
+      <View
+        style={[
+          styles.line,
+          corner,
+          {
+            left: inset,
+            top: inset,
+            borderLeftWidth: stroke,
+            borderTopWidth: stroke,
+          },
+        ]}
+      />
+      <View
+        style={[
+          styles.line,
+          corner,
+          {
+            right: inset,
+            top: inset,
+            borderRightWidth: stroke,
+            borderTopWidth: stroke,
+          },
+        ]}
+      />
+      <View
+        style={[
+          styles.line,
+          corner,
+          {
+            left: inset,
+            bottom: inset,
+            borderLeftWidth: stroke,
+            borderBottomWidth: stroke,
+          },
+        ]}
+      />
+      <View
+        style={[
+          styles.line,
+          corner,
+          {
+            right: inset,
+            bottom: inset,
+            borderRightWidth: stroke,
+            borderBottomWidth: stroke,
+          },
+        ]}
+      />
+    </View>
+  );
+}
+
+/** "Archive": a box with its lid on, and a handle on its front. */
+export function ArchiveIcon({size, color}: ActionIconProps): React.JSX.Element {
+  const stroke = Math.max(2, Math.round(iconStroke(size) * 0.8));
+  const lidHeight = Math.round(size * 0.24);
+  const bodyWidth = Math.round(size * 0.8);
+  const bodyHeight = Math.round(size * 0.56);
+  const handleWidth = Math.round(bodyWidth * 0.36);
+  return (
+    <View
+      style={[styles.box, {width: size, height: size}]}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants">
+      <View
+        style={{
+          width: size,
+          height: lidHeight,
+          borderWidth: stroke,
+          borderColor: color,
+          borderRadius: stroke,
+        }}
+      />
+      <View
+        style={[
+          styles.box,
+          {
+            width: bodyWidth,
+            height: bodyHeight,
+            borderLeftWidth: stroke,
+            borderRightWidth: stroke,
+            borderBottomWidth: stroke,
+            borderColor: color,
+          },
+        ]}>
+        <View
+          style={{
+            width: handleWidth,
+            height: stroke,
+            backgroundColor: color,
+            marginBottom: Math.round(bodyHeight * 0.3),
+          }}
+        />
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   box: {
     alignItems: 'center',

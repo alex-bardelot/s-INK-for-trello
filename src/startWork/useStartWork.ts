@@ -51,6 +51,8 @@ export interface StartWorkControls {
   notePath: string | null;
   /** Start was already done on the card: it is not offered again. */
   started: boolean;
+  /** The card and the settings are read: `started` can be trusted. */
+  ready: boolean;
   /** What Start is about to do, read from the saved settings, to confirm. */
   loadPreview: () => Promise<StartWorkPreview>;
   busy: boolean;
@@ -286,6 +288,7 @@ export function useStartWork({
   return {
     notePath,
     started,
+    ready: !!current && !!savedSettings,
     loadPreview,
     busy,
     report,

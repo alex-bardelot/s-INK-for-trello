@@ -85,6 +85,11 @@ export interface CardDetailScreenProps {
   memberId: string;
   /** The member may edit the board's cards: Start is offered. */
   canEdit: boolean;
+  /**
+   * Start work was chosen in the card's menu on the board: once the card
+   * is loaded, its steps are listed to confirm, unless it is started.
+   */
+  startOnOpen?: boolean;
   onBack: () => void;
   /** Called when Trello rejects the token while loading. */
   onTokenRejected: () => void;
@@ -104,6 +109,7 @@ export function CardDetailScreen({
   store,
   memberId,
   canEdit,
+  startOnOpen = false,
   onBack,
   onTokenRejected,
 }: CardDetailScreenProps): React.JSX.Element {
@@ -166,6 +172,20 @@ export function CardDetailScreen({
   // cancelled.
   const [preview, setPreview] = useState<StartWorkPreview | null>(null);
   const askStart = async () => setPreview(await startWork.loadPreview());
+
+  // Asked once, from the board's card menu, as soon as Start can be told.
+  const [startAsked, setStartAsked] = useState(false);
+  useEffect(() => {
+    if (!startOnOpen || startAsked || !canEdit || !startWork.ready) {
+      return;
+    }
+    setStartAsked(true);
+    if (!startWork.started && !startWork.busy) {
+      askStart();
+    }
+    // askStart reads the current card; it runs once, when Start is ready.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canEdit, startAsked, startOnOpen, startWork.ready]);
   const confirmStart = (steps: readonly StartWorkPreviewStep[]) => {
     if (preview) {
       setPreview(null);

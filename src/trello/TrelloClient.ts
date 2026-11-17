@@ -350,6 +350,14 @@ export class TrelloClient {
     });
   }
 
+  /** Archives a card: it leaves its list, and can be sent back from Trello. */
+  async archiveCard(cardId: string): Promise<void> {
+    await this.request<unknown>(`/cards/${encodeURIComponent(cardId)}`, {
+      method: 'PUT',
+      body: {closed: true},
+    });
+  }
+
   /** Revokes the token on Trello's side (used when disconnecting). */
   async revokeToken(): Promise<void> {
     if (!this.token) {

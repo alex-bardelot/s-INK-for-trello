@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   LayoutChangeEvent,
   Pressable,
@@ -66,6 +66,13 @@ import {
 } from '../trello';
 import {borders, colors, spacing, typography} from '../theme';
 import {CardDetailScreen} from './CardDetailScreen';
+import {
+  ArchiveCardPopup,
+  ArchiveState,
+  CardMenu,
+  CardMenuTarget,
+  measureCardRect,
+} from './CardMenu';
 import {WaitingScreen} from './StatusScreen';
 
 const CARD_GAP = spacing.sm;
@@ -77,6 +84,8 @@ const MAX_AVATARS = 3;
 
 type MembersById = ReadonlyMap<string, TrelloBoardMember>;
 type OpenCard = (card: TrelloBoardCard) => void;
+/** A long press on a card: `tile` is the view it is drawn in. */
+type PressCardLong = (card: TrelloBoardCard, tile: View) => void;
 
 type BoardState =
   | {status: 'loading'}
@@ -147,33 +156,43 @@ export function BoardScreen({
     };
   }, [store]);
 
-  const load = useCallback(async () => {
-    setState({status: 'loading'});
-    try {
-      const [lists, cards, members] = await Promise.all([
-        client.getBoardLists(board.id),
-        client.getBoardCards(board.id),
-        // Avatars are a nicety: the board still shows without them.
-        client.getBoardMembers(board.id).catch(error => {
-          console.warn('[sINK] Failed to load board members', error);
-          return [];
-        }),
-      ]);
-      setState({
-        status: 'loaded',
-        lists,
-        cardsByList: groupCardsByList(cards),
-        members: new Map(members.map(member => [member.id, member])),
-      });
-    } catch (error) {
-      console.warn('[sINK] Failed to load board', error);
-      if (toSessionError(error) === 'invalidToken') {
-        onTokenRejected();
-        return;
+  // A quiet load keeps the board shown until the new one comes, and keeps
+  // it when the load fails.
+  const fetchBoard = useCallback(
+    async (quiet: boolean) => {
+      if (!quiet) {
+        setState({status: 'loading'});
       }
-      setState({status: 'failed'});
-    }
-  }, [board.id, client, onTokenRejected]);
+      try {
+        const [lists, cards, members] = await Promise.all([
+          client.getBoardLists(board.id),
+          client.getBoardCards(board.id),
+          // Avatars are a nicety: the board still shows without them.
+          client.getBoardMembers(board.id).catch(error => {
+            console.warn('[sINK] Failed to load board members', error);
+            return [];
+          }),
+        ]);
+        setState({
+          status: 'loaded',
+          lists,
+          cardsByList: groupCardsByList(cards),
+          members: new Map(members.map(member => [member.id, member])),
+        });
+      } catch (error) {
+        console.warn('[sINK] Failed to load board', error);
+        if (toSessionError(error) === 'invalidToken') {
+          onTokenRejected();
+          return;
+        }
+        if (!quiet) {
+          setState({status: 'failed'});
+        }
+      }
+    },
+    [board.id, client, onTokenRejected],
+  );
+  const load = useCallback(() => fetchBoard(false), [fetchBoard]);
 
   useEffect(() => {
     load();
@@ -292,7 +311,87 @@ export function BoardScreen({
     [columns, listPage, lists.length],
   );
 
-  const closeCard = useCallback(() => setOpenCard(null), []);
+  // Start work from the card menu opens the card, asking to start at once.
+  const [startOnOpen, setStartOnOpen] = useState(false);
+  const showCard = useCallback((card: TrelloBoardCard) => {
+    setStartOnOpen(false);
+    setOpenCard(card);
+  }, []);
+  const closeCard = useCallback(() => {
+    setOpenCard(null);
+    setStartOnOpen(false);
+  }, []);
+  // Start changes the card: only for members who may edit the board.
+  const canEdit = !!memberId && canAddCards(board, memberId, false);
+
+  // A long press on a card opens its menu beside it.
+  const screenRef = useRef<View>(null);
+  const [screenSize, setScreenSize] = useState({width: 0, height: 0});
+  const [menu, setMenu] = useState<CardMenuTarget | null>(null);
+  const openMenu = useCallback<PressCardLong>((card, tile) => {
+    const screen = screenRef.current;
+    if (screen) {
+      measureCardRect(tile, screen).then(rect => setMenu({card, rect}));
+    }
+  }, []);
+  const closeMenu = useCallback(() => setMenu(null), []);
+
+  // Archiving is confirmed first; once done, the board is loaded again,
+  // still shown meanwhile.
+  const [archive, setArchive] = useState<ArchiveState | null>(null);
+  const archiveCard = useCallback(async () => {
+    if (!archive || archive.status === 'busy') {
+      return;
+    }
+    const {card} = archive;
+    setArchive({card, status: 'busy'});
+    try {
+      await client.archiveCard(card.id);
+    } catch (error) {
+      console.warn('[sINK] Failed to archive the card', error);
+      if (toSessionError(error) === 'invalidToken') {
+        setArchive(null);
+        onTokenRejected();
+        return;
+      }
+      setArchive({card, status: 'failed'});
+      return;
+    }
+    setArchive(null);
+    await fetchBoard(true);
+  }, [archive, client, fetchBoard, onTokenRejected]);
+
+  const menuOverlay = menu && state.status === 'loaded' && (
+    <CardMenu
+      key={menu.card.id}
+      target={menu}
+      page={screenSize}
+      canEdit={canEdit}
+      onOpen={() => {
+        closeMenu();
+        showCard(menu.card);
+      }}
+      onStartWork={() => {
+        closeMenu();
+        setOpenCard(menu.card);
+        setStartOnOpen(true);
+      }}
+      onArchive={() => {
+        closeMenu();
+        setArchive({card: menu.card, status: 'confirm'});
+      }}
+      onClose={closeMenu}
+    />
+  );
+  const archivePopup = archive && (
+    <ArchiveCardPopup
+      card={archive.card}
+      busy={archive.status === 'busy'}
+      failed={archive.status === 'failed'}
+      onCancel={() => setArchive(null)}
+      onConfirm={archiveCard}
+    />
+  );
 
   // The card detail is drawn over the board, which stays mounted: going
   // back finds the same lists and card pages, without reloading them.
@@ -300,14 +399,14 @@ export function BoardScreen({
     <View style={styles.overlay}>
       <CardDetailScreen
         card={openCard}
+        startOnOpen={startOnOpen}
         boardName={board.name}
         listName={lists.find(list => list.id === openCard.idList)?.name ?? ''}
         members={state.members}
         client={client}
         store={store}
         memberId={memberId}
-        // Start changes the card: only for members who may edit the board.
-        canEdit={!!memberId && canAddCards(board, memberId, false)}
+        canEdit={canEdit}
         onBack={closeCard}
         onTokenRejected={onTokenRejected}
       />
@@ -327,7 +426,17 @@ export function BoardScreen({
   }
 
   return (
-    <View style={styles.screen}>
+    <View
+      ref={screenRef}
+      style={styles.screen}
+      onLayout={event => {
+        const {width: w, height: h} = event.nativeEvent.layout;
+        setScreenSize(current =>
+          current.width === w && current.height === h
+            ? current
+            : {width: w, height: h},
+        );
+      }}>
       <ScreenFrame
         title={board.name}
         onBack={onBack}
@@ -406,7 +515,8 @@ export function BoardScreen({
             cardsByList={focused.cardsByList}
             members={state.members}
             columns={columns}
-            onOpenCard={setOpenCard}
+            onOpenCard={showCard}
+            onLongPressCard={openMenu}
             emptyMessage={t(
               mode === 'review' ? 'board.reviewEmpty' : 'board.focusEmpty',
             )}
@@ -428,7 +538,8 @@ export function BoardScreen({
                   members={state.members}
                   revealCardId={initialCardId}
                   onTurnLists={turnListPage}
-                  onOpenCard={setOpenCard}
+                  onOpenCard={showCard}
+                  onLongPressCard={openMenu}
                 />
               ))}
               {Array.from({length: columns - visibleLists.length}, (_, i) => (
@@ -463,6 +574,8 @@ export function BoardScreen({
         )}
       </ScreenFrame>
       {detail}
+      {menuOverlay}
+      {archivePopup}
     </View>
   );
 }
@@ -475,6 +588,7 @@ interface BoardColumnProps {
   revealCardId?: string;
   onTurnLists: (delta: number) => void;
   onOpenCard: OpenCard;
+  onLongPressCard: PressCardLong;
 }
 
 /**
@@ -489,6 +603,7 @@ function BoardColumn({
   revealCardId,
   onTurnLists,
   onOpenCard,
+  onLongPressCard,
 }: BoardColumnProps): React.JSX.Element {
   const {t, locale} = useTranslation();
   const [bodyHeight, setBodyHeight] = useState(0);
@@ -579,6 +694,7 @@ function BoardColumn({
             members={members}
             locale={locale}
             onPress={onOpenCard}
+            onLongPress={onLongPressCard}
           />
         ))}
       </View>
@@ -637,6 +753,7 @@ interface StackedBoardProps {
   /** Shown when no list is left. */
   emptyMessage: string;
   onOpenCard: OpenCard;
+  onLongPressCard: PressCardLong;
 }
 
 /**
@@ -652,6 +769,7 @@ function StackedBoard({
   columns,
   emptyMessage,
   onOpenCard,
+  onLongPressCard,
 }: StackedBoardProps): React.JSX.Element {
   const {t, locale} = useTranslation();
   const [area, setArea] = useState({width: 0, height: 0});
@@ -776,6 +894,7 @@ function StackedBoard({
                         members={members}
                         locale={locale}
                         onPress={onOpenCard}
+                        onLongPress={onLongPressCard}
                       />
                     ) : null;
                   })}
@@ -857,21 +976,25 @@ function FocusTagsPanel({
 }
 
 /**
- * A card of the board. With `onPress`, tapping it opens its detail; the
- * copies laid out only to be measured have none.
+ * A card of the board. With `onPress`, tapping it opens its detail and a
+ * long press opens its menu; the copies laid out only to be measured have
+ * neither.
  */
 function CardTile({
   card,
   members,
   locale,
   onPress,
+  onLongPress,
 }: {
   card: TrelloBoardCard;
   members: MembersById;
   locale: Locale;
   onPress?: OpenCard;
+  onLongPress?: PressCardLong;
 }): React.JSX.Element {
   const {t} = useTranslation();
+  const tileRef = useRef<View>(null);
   // A lasso selection waits to be linked: each card shows a "Link" tab.
   const linking = usePendingBinding() !== null;
   const {checkItems, checkItemsChecked, description} = card.badges ?? {};
@@ -959,9 +1082,14 @@ function CardTile({
   }
   return (
     <Pressable
+      ref={tileRef}
       accessibilityRole="button"
       accessibilityHint={t('board.openCardHint')}
       onPress={() => onPress(card)}
+      onLongPress={
+        onLongPress &&
+        (() => tileRef.current && onLongPress(card, tileRef.current))
+      }
       // No inverted look: the whole card would flash on E Ink.
       style={({pressed}) => [styles.card, pressed && styles.cardPressed]}>
       {content}
