@@ -3,6 +3,16 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.59.10 — Card actions in the card's name band
+
+- On the card page, **Start work** and **Link in note** (or **Open note**)
+  stand at the end of the card's grey name band, with the card they act
+  on, instead of in the title bar.
+- The name band stays above every page of the card, not just the first.
+- The title bar reads **Board / List**, the board and the list the card is
+  in; the "In list" line under the name is gone. Refresh, settings and
+  close stay in the title bar.
+
 ## 0.59.9 — No ® in the Main page header
 
 - The Main page header reads **s-INK for Trello**, without the ® sign.

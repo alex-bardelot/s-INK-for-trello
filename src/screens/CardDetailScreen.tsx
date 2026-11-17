@@ -181,9 +181,13 @@ export function CardDetailScreen({
       }
     : undefined;
 
+  // The list the card is in now: Start may have moved it.
+  const shownListName = detail.list?.name ?? listName;
+
   return (
     <ScreenFrame
-      title={boardName}
+      // Where the card is: its board and its list.
+      title={`${boardName} / ${shownListName}`}
       onBack={onBack}
       // The card's Start button follows the Start work settings.
       settingsCategory="startWork"
@@ -198,7 +202,29 @@ export function CardDetailScreen({
         )
       }
       actions={
-        <>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('board.refresh')}
+          hitSlop={spacing.md}
+          onPress={load}
+          style={styles.iconButton}>
+          <RefreshIcon size={HEADER_ICON_SIZE} color={colors.foreground} />
+        </Pressable>
+      }>
+      {/* The card's name and its own actions, above every page. */}
+      <View style={styles.titleRow}>
+        {detail.dueComplete && (
+          <View
+            style={styles.completeMark}
+            accessible
+            accessibilityLabel={t('board.complete')}>
+            <Text style={styles.completeMarkText}>✓</Text>
+          </View>
+        )}
+        <Text accessibilityRole="header" style={styles.cardName}>
+          {detail.name}
+        </Text>
+        <View style={styles.cardActions}>
           {/* Not offered again once the card is started, unless running. */}
           {canEdit && (startWork.busy || !startWork.started) && (
             <SmallButton
@@ -223,16 +249,8 @@ export function CardDetailScreen({
               name={detail.name}
             />
           )}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={t('board.refresh')}
-            hitSlop={spacing.md}
-            onPress={load}
-            style={styles.iconButton}>
-            <RefreshIcon size={HEADER_ICON_SIZE} color={colors.foreground} />
-          </Pressable>
-        </>
-      }>
+        </View>
+      </View>
       {startWork.report && (
         <StartWorkReportView
           report={startWork.report}
@@ -245,7 +263,6 @@ export function CardDetailScreen({
         // Pages are measured again for new content.
         key={`${state.status}:${version}`}
         card={detail}
-        listName={detail.list?.name ?? listName}
         members={cardMembers(detail, members)}
         footer={
           state.status === 'loading' ? (
@@ -552,7 +569,6 @@ function StartWorkReportView({
 
 interface DetailPagesProps {
   card: TrelloCardDetail;
-  listName: string;
   members: readonly TrelloBoardMember[];
   /** Status shown under the summary while the detail loads or failed. */
   footer: React.ReactNode;
@@ -565,7 +581,6 @@ interface DetailPagesProps {
  */
 function DetailPages({
   card,
-  listName,
   members,
   footer,
 }: DetailPagesProps): React.JSX.Element {
@@ -616,7 +631,6 @@ function DetailPages({
     <Block
       block={block}
       card={card}
-      listName={listName}
       members={members}
       footer={footer}
     />
@@ -671,7 +685,6 @@ function DetailPages({
 interface BlockProps {
   block: DetailBlock;
   card: TrelloCardDetail;
-  listName: string;
   members: readonly TrelloBoardMember[];
   footer: React.ReactNode;
 }
@@ -679,7 +692,6 @@ interface BlockProps {
 function Block({
   block,
   card,
-  listName,
   members,
   footer,
 }: BlockProps): React.JSX.Element {
@@ -689,7 +701,6 @@ function Block({
       return (
         <Summary
           card={card}
-          listName={listName}
           members={members}
           footer={footer}
         />
@@ -765,10 +776,12 @@ function Block({
   }
 }
 
-/** Name, list, labels, members and dates of the card. */
+/**
+ * Labels, members and dates of the card. Its name stands above the pages,
+ * its board and list in the title bar.
+ */
 function Summary({
   card,
-  listName,
   members,
   footer,
 }: Omit<BlockProps, 'block'>): React.JSX.Element {
@@ -776,22 +789,6 @@ function Summary({
   const labels = card.labels ?? [];
   return (
     <View style={styles.summary}>
-      <View style={styles.titleRow}>
-        {card.dueComplete && (
-          <View
-            style={styles.completeMark}
-            accessible
-            accessibilityLabel={t('board.complete')}>
-            <Text style={styles.completeMarkText}>✓</Text>
-          </View>
-        )}
-        <Text style={styles.cardName}>{card.name}</Text>
-      </View>
-      {!!listName && (
-        <Text style={styles.meta}>
-          {t('cardDetail.inList', {list: listName})}
-        </Text>
-      )}
       {labels.length > 0 && (
         <View style={styles.labels}>
           {labels.map(label => (
@@ -990,12 +987,13 @@ const styles = StyleSheet.create({
   // The card's name stands out on a light grey band, as wide as the page.
   titleRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: spacing.sm,
     backgroundColor: colors.titleBand,
     borderRadius: borders.radius,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+    marginBottom: spacing.md,
   },
   cardName: {
     flex: 1,
@@ -1003,10 +1001,16 @@ const styles = StyleSheet.create({
     fontSize: typography.heading,
     fontWeight: '700',
   },
+  // Start work and the note's button, at the end of the name's band.
+  cardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginLeft: spacing.sm,
+  },
   completeMark: {
     width: 32,
     height: 32,
-    marginTop: 4,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
