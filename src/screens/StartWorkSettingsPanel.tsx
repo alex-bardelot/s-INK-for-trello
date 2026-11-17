@@ -20,6 +20,7 @@ import {
 } from '../components/FloatingPicker';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {SettingsSection} from '../components/SettingsSection';
+import {SignCircle} from '../components/SignCircle';
 import {Switch} from '../components/Switch';
 import {WaitingBox} from '../components/WaitingBox';
 import {labelKey} from '../board/focus';
@@ -631,9 +632,7 @@ function LabelNamesSide({
   return (
     <View accessibilityLabel={accessibilityLabel} style={styles.labelSide}>
       <View style={styles.chips}>
-        <View style={styles.signCircle}>
-          <Text style={styles.signText}>{sign}</Text>
-        </View>
+        <SignCircle sign={sign} />
         {names.map(name => (
           <Pressable
             key={name}
@@ -748,7 +747,6 @@ function ListNameInput({
 const CHIP_ICON_SIZE = 20;
 /** Label chips, the round sign and Add share one height. */
 const CHIP_HEIGHT = 40;
-const SIGN_SIZE = 32;
 /** Preview size of a template, about a twentieth of the page. */
 const TILE_SHORT_SIDE = 96;
 const TILE_LONG_SIDE = 128;
@@ -793,21 +791,6 @@ const styles = StyleSheet.create({
   labelSide: {
     flex: 1,
     gap: spacing.sm,
-  },
-  signCircle: {
-    width: SIGN_SIZE,
-    height: SIGN_SIZE,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderColor: colors.foreground,
-    borderWidth: borders.width,
-    borderRadius: SIGN_SIZE / 2,
-  },
-  signText: {
-    color: colors.foreground,
-    fontSize: typography.label,
-    fontWeight: '700',
-    lineHeight: typography.label + 2,
   },
   addButton: {
     height: CHIP_HEIGHT,

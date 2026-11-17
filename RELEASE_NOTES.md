@@ -3,6 +3,21 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.62.1 — Start work popup: − and + labels, stays over Settings
+
+- The popup before Start work shows the labels it takes off after a round
+  −, and those it puts on after a round +, as in Settings, Start work, in
+  place of the words Remove and Add. Every step's words or label start at
+  the same place.
+- The note step reads **Create & open note**, or **Open note** when the
+  card already has one.
+- The line under the steps saying a switch counts for this time only is
+  gone.
+- The popup's Settings button no longer closes the popup: back from
+  Settings, it is still there, its steps listed again from the settings
+  changed there.
+- Settings, Start work, and the popup draw the round − and + the same way.
+
 ## 0.62.0 — Faster Focus mode, its tags in Settings
 
 - Focus and Review modes show much sooner on boards with many cards. The

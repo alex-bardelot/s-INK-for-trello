@@ -27,6 +27,7 @@ import {LabelChip} from '../components/LabelChip';
 import {MemberAvatar} from '../components/MemberAvatar';
 import {Popup} from '../components/Popup';
 import {RefreshIcon} from '../components/RefreshIcon';
+import {SIGN_SIZE, SignCircle} from '../components/SignCircle';
 import {
   CONTENT_PADDING,
   HEADER_ICON_SIZE,
@@ -246,14 +247,28 @@ export function CardDetailScreen({
       startWork.start(settingsForRun(preview.settings, steps));
     }
   };
-  // The popup's Settings button opens Settings at Start work, over the card.
+  // The popup's Settings button opens Settings at Start work, over the card
+  // and the popup, which stay (the opener is `null` meanwhile). Back from
+  // Settings, the popup lists the steps again from the settings changed
+  // there.
   const openSettings = useSettingsOpener();
   const openStartWorkSettings = openSettings
-    ? () => {
-        setPreview(null);
-        openSettings('startWork');
-      }
+    ? () => openSettings('startWork')
     : undefined;
+  const settingsClosed = openSettings !== null;
+  const previewShown = preview !== null;
+  useEffect(() => {
+    if (!settingsClosed || !previewShown) {
+      return;
+    }
+    let active = true;
+    startWork.loadPreview().then(next => active && setPreview(next));
+    return () => {
+      active = false;
+    };
+    // Runs when Settings closes over an open popup, not when it opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settingsClosed]);
 
   // The list the card is in now: Start may have moved it.
   const shownListName = detail.list?.name ?? listName;
@@ -393,19 +408,28 @@ function fromBoardCard(card: TrelloBoardCard): TrelloCardDetail {
 
 /**
  * One step Start is about to take, in the user's language: its words, and
- * what it acts on, a label or a list, drawn after them.
+ * what it acts on, a label or a list, drawn after them. A label's words are
+ * only read aloud: the label shows after a round − or +, as in Settings.
  */
 function previewStepParts(
   step: StartWorkPreviewStep,
   t: ReturnType<typeof useTranslation>['t'],
-): {text: string; name?: string} {
+): {text: string; name?: string; sign?: '−' | '+'} {
   switch (step.kind) {
     case 'assign':
       return {text: t('startWork.assignMe')};
     case 'removeLabel':
-      return {text: t('startWork.previewRemoveLabel'), name: step.name};
+      return {
+        text: t('startWork.previewRemoveLabel'),
+        name: step.name,
+        sign: '−',
+      };
     case 'addLabel':
-      return {text: t('startWork.previewAddLabel'), name: step.name};
+      return {
+        text: t('startWork.previewAddLabel'),
+        name: step.name,
+        sign: '+',
+      };
     case 'move':
       return {text: t('startWork.previewMove'), name: step.name};
     case 'createNote':
@@ -417,9 +441,10 @@ function previewStepParts(
 
 /**
  * A step of the popup's tree: its branch from the line coming down from
- * the play sign, a dot (an arrow for the note, opened last), its words with
- * the label as a label or the list in a frame, and its switch at the end.
- * The whole row turns the step on or off.
+ * the play sign, a mark (a dot, a round − or + for a label, an arrow for
+ * the note, opened last), its words or label, the list in a frame, and its
+ * switch at the end. Marks share one width, so that every step's words or
+ * label start at the same place. The whole row turns the step on or off.
  */
 function PreviewStepRow({
   step,
@@ -431,7 +456,7 @@ function PreviewStepRow({
   onToggle: () => void;
 }): React.JSX.Element {
   const {t} = useTranslation();
-  const {text, name} = previewStepParts(step, t);
+  const {text, name, sign} = previewStepParts(step, t);
   const note = step.kind === 'createNote' || step.kind === 'openNote';
   return (
     <Pressable
@@ -444,13 +469,17 @@ function PreviewStepRow({
         <View style={[styles.treeTrunk, last && styles.treeTrunkEnd]} />
         <View style={styles.treeTwig} />
       </View>
-      {note ? (
-        <Text style={styles.treeArrow}>›</Text>
-      ) : (
-        <View style={styles.treeDot} />
-      )}
+      <View style={styles.treeMark}>
+        {sign ? (
+          <SignCircle sign={sign} />
+        ) : note ? (
+          <Text style={styles.treeArrow}>›</Text>
+        ) : (
+          <View style={styles.treeDot} />
+        )}
+      </View>
       <View style={styles.treeContent}>
-        <Text style={styles.popupText}>{text}</Text>
+        {!sign && <Text style={styles.popupText}>{text}</Text>}
         {name !== undefined &&
           (step.kind === 'move' ? (
             <View style={styles.treeList}>
@@ -496,6 +525,8 @@ function StartWorkConfirmPopup({
 }): React.JSX.Element {
   const {t} = useTranslation();
   const [steps, setSteps] = useState(initialSteps);
+  // Listed again after Settings: the switches start from it once more.
+  useEffect(() => setSteps(initialSteps), [initialSteps]);
   const toggle = (index: number) =>
     setSteps(current =>
       current.map((step, i) => (i === index ? {...step, on: !step.on} : step)),
@@ -535,7 +566,6 @@ function StartWorkConfirmPopup({
           />
         ))}
       </View>
-      <Text style={styles.popupHint}>{t('startWork.confirmOnce')}</Text>
       {/* Said in words only when the Settings button cannot be shown. */}
       {!onOpenSettings && (
         <Text style={styles.popupHint}>{t('startWork.confirmSettings')}</Text>
@@ -1154,19 +1184,24 @@ const styles = StyleSheet.create({
     height: TREE_LINE,
     backgroundColor: colors.foreground,
   },
+  // As wide as the round sign; the mark touches the end of its branch.
+  treeMark: {
+    width: SIGN_SIZE,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
   treeDot: {
     width: TREE_DOT_SIZE,
     height: TREE_DOT_SIZE,
     borderRadius: TREE_DOT_SIZE / 2,
     backgroundColor: colors.foreground,
-    marginRight: spacing.md,
   },
   treeArrow: {
     color: colors.foreground,
     fontSize: typography.heading,
     fontWeight: '700',
     lineHeight: typography.heading,
-    marginRight: spacing.sm,
   },
   treeContent: {
     flex: 1,
