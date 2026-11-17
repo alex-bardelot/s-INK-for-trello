@@ -41,7 +41,6 @@
   "connect.persistDevice": "重新啟動後仍保持",
   "connect.sessionOnly": "建議。權杖僅保存在記憶體中，從不寫入平板。只要平板開著，即使關閉再開啟，s-INK 也會保持連接；重新啟動後需再次連接（使用 QR 碼只需幾秒）。",
   "connect.rememberWarning": "平板重新啟動後 s-INK 仍保持連接。注意：此時權杖將以未加密的形式寫入 s-INK 外掛資料夾。任何能讀取此平板檔案的人（包括其他外掛）都可以用它存取您的 Trello 帳戶。您之後可以在設定中變更此選擇；中斷連接會將權杖從平板刪除並在 Trello 上撤銷。",
-  "boards.title": "s-INK for Trello：看板",
   "boards.loading": "正在載入看板…",
   "boards.loadFailed": "無法載入您的看板。",
   "boards.empty": "您沒有開啟中的看板。",

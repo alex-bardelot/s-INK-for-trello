@@ -3,6 +3,14 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.59.1 — One title bar height
+
+- The title bar has the same height on every page: on Settings and the
+  other pages with a back arrow, it was a little taller than on the
+  boards page, the arrow being a text character taller than the icons.
+- The boards page is titled "s-INK for Trello®" alone, without
+  ": Boards".
+
 ## 0.59.0 — Start work asks first
 
 - The card's **Start** button is now called **Start work**, like its

@@ -41,7 +41,6 @@
   "connect.persistDevice": "After restarts",
   "connect.sessionOnly": "Recommended. The token is kept in memory only and never written on the tablet. s-INK stays connected while the tablet is on, even if you close and reopen it; after a restart, you connect again (a few seconds with the QR code).",
   "connect.rememberWarning": "s-INK stays connected after the tablet restarts. Warning: the token is then written unencrypted in the s-INK plugin folder. Anyone who can read this tablet’s files, including other plugins, could use it to access your Trello account. You can change this choice later in Settings; Disconnect deletes the token from the tablet and revokes it on Trello.",
-  "boards.title": "s-INK for Trello: Boards",
   "boards.loading": "Loading boards…",
   "boards.loadFailed": "Your boards could not be loaded.",
   "boards.empty": "You have no open boards.",

@@ -16,6 +16,12 @@ import {OfflineButton, OfflinePopup, useOfflineRetry} from './OfflineButton';
  * `spacing.sm` around it, like the close button, so they line up.
  */
 export const HEADER_ICON_SIZE = 32;
+/**
+ * Height of the title bar, the same on every page whatever it holds: an
+ * icon button with its padding, the bar's padding and its bottom border.
+ */
+const HEADER_HEIGHT =
+  HEADER_ICON_SIZE + spacing.sm * 2 + spacing.md * 2 + borders.width;
 /** The gear fills its square more than the close cross: a bit smaller. */
 const SETTINGS_ICON_SIZE = 28;
 
@@ -260,10 +266,10 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    height: HEADER_HEIGHT,
     borderBottomColor: colors.foreground,
     borderBottomWidth: borders.width,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
   },
   title: {
     flex: 1,
@@ -284,10 +290,12 @@ const styles = StyleSheet.create({
     paddingRight: spacing.md,
     paddingVertical: spacing.sm,
   },
+  // The back arrow is text: its line is held to the size of the icons.
   closeIcon: {
     color: colors.foreground,
     fontSize: typography.icon,
     fontWeight: '600',
+    lineHeight: HEADER_ICON_SIZE,
   },
   content: {
     flex: 1,

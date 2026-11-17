@@ -368,7 +368,7 @@ export function BoardsScreen({
 
   return (
     <ScreenFrame
-      title={t('boards.title')}
+      title={t('app.name')}
       // Hidden while picking what to link a selection to.
       settingsCategory={linking ? undefined : 'general'}>
       <View
