@@ -3,6 +3,11 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.59.8 — No star in the board header
+
+- The board page no longer puts a star before the name of a starred
+  board in its header.
+
 ## 0.59.7 — Card name on a grey band
 
 - On the card page, the card's name stands out on a light grey band as

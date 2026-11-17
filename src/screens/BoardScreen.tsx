@@ -329,7 +329,7 @@ export function BoardScreen({
   return (
     <View style={styles.screen}>
       <ScreenFrame
-        title={board.starred ? `★ ${board.name}` : board.name}
+        title={board.name}
         onBack={onBack}
         settingsCategory="boards"
         actions={
