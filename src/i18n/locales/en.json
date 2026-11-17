@@ -245,6 +245,7 @@
   "cardDetail.noChecklists": "No checklists",
   "cardDetail.noAttachments": "No attachments",
   "cardDetail.noComments": "No comments",
+  "cardDetail.checkItemFailed": "The checklist item could not be updated on Trello.",
   "inkLink.insert": "Link in note",
   "inkLink.insertHint": "Places a link to this page on the current note page. A finger tap on it opens it here.",
   "inkLink.insertFailed": "Link failed",

@@ -245,6 +245,7 @@
   "cardDetail.noChecklists": "无清单",
   "cardDetail.noAttachments": "无附件",
   "cardDetail.noComments": "无评论",
+  "cardDetail.checkItemFailed": "无法在 Trello 上更新该清单项。",
   "inkLink.insert": "链接到笔记",
   "inkLink.insertHint": "在当前笔记页放置指向此页面的链接。用手指点按即可在此打开。",
   "inkLink.insertFailed": "链接失败",

@@ -3,6 +3,17 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.61.0 — Tick checklist items on the card page
+
+- On the card page, a tap on a checklist item ticks or unticks it, and
+  Trello is told at once: the box and the checklist's count change right
+  away, then the item is sent to Trello. While it is on its way, the item
+  can't be tapped again.
+- If Trello refuses (no network, no right to edit the card…), the item
+  goes back to how it was and a line says it could not be updated.
+- Items can be ticked only by members who may edit the board's cards,
+  and once the card's detail has loaded.
+
 ## 0.60.2 — Only web attachments open
 
 - On the card page, an attachment opens only if its address is a web page

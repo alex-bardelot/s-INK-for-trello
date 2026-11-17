@@ -6,6 +6,7 @@ import {
   paginateBlocks,
   plainMarkdown,
   webUrl,
+  withCheckItemState,
 } from '../src/cards/detail';
 import {TrelloClient} from '../src/trello/TrelloClient';
 import {TrelloBoardMember, TrelloCardDetail} from '../src/trello/types';
@@ -103,6 +104,13 @@ describe('buildDetailBlocks', () => {
       'c-old',
     ]);
     expect(blocks[5]).toMatchObject({done: 1, total: 2});
+    expect(blocks[6]).toEqual({
+      kind: 'checkItem',
+      key: 'ci-a',
+      itemId: 'a',
+      name: 'A',
+      complete: true,
+    });
     expect(blocks[11]).toMatchObject({name: 'https://x.test/f'});
     expect(blocks[13]).toMatchObject({author: 'Ann', text: 'new'});
   });
@@ -121,6 +129,55 @@ describe('buildDetailBlocks', () => {
       name: 'Report',
       url: null,
     });
+  });
+});
+
+describe('withCheckItemState', () => {
+  const withLists = card({
+    checklists: [
+      {
+        id: 'l1',
+        name: 'One',
+        pos: 1,
+        checkItems: [
+          {id: 'a', name: 'A', state: 'incomplete', pos: 1},
+          {id: 'b', name: 'B', state: 'complete', pos: 2},
+        ],
+      },
+      {
+        id: 'l2',
+        name: 'Two',
+        pos: 2,
+        checkItems: [{id: 'c', name: 'C', state: 'incomplete', pos: 1}],
+      },
+    ],
+  });
+
+  it('ticks and unticks one item, leaving the others', () => {
+    const ticked = withCheckItemState(withLists, 'a', true);
+    expect(ticked.checklists?.[0].checkItems.map(item => item.state)).toEqual([
+      'complete',
+      'complete',
+    ]);
+    expect(ticked.checklists?.[1]).toBe(withLists.checklists?.[1]);
+    const unticked = withCheckItemState(withLists, 'b', false);
+    expect(unticked.checklists?.[0].checkItems[1].state).toBe('incomplete');
+    // The card it was given is left as it was.
+    expect(withLists.checklists?.[0].checkItems[0].state).toBe('incomplete');
+  });
+
+  it('updates the count of its checklist', () => {
+    const blocks = buildDetailBlocks(withCheckItemState(withLists, 'c', true));
+    expect(blocks.find(block => block.key === 'cl-l2')).toMatchObject({
+      done: 1,
+      total: 1,
+    });
+  });
+
+  it('returns the card as it is without such an item', () => {
+    expect(withCheckItemState(withLists, 'x', true)).toBe(withLists);
+    const bare = card();
+    expect(withCheckItemState(bare, 'a', true)).toBe(bare);
   });
 });
 

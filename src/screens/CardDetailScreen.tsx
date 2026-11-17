@@ -17,6 +17,7 @@ import {
   DetailSection,
   formatCardDate,
   paginateBlocks,
+  withCheckItemState,
 } from '../cards/detail';
 import {Button} from '../components/Button';
 import {GearIcon} from '../components/GearIcon';
@@ -162,6 +163,47 @@ export function CardDetailScreen({
     load();
   }, [load]);
 
+  // A tapped checklist item is ticked or unticked at once, then on Trello;
+  // it goes back if Trello refuses. Items on their way can't be tapped.
+  const [pendingItems, setPendingItems] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const [checkFailed, setCheckFailed] = useState(false);
+  const setItemShown = (itemId: string, complete: boolean) =>
+    setState(current =>
+      current.status === 'loaded'
+        ? {
+            status: 'loaded',
+            card: withCheckItemState(current.card, itemId, complete),
+          }
+        : current,
+    );
+  const toggleCheckItem = async (itemId: string, complete: boolean) => {
+    if (pendingItems.has(itemId)) {
+      return;
+    }
+    setCheckFailed(false);
+    setItemShown(itemId, complete);
+    setPendingItems(current => new Set(current).add(itemId));
+    try {
+      await client.setCheckItemState(card.id, itemId, complete);
+    } catch (error) {
+      console.warn('[sINK] Failed to update a checklist item', error);
+      setItemShown(itemId, !complete);
+      if (toSessionError(error) === 'invalidToken') {
+        onTokenRejected();
+        return;
+      }
+      setCheckFailed(true);
+    } finally {
+      setPendingItems(current => {
+        const next = new Set(current);
+        next.delete(itemId);
+        return next;
+      });
+    }
+  };
+
   // What the board already knows is shown at once, the rest once loaded.
   const detail: TrelloCardDetail =
     state.status === 'loaded' ? state.card : fromBoardCard(card);
@@ -291,11 +333,28 @@ export function CardDetailScreen({
           onClose={startWork.dismissReport}
         />
       )}
+      {checkFailed && (
+        <View accessibilityRole="alert" style={styles.checkFailure}>
+          <Text style={[styles.message, styles.checkFailureText]}>
+            {t('cardDetail.checkItemFailed')}
+          </Text>
+          <SmallButton
+            label={t('common.ok')}
+            accessibilityLabel={t('common.ok')}
+            onPress={() => setCheckFailed(false)}
+          />
+        </View>
+      )}
       <DetailPages
-        // Pages are measured again for new content.
+        // Pages are measured again for new content; ticking an item keeps
+        // the page shown.
         key={`${state.status}:${version}`}
         card={detail}
         members={cardMembers(detail, members)}
+        onToggleCheckItem={
+          canEdit && state.status === 'loaded' ? toggleCheckItem : undefined
+        }
+        pendingItems={pendingItems}
         footer={
           state.status === 'loading' ? (
             <Text style={styles.message}>{t('cardDetail.loading')}</Text>
@@ -604,6 +663,10 @@ interface DetailPagesProps {
   members: readonly TrelloBoardMember[];
   /** Status shown under the summary while the detail loads or failed. */
   footer: React.ReactNode;
+  /** Ticks or unticks a checklist item; unset, items can't be tapped. */
+  onToggleCheckItem?: (itemId: string, complete: boolean) => void;
+  /** Items whose new state is on its way to Trello. */
+  pendingItems: ReadonlySet<string>;
 }
 
 /**
@@ -615,6 +678,8 @@ function DetailPages({
   card,
   members,
   footer,
+  onToggleCheckItem,
+  pendingItems,
 }: DetailPagesProps): React.JSX.Element {
   const {t} = useTranslation();
   const blocks = useMemo(() => buildDetailBlocks(card), [card]);
@@ -665,6 +730,8 @@ function DetailPages({
       card={card}
       members={members}
       footer={footer}
+      onToggleCheckItem={onToggleCheckItem}
+      pendingItems={pendingItems}
     />
   );
 
@@ -719,6 +786,8 @@ interface BlockProps {
   card: TrelloCardDetail;
   members: readonly TrelloBoardMember[];
   footer: React.ReactNode;
+  onToggleCheckItem?: (itemId: string, complete: boolean) => void;
+  pendingItems: ReadonlySet<string>;
 }
 
 function Block({
@@ -726,6 +795,8 @@ function Block({
   card,
   members,
   footer,
+  onToggleCheckItem,
+  pendingItems,
 }: BlockProps): React.JSX.Element {
   const {t, locale} = useTranslation();
   switch (block.kind) {
@@ -759,13 +830,9 @@ function Block({
           </Text>
         </View>
       );
-    case 'checkItem':
-      return (
-        <View
-          style={styles.checkItem}
-          accessible
-          accessibilityRole="checkbox"
-          accessibilityState={{checked: block.complete}}>
+    case 'checkItem': {
+      const content = (
+        <>
           <View style={[styles.checkBox, block.complete && styles.checkBoxOn]}>
             {block.complete && <Text style={styles.checkMark}>✓</Text>}
           </View>
@@ -773,8 +840,34 @@ function Block({
             style={[styles.checkItemText, block.complete && styles.checkDone]}>
             {block.name}
           </Text>
-        </View>
+        </>
       );
+      if (!onToggleCheckItem) {
+        return (
+          <View
+            style={styles.checkItem}
+            accessible
+            accessibilityRole="checkbox"
+            accessibilityState={{checked: block.complete}}>
+            {content}
+          </View>
+        );
+      }
+      // The whole row ticks or unticks the item, here and on Trello.
+      const pending = pendingItems.has(block.itemId);
+      return (
+        <Pressable
+          style={styles.checkItem}
+          accessibilityRole="checkbox"
+          accessibilityState={{checked: block.complete, busy: pending}}
+          accessibilityLabel={block.name}
+          disabled={pending}
+          hitSlop={{top: BLOCK_GAP / 2, bottom: BLOCK_GAP / 2}}
+          onPress={() => onToggleCheckItem(block.itemId, !block.complete)}>
+          {content}
+        </Pressable>
+      );
+    }
     case 'attachment': {
       const url = block.url;
       if (url === null) {
@@ -834,7 +927,7 @@ function Summary({
   card,
   members,
   footer,
-}: Omit<BlockProps, 'block'>): React.JSX.Element {
+}: Pick<BlockProps, 'card' | 'members' | 'footer'>): React.JSX.Element {
   const {t, locale} = useTranslation();
   const labels = card.labels ?? [];
   return (
@@ -998,6 +1091,19 @@ const styles = StyleSheet.create({
   message: {
     color: colors.foreground,
     fontSize: typography.body,
+  },
+  checkFailure: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderColor: colors.foreground,
+    borderWidth: borders.width,
+    borderRadius: borders.radius,
+    padding: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  checkFailureText: {
+    flex: 1,
   },
   popupText: {
     color: colors.foreground,

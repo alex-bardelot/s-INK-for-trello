@@ -245,6 +245,7 @@
   "cardDetail.noChecklists": "無檢查清單",
   "cardDetail.noAttachments": "無附件",
   "cardDetail.noComments": "無留言",
+  "cardDetail.checkItemFailed": "無法在 Trello 上更新該檢查清單項目。",
   "inkLink.insert": "連結到筆記",
   "inkLink.insertHint": "在目前筆記頁放置指向此頁面的連結。用手指點按即可在此開啟。",
   "inkLink.insertFailed": "連結失敗",

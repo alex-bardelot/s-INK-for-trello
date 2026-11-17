@@ -284,4 +284,28 @@ describe('TrelloClient', () => {
       ['PUT', 'https://api.trello.com/1/cards/c1', {closed: true}],
     ]);
   });
+
+  it('ticks and unticks a checklist item of a card', async () => {
+    const fetchImpl = jest.fn().mockResolvedValue(jsonResponse({}));
+    const client = clientWith(fetchImpl);
+    await client.setCheckItemState('c1', 'i1', true);
+    await client.setCheckItemState('c1', 'i/2', false);
+    const calls = fetchImpl.mock.calls.map(([url, init]) => [
+      init.method,
+      url,
+      JSON.parse(init.body),
+    ]);
+    expect(calls).toEqual([
+      [
+        'PUT',
+        'https://api.trello.com/1/cards/c1/checkItem/i1',
+        {state: 'complete'},
+      ],
+      [
+        'PUT',
+        'https://api.trello.com/1/cards/c1/checkItem/i%2F2',
+        {state: 'incomplete'},
+      ],
+    ]);
+  });
 });

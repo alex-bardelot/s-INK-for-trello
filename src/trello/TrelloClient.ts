@@ -293,6 +293,23 @@ export class TrelloClient {
     );
   }
 
+  /** Ticks or unticks an item of one of the card's checklists. */
+  async setCheckItemState(
+    cardId: string,
+    checkItemId: string,
+    complete: boolean,
+  ): Promise<void> {
+    await this.request<unknown>(
+      `/cards/${encodeURIComponent(cardId)}/checkItem/${encodeURIComponent(
+        checkItemId,
+      )}`,
+      {
+        method: 'PUT',
+        body: {state: complete ? 'complete' : 'incomplete'},
+      },
+    );
+  }
+
   /** Returns the labels of a board, named or not. */
   async getBoardLabels(boardId: string): Promise<TrelloLabel[]> {
     const labels = await this.request<TrelloLabel[]>(

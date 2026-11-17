@@ -2,6 +2,7 @@ import type {Locale} from '../i18n';
 import type {
   TrelloBoardMember,
   TrelloCardDetail,
+  TrelloCheckItem,
   TrelloChecklist,
 } from '../trello/types';
 
@@ -22,7 +23,14 @@ export type DetailBlock =
       done: number;
       total: number;
     }
-  | {kind: 'checkItem'; key: string; name: string; complete: boolean}
+  | {
+      kind: 'checkItem';
+      key: string;
+      /** Trello id of the item, to tick or untick it. */
+      itemId: string;
+      name: string;
+      complete: boolean;
+    }
   /** Stands under the heading of a section the card has nothing in. */
   | {kind: 'empty'; key: string; section: DetailSection}
   | {
@@ -90,6 +98,7 @@ export function buildDetailBlocks(card: TrelloCardDetail): DetailBlock[] {
         blocks.push({
           kind: 'checkItem',
           key: `ci-${item.id}`,
+          itemId: item.id,
           name: item.name,
           complete: item.state === 'complete',
         });
@@ -170,6 +179,32 @@ function sortedChecklists(
         (a, b) => a.pos - b.pos,
       ),
     }));
+}
+
+/**
+ * The card with one checklist item ticked or unticked, as Trello will have
+ * it once told; the card is returned as it is if it has no such item.
+ */
+export function withCheckItemState(
+  card: TrelloCardDetail,
+  itemId: string,
+  complete: boolean,
+): TrelloCardDetail {
+  const state: TrelloCheckItem['state'] = complete ? 'complete' : 'incomplete';
+  let found = false;
+  const checklists = (card.checklists ?? []).map(checklist => {
+    if (!(checklist.checkItems ?? []).some(item => item.id === itemId)) {
+      return checklist;
+    }
+    found = true;
+    return {
+      ...checklist,
+      checkItems: checklist.checkItems.map(item =>
+        item.id === itemId ? {...item, state} : item,
+      ),
+    };
+  });
+  return found ? {...card, checklists} : card;
 }
 
 /** Members of the card, from the nested members or the board's. */

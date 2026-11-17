@@ -245,6 +245,7 @@
   "cardDetail.noChecklists": "チェックリストはありません",
   "cardDetail.noAttachments": "添付ファイルはありません",
   "cardDetail.noComments": "コメントはありません",
+  "cardDetail.checkItemFailed": "チェックリストの項目を Trello で更新できませんでした。",
   "inkLink.insert": "ノートにリンク",
   "inkLink.insertHint": "現在のノートページにこのページへのリンクを配置します。指でタップするとここで開きます。",
   "inkLink.insertFailed": "リンク失敗",
