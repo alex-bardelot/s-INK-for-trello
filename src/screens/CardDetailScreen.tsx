@@ -775,12 +775,23 @@ function Block({
           </Text>
         </View>
       );
-    case 'attachment':
+    case 'attachment': {
+      const url = block.url;
+      if (url === null) {
+        // Not a web address: shown, never opened.
+        return (
+          <View style={styles.attachment}>
+            <Text style={styles.attachmentText} numberOfLines={2}>
+              {block.name}
+            </Text>
+          </View>
+        );
+      }
       return (
         <Pressable
           accessibilityRole="link"
           onPress={() =>
-            Linking.openURL(block.url).catch(error =>
+            Linking.openURL(url).catch(error =>
               console.warn('[sINK] Failed to open an attachment', error),
             )
           }
@@ -794,6 +805,7 @@ function Block({
           )}
         </Pressable>
       );
+    }
     case 'comment':
       return (
         <View style={styles.comment}>

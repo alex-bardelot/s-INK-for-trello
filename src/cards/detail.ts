@@ -25,7 +25,13 @@ export type DetailBlock =
   | {kind: 'checkItem'; key: string; name: string; complete: boolean}
   /** Stands under the heading of a section the card has nothing in. */
   | {kind: 'empty'; key: string; section: DetailSection}
-  | {kind: 'attachment'; key: string; name: string; url: string}
+  | {
+      kind: 'attachment';
+      key: string;
+      name: string;
+      /** Web address to open, or `null` if it is not a web address. */
+      url: string | null;
+    }
   | {
       kind: 'comment';
       key: string;
@@ -106,7 +112,7 @@ export function buildDetailBlocks(card: TrelloCardDetail): DetailBlock[] {
       kind: 'attachment',
       key: `a-${attachment.id}`,
       name: attachment.name || attachment.url,
-      url: attachment.url,
+      url: webUrl(attachment.url),
     });
   }
 
@@ -132,6 +138,24 @@ export function buildDetailBlocks(card: TrelloCardDetail): DetailBlock[] {
     });
   }
   return blocks;
+}
+
+/** An `http:` or `https:` address with a host, and no space or control. */
+const WEB_URL_PATTERN = /^https?:\/\/[^\s/?#@]+(?:[/?#]\S*)?$/i;
+
+/**
+ * The address of an attachment if it is a web page, else `null`. Any
+ * member of a board can set an attachment's address, so other schemes
+ * (`intent:`, `file:`, `content:`, an app's own scheme…) are never opened:
+ * they could start another app or reach the tablet's files.
+ */
+export function webUrl(url: string | null | undefined): string | null {
+  const trimmed = (url ?? '').trim();
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0000-\u001f\u007f]/.test(trimmed)) {
+    return null;
+  }
+  return WEB_URL_PATTERN.test(trimmed) ? trimmed : null;
 }
 
 /** Checklists and their items in board order (Trello does not sort them). */

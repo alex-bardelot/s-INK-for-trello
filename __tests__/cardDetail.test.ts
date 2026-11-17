@@ -5,6 +5,7 @@ import {
   formatCardDate,
   paginateBlocks,
   plainMarkdown,
+  webUrl,
 } from '../src/cards/detail';
 import {TrelloClient} from '../src/trello/TrelloClient';
 import {TrelloBoardMember, TrelloCardDetail} from '../src/trello/types';
@@ -104,6 +105,61 @@ describe('buildDetailBlocks', () => {
     expect(blocks[5]).toMatchObject({done: 1, total: 2});
     expect(blocks[11]).toMatchObject({name: 'https://x.test/f'});
     expect(blocks[13]).toMatchObject({author: 'Ann', text: 'new'});
+  });
+
+  it('keeps an attachment that is not a web page, without its address', () => {
+    const blocks = buildDetailBlocks(
+      card({
+        attachments: [
+          {id: 'f', name: 'Report', url: 'file:///sdcard/a.note', date: ''},
+        ],
+      }),
+    );
+    expect(blocks.find(block => block.kind === 'attachment')).toEqual({
+      kind: 'attachment',
+      key: 'a-f',
+      name: 'Report',
+      url: null,
+    });
+  });
+});
+
+describe('webUrl', () => {
+  it('keeps web addresses', () => {
+    expect(webUrl('https://trello.com/1/cards/c/attachments/a/download/x.pdf'))
+      .toBe('https://trello.com/1/cards/c/attachments/a/download/x.pdf');
+    expect(webUrl('HTTP://example.test')).toBe('HTTP://example.test');
+    expect(webUrl('  https://x.test/a?b=c#d  ')).toBe('https://x.test/a?b=c#d');
+  });
+
+  it('refuses every other scheme', () => {
+    for (const url of [
+      'intent://scan/#Intent;scheme=zxing;package=com.example;end',
+      'file:///storage/emulated/0/Note/a.note',
+      'content://com.android.externalstorage.documents/x',
+      // eslint-disable-next-line no-script-url
+      'javascript:alert(1)',
+      'market://details?id=com.example',
+      'tel:+33100000000',
+      'sms:+33100000000',
+      'otherapp://open',
+      '//x.test/a',
+      'x.test/a',
+    ]) {
+      expect(webUrl(url)).toBeNull();
+    }
+  });
+
+  it('refuses malformed web addresses', () => {
+    expect(webUrl('https://')).toBeNull();
+    expect(webUrl('https:///path')).toBeNull();
+    expect(webUrl('https://user@x.test/')).toBeNull();
+    expect(webUrl('https://x.test/a b')).toBeNull();
+    expect(webUrl('https://x.test/\na')).toBeNull();
+    expect(webUrl('https://x.test/\u0000')).toBeNull();
+    expect(webUrl('')).toBeNull();
+    expect(webUrl(null)).toBeNull();
+    expect(webUrl(undefined)).toBeNull();
   });
 });
 

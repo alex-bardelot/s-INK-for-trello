@@ -3,6 +3,14 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.60.2 — Only web attachments open
+
+- On the card page, an attachment opens only if its address is a web page
+  (`https://` or `http://`). Any member of a board can set an attachment's
+  address; other kinds (`intent:`, `file:`, `content:`, an app's own
+  link…) could start another app or reach the tablet's files, so such an
+  attachment is listed by its name but cannot be tapped.
+
 ## 0.60.1 — Empty card sections and a full-width name band
 
 - On the card page, the **Description**, **Attachments** and **Comments**
