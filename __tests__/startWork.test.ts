@@ -370,11 +370,39 @@ describe('previewStartWork', () => {
     const settings = settingsWith({moveToList: true, listName: ' In progress '});
     expect(previewStartWork(card, 'To do', settings, ME, false)).toEqual([
       {kind: 'assign', on: true},
-      {kind: 'removeLabel', name: 'todo', on: true},
-      {kind: 'addLabel', name: 'WIP', on: true},
+      {kind: 'removeLabel', name: 'todo', color: null, on: true},
+      {kind: 'addLabel', name: 'WIP', color: null, on: true},
       {kind: 'move', name: 'In progress', on: true},
       {kind: 'createNote', on: true},
     ]);
+  });
+
+  it('gives the labels their color, from the card or the board', () => {
+    const colored = {
+      ...card,
+      labels: [{id: 'l-todo', name: 'TODO', color: 'yellow'}],
+    };
+    const steps = previewStartWork(
+      colored,
+      'To do',
+      settingsWith({addLabelNames: ['wip']}),
+      ME,
+      false,
+      [{name: 'WIP', color: 'green'}],
+    );
+    expect(steps).toContainEqual({
+      kind: 'removeLabel',
+      name: 'TODO',
+      color: 'yellow',
+      on: true,
+    });
+    // Named as on the board.
+    expect(steps).toContainEqual({
+      kind: 'addLabel',
+      name: 'WIP',
+      color: 'green',
+      on: true,
+    });
   });
 
   it('leaves out what is already done, and opens a note found', () => {
@@ -410,7 +438,7 @@ describe('previewStartWork', () => {
       createNote: false,
     });
     expect(previewStartWork(card, 'To do', settings, ME, false)).toEqual([
-      {kind: 'addLabel', name: 'Urgent', on: true},
+      {kind: 'addLabel', name: 'Urgent', color: null, on: true},
       {kind: 'createNote', on: false},
     ]);
   });
@@ -442,8 +470,8 @@ describe('settingsForRun', () => {
     const run = settingsForRun(
       settingsWith({removeLabelNames: ['TODO', 'Bug']}),
       [
-        {kind: 'removeLabel', name: 'todo', on: false},
-        {kind: 'removeLabel', name: 'Bug', on: true},
+        {kind: 'removeLabel', name: 'todo', color: null, on: false},
+        {kind: 'removeLabel', name: 'Bug', color: 'red', on: true},
       ],
     );
     expect(run.removeLabelNames).toEqual(['Bug']);

@@ -123,13 +123,29 @@ export function useStartWork({
     cardIsStarted(current, currentList, savedSettings, memberId, !!notePath);
   // Settings may have changed since the page opened (they open over it):
   // they are read again each time the steps are listed.
+  // The board's labels give those put on their color; without them, the
+  // steps are still listed, the labels drawn without color.
   const loadPreview = async (): Promise<StartWorkPreview> => {
     const settings = await loadStartWorkSettings(store);
     setSavedSettings(settings);
+    const boardLabels =
+      card?.idBoard && settings.addLabelNames.length > 0
+        ? await client.getBoardLabels(card.idBoard).catch(error => {
+            console.warn('[sINK] Failed to read the labels for Start', error);
+            return [];
+          })
+        : [];
     return {
       settings,
       steps: current
-        ? previewStartWork(current, currentList, settings, memberId, !!notePath)
+        ? previewStartWork(
+            current,
+            currentList,
+            settings,
+            memberId,
+            !!notePath,
+            boardLabels,
+          )
         : [],
     };
   };

@@ -3,6 +3,20 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.59.5 — Start work popup as a tree
+
+- The **Start work** popup is drawn as a tree: a large play sign with
+  "Start work takes all these steps", and a line coming down from it
+  with a branch to each step, a dot before it (an arrow before the note,
+  opened last) and its switch at the end of the row.
+- Labels taken off or put on are drawn as labels, in their color shade,
+  after "Remove" or "Add"; the list the card moves to is framed after
+  "Move to". The colors of the labels put on come from the board,
+  read when the popup opens; without them, the labels are drawn plain.
+- The steps read as in Settings ("Assign me to the card"), and the
+  switches have no ON / OFF word, like the sketch: the whole row turns
+  its step on or off.
+
 ## 0.59.4 — Even gaps between the title bar icons
 
 - The refresh, settings and close icons of the title bar stand at the

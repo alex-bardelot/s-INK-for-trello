@@ -6,7 +6,10 @@ import {cleanName, StartWorkSettings} from './settings';
 export interface StartWorkCard {
   idList: string;
   idMembers: readonly string[];
-  labels: readonly Pick<TrelloLabel, 'id' | 'name'>[];
+  /** Their color, when known, draws them in the Start work popup. */
+  labels: readonly (Pick<TrelloLabel, 'id' | 'name'> & {
+    color?: string | null;
+  })[];
 }
 
 /** What Start changes on the card, worked out before any request. */
@@ -109,16 +112,16 @@ export function planIsEmpty(plan: StartWorkPlan): boolean {
  */
 export type StartWorkPreviewStep = {on: boolean} & (
   | {kind: 'assign'}
-  | {kind: 'removeLabel'; name: string}
-  | {kind: 'addLabel'; name: string}
+  /** `color`: that of the label, `null` when unknown or colorless. */
+  | {kind: 'removeLabel' | 'addLabel'; name: string; color: string | null}
   | {kind: 'move'; name: string}
   | {kind: 'createNote'}
   | {kind: 'openNote'}
 );
 
 /**
- * What Start is about to do on a card, from the card and the settings
- * alone, to be confirmed before it runs: the board is not read, so a label
+ * What Start is about to do on a card, from the card and the settings, to
+ * be confirmed before it runs: the board's lists are not read, so a label
  * or list the board lacks is still listed (the report says so afterwards).
  * Steps with nothing to change are left out, in the order Start takes them,
  * all on. The note's step is always listed, on as the settings say, so that
@@ -126,6 +129,8 @@ export type StartWorkPreviewStep = {on: boolean} & (
  *
  * @param listName - Name of the card's list.
  * @param hasNote - The card's note was found: Start opens it again.
+ * @param boardLabels - The board's labels, if read: give the labels put on
+ *   their color and name as on the board.
  */
 export function previewStartWork(
   card: StartWorkCard,
@@ -133,6 +138,7 @@ export function previewStartWork(
   settings: StartWorkSettings,
   memberId: string,
   hasNote: boolean,
+  boardLabels: readonly Pick<TrelloLabel, 'name' | 'color'>[] = [],
 ): StartWorkPreviewStep[] {
   const steps: StartWorkPreviewStep[] = [];
   if (settings.assignMe && !!memberId && !card.idMembers.includes(memberId)) {
@@ -147,7 +153,12 @@ export function previewStartWork(
       !addKeys.has(key) &&
       settings.removeLabelNames.some(name => labelKey(name) === key)
     ) {
-      steps.push({kind: 'removeLabel', name: label.name, on: true});
+      steps.push({
+        kind: 'removeLabel',
+        name: label.name,
+        color: label.color ?? null,
+        on: true,
+      });
     }
   }
   const onCard = new Set(card.labels.map(label => labelKey(label.name ?? '')));
@@ -155,7 +166,15 @@ export function previewStartWork(
     const key = labelKey(name);
     if (key && !onCard.has(key)) {
       onCard.add(key);
-      steps.push({kind: 'addLabel', name: name.trim(), on: true});
+      const onBoard = boardLabels.find(
+        label => labelKey(label.name ?? '') === key,
+      );
+      steps.push({
+        kind: 'addLabel',
+        name: onBoard?.name ?? name.trim(),
+        color: onBoard?.color ?? null,
+        on: true,
+      });
     }
   }
 

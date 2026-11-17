@@ -42,10 +42,20 @@ export function Switch({
       {accessory}
       {/* ON / OFF before the track, like the Supernote system settings. */}
       <Text style={styles.state}>{t(value ? 'common.on' : 'common.off')}</Text>
-      <View style={[styles.track, value && styles.trackOn]}>
-        <View style={[styles.knob, value && styles.knobOn]} />
-      </View>
+      <SwitchTrack value={value} />
     </Pressable>
+  );
+}
+
+/**
+ * The track of a switch alone, for rows drawing their own content: filled
+ * black with its knob at the end when on.
+ */
+export function SwitchTrack({value}: {value: boolean}): React.JSX.Element {
+  return (
+    <View style={[styles.track, value && styles.trackOn]}>
+      <View style={[styles.knob, value && styles.knobOn]} />
+    </View>
   );
 }
 

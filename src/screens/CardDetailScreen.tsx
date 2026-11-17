@@ -28,7 +28,7 @@ import {Popup} from '../components/Popup';
 import {RefreshIcon} from '../components/RefreshIcon';
 import {HEADER_ICON_SIZE, ScreenFrame} from '../components/ScreenFrame';
 import {SmallButton} from '../components/SmallButton';
-import {Switch} from '../components/Switch';
+import {SwitchTrack} from '../components/Switch';
 import {NoteIcon, StartIcon} from '../components/ActionIcons';
 import {TranslationKey, useTranslation} from '../i18n';
 import {toSessionError} from '../session/trelloSession';
@@ -51,6 +51,13 @@ import {borders, colors, spacing, typography} from '../theme';
 
 const BLOCK_GAP = spacing.sm;
 const AVATAR_SIZE = 40;
+/** Play sign of the Start work popup, which its tree of steps hangs from. */
+const TREE_ICON_SIZE = 48;
+const TREE_LINE = 2;
+/** The tree's line runs under the middle of the play sign. */
+const TREE_TRUNK_LEFT = TREE_ICON_SIZE / 2 - TREE_LINE / 2;
+const TREE_BRANCH_WIDTH = TREE_ICON_SIZE;
+const TREE_DOT_SIZE = 10;
 
 const SECTION_TITLES: Record<DetailSection, TranslationKey> = {
   description: 'cardDetail.description',
@@ -276,25 +283,83 @@ function fromBoardCard(card: TrelloBoardCard): TrelloCardDetail {
   };
 }
 
-/** One step Start is about to take, in the user's language. */
-function describePreviewStep(
+/**
+ * One step Start is about to take, in the user's language: its words, and
+ * what it acts on, a label or a list, drawn after them.
+ */
+function previewStepParts(
   step: StartWorkPreviewStep,
   t: ReturnType<typeof useTranslation>['t'],
-): string {
+): {text: string; name?: string} {
   switch (step.kind) {
     case 'assign':
-      return t('startWork.previewAssign');
+      return {text: t('startWork.assignMe')};
     case 'removeLabel':
-      return t('startWork.previewRemoveLabel', {name: step.name});
+      return {text: t('startWork.previewRemoveLabel'), name: step.name};
     case 'addLabel':
-      return t('startWork.previewAddLabel', {name: step.name});
+      return {text: t('startWork.previewAddLabel'), name: step.name};
     case 'move':
-      return t('startWork.previewMove', {name: step.name});
+      return {text: t('startWork.previewMove'), name: step.name};
     case 'createNote':
-      return t('startWork.previewCreateNote');
+      return {text: t('startWork.previewCreateNote')};
     case 'openNote':
-      return t('startWork.previewOpenNote');
+      return {text: t('startWork.previewOpenNote')};
   }
+}
+
+/**
+ * A step of the popup's tree: its branch from the line coming down from
+ * the play sign, a dot (an arrow for the note, opened last), its words with
+ * the label as a label or the list in a frame, and its switch at the end.
+ * The whole row turns the step on or off.
+ */
+function PreviewStepRow({
+  step,
+  last,
+  onToggle,
+}: {
+  step: StartWorkPreviewStep;
+  last: boolean;
+  onToggle: () => void;
+}): React.JSX.Element {
+  const {t} = useTranslation();
+  const {text, name} = previewStepParts(step, t);
+  const note = step.kind === 'createNote' || step.kind === 'openNote';
+  return (
+    <Pressable
+      accessibilityRole="switch"
+      accessibilityState={{checked: step.on}}
+      accessibilityLabel={name ? `${text} ${name}` : text}
+      onPress={onToggle}
+      style={styles.treeRow}>
+      <View style={styles.treeBranch}>
+        <View style={[styles.treeTrunk, last && styles.treeTrunkEnd]} />
+        <View style={styles.treeTwig} />
+      </View>
+      {note ? (
+        <Text style={styles.treeArrow}>›</Text>
+      ) : (
+        <View style={styles.treeDot} />
+      )}
+      <View style={styles.treeContent}>
+        <Text style={styles.popupText}>{text}</Text>
+        {name !== undefined &&
+          (step.kind === 'move' ? (
+            <View style={styles.treeList}>
+              <Text style={styles.treeListText} numberOfLines={1}>
+                {name}
+              </Text>
+            </View>
+          ) : (
+            <LabelChip
+              large
+              label={{name, color: 'color' in step ? step.color : null}}
+            />
+          ))}
+      </View>
+      <SwitchTrack value={step.on} />
+    </Pressable>
+  );
 }
 
 /** Gear of the popup's Settings button, in the button's colors. */
@@ -303,10 +368,11 @@ const settingsIcon = (color: string, background: string) => (
 );
 
 /**
- * Asks before Start runs: lists what it is about to do on the card, each
- * step with a switch that turns it off for this run alone, then Settings
- * (at Start work) on the left, Cancel and Start work on the right. Start
- * work is unavailable while every step is off.
+ * Asks before Start runs: the play sign and what it does, then its steps
+ * as a tree hanging from the sign, each with a switch that turns it off
+ * for this run alone; Settings (at Start work) on the left, Cancel and
+ * Start work on the right. Start work is unavailable while every step is
+ * off.
  */
 function StartWorkConfirmPopup({
   steps: initialSteps,
@@ -322,13 +388,14 @@ function StartWorkConfirmPopup({
 }): React.JSX.Element {
   const {t} = useTranslation();
   const [steps, setSteps] = useState(initialSteps);
-  const toggle = (index: number, on: boolean) =>
+  const toggle = (index: number) =>
     setSteps(current =>
-      current.map((step, i) => (i === index ? {...step, on} : step)),
+      current.map((step, i) => (i === index ? {...step, on: !step.on} : step)),
     );
   return (
     <Popup
-      title={t('startWork.confirmTitle')}
+      title={t('startWork.confirmIntro')}
+      icon={<StartIcon size={TREE_ICON_SIZE} color={colors.foreground} />}
       onClose={onCancel}
       actions={
         <>
@@ -350,14 +417,13 @@ function StartWorkConfirmPopup({
           />
         </>
       }>
-      <Text style={styles.popupText}>{t('startWork.confirmIntro')}</Text>
-      <View>
+      <View style={styles.tree}>
         {steps.map((step, index) => (
-          <Switch
+          <PreviewStepRow
             key={index}
-            label={describePreviewStep(step, t)}
-            value={step.on}
-            onChange={on => toggle(index, on)}
+            step={step}
+            last={index === steps.length - 1}
+            onToggle={() => toggle(index)}
           />
         ))}
       </View>
@@ -838,6 +904,80 @@ const styles = StyleSheet.create({
   // Settings stands apart, on the left of Cancel and Start work.
   popupSettings: {
     marginRight: 'auto',
+  },
+  // Hangs right under the play sign of the popup's title.
+  tree: {
+    marginTop: -spacing.md,
+  },
+  // Rows touch, so that the tree's line runs on from one to the next.
+  treeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 64,
+    paddingVertical: spacing.xs,
+  },
+  treeBranch: {
+    width: TREE_BRANCH_WIDTH,
+    alignSelf: 'stretch',
+    // The row's padding is crossed, so that the line has no gap.
+    marginVertical: -spacing.xs,
+  },
+  treeTrunk: {
+    position: 'absolute',
+    left: TREE_TRUNK_LEFT,
+    top: 0,
+    bottom: 0,
+    width: TREE_LINE,
+    backgroundColor: colors.foreground,
+  },
+  // The last step ends the line, like the corner of a tree.
+  treeTrunkEnd: {
+    bottom: '50%',
+  },
+  treeTwig: {
+    position: 'absolute',
+    left: TREE_TRUNK_LEFT,
+    right: 0,
+    top: '50%',
+    height: TREE_LINE,
+    backgroundColor: colors.foreground,
+  },
+  treeDot: {
+    width: TREE_DOT_SIZE,
+    height: TREE_DOT_SIZE,
+    borderRadius: TREE_DOT_SIZE / 2,
+    backgroundColor: colors.foreground,
+    marginRight: spacing.md,
+  },
+  treeArrow: {
+    color: colors.foreground,
+    fontSize: typography.heading,
+    fontWeight: '700',
+    lineHeight: typography.heading,
+    marginRight: spacing.sm,
+  },
+  treeContent: {
+    flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginRight: spacing.md,
+  },
+  // The list a card moves to, framed like a column of the board.
+  treeList: {
+    maxWidth: '100%',
+    minHeight: 36,
+    justifyContent: 'center',
+    borderColor: colors.foreground,
+    borderWidth: borders.width,
+    borderRadius: borders.radius,
+    paddingHorizontal: spacing.md,
+  },
+  treeListText: {
+    color: colors.foreground,
+    fontSize: typography.body,
+    fontWeight: '700',
   },
   failure: {
     gap: spacing.md,
