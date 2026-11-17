@@ -3,6 +3,14 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.60.1 — Empty card sections and a full-width name band
+
+- On the card page, the **Description**, **Attachments** and **Comments**
+  headings are always shown. A section the card has nothing in reads
+  "No description", "No attachments" or "No comments".
+- The card's grey name band now sits right under the title bar and runs
+  to both edges of the page, with padding around the text only.
+
 ## 0.60.0 — Card menu on the board
 
 - A long press on a card of the board opens its menu, beside the card:

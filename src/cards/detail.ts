@@ -23,6 +23,8 @@ export type DetailBlock =
       total: number;
     }
   | {kind: 'checkItem'; key: string; name: string; complete: boolean}
+  /** Stands under the heading of a section the card has nothing in. */
+  | {kind: 'empty'; key: string; section: DetailSection}
   | {kind: 'attachment'; key: string; name: string; url: string}
   | {
       kind: 'comment';
@@ -41,20 +43,29 @@ export type DetailSection =
 /** Paragraphs with more lines than this are cut line by line. */
 const MAX_PARAGRAPH_LINES = 8;
 
-/** Builds the blocks of the detail page of a card, in reading order. */
+/**
+ * Builds the blocks of the detail page of a card, in reading order. The
+ * description, attachments and comments always have their heading, with a
+ * line saying there are none when the card has none; checklists only show
+ * when the card has some.
+ */
 export function buildDetailBlocks(card: TrelloCardDetail): DetailBlock[] {
   const blocks: DetailBlock[] = [{kind: 'summary', key: 'summary'}];
+  const empty = (section: DetailSection) =>
+    blocks.push({kind: 'empty', key: `e-${section}`, section});
 
   const paragraphs = descriptionParagraphs(card.desc ?? '');
+  blocks.push({
+    kind: 'heading',
+    key: 'h-description',
+    section: 'description',
+  });
   if (paragraphs.length > 0) {
-    blocks.push({
-      kind: 'heading',
-      key: 'h-description',
-      section: 'description',
-    });
     paragraphs.forEach((text, i) =>
       blocks.push({kind: 'paragraph', key: `p-${i}`, text}),
     );
+  } else {
+    empty('description');
   }
 
   const checklists = sortedChecklists(card.checklists ?? []);
@@ -81,42 +92,44 @@ export function buildDetailBlocks(card: TrelloCardDetail): DetailBlock[] {
   }
 
   const attachments = card.attachments ?? [];
-  if (attachments.length > 0) {
+  blocks.push({
+    kind: 'heading',
+    key: 'h-attachments',
+    section: 'attachments',
+    ...(attachments.length > 0 && {count: String(attachments.length)}),
+  });
+  if (attachments.length === 0) {
+    empty('attachments');
+  }
+  for (const attachment of attachments) {
     blocks.push({
-      kind: 'heading',
-      key: 'h-attachments',
-      section: 'attachments',
-      count: String(attachments.length),
+      kind: 'attachment',
+      key: `a-${attachment.id}`,
+      name: attachment.name || attachment.url,
+      url: attachment.url,
     });
-    for (const attachment of attachments) {
-      blocks.push({
-        kind: 'attachment',
-        key: `a-${attachment.id}`,
-        name: attachment.name || attachment.url,
-        url: attachment.url,
-      });
-    }
   }
 
   const comments = [...(card.actions ?? [])]
     .filter(action => typeof action.data?.text === 'string')
     .sort((a, b) => b.date.localeCompare(a.date));
-  if (comments.length > 0) {
+  blocks.push({
+    kind: 'heading',
+    key: 'h-comments',
+    section: 'comments',
+    ...(comments.length > 0 && {count: String(comments.length)}),
+  });
+  if (comments.length === 0) {
+    empty('comments');
+  }
+  for (const comment of comments) {
     blocks.push({
-      kind: 'heading',
-      key: 'h-comments',
-      section: 'comments',
-      count: String(comments.length),
+      kind: 'comment',
+      key: `c-${comment.id}`,
+      author: comment.memberCreator?.fullName ?? '',
+      date: comment.date,
+      text: plainMarkdown(comment.data.text).trim(),
     });
-    for (const comment of comments) {
-      blocks.push({
-        kind: 'comment',
-        key: `c-${comment.id}`,
-        author: comment.memberCreator?.fullName ?? '',
-        date: comment.date,
-        text: plainMarkdown(comment.data.text).trim(),
-      });
-    }
   }
   return blocks;
 }

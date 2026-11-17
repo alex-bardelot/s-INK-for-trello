@@ -17,6 +17,11 @@ import {OfflineButton, OfflinePopup, useOfflineRetry} from './OfflineButton';
  */
 export const HEADER_ICON_SIZE = 32;
 /**
+ * Padding of the page under the title bar. A band drawn to the edges of
+ * the page takes it back with negative margins.
+ */
+export const CONTENT_PADDING = spacing.lg;
+/**
  * Height of the title bar, the same on every page whatever it holds: an
  * icon button with its padding, the bar's padding and its bottom border.
  */
@@ -312,7 +317,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: spacing.lg,
+    padding: CONTENT_PADDING,
   },
   flush: {
     padding: 0,

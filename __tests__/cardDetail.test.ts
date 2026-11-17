@@ -31,11 +31,24 @@ function member(id: string): TrelloBoardMember {
   return {id, fullName: id, initials: id, username: id, avatarUrl: null};
 }
 
-const kinds = (blocks: {kind: string}[]) => blocks.map(block => block.kind);
-
 describe('buildDetailBlocks', () => {
-  it('shows only the summary for a bare card', () => {
-    expect(kinds(buildDetailBlocks(card()))).toEqual(['summary']);
+  it('keeps the description, attachments and comments of a bare card', () => {
+    const blocks = buildDetailBlocks(card());
+    expect(blocks.map(block => block.key)).toEqual([
+      'summary',
+      'h-description',
+      'e-description',
+      'h-attachments',
+      'e-attachments',
+      'h-comments',
+      'e-comments',
+    ]);
+    expect(blocks[3]).not.toHaveProperty('count');
+    expect(blocks[4]).toEqual({
+      kind: 'empty',
+      key: 'e-attachments',
+      section: 'attachments',
+    });
   });
 
   it('lays out every section in reading order', () => {

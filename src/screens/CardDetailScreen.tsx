@@ -26,7 +26,11 @@ import {LabelChip} from '../components/LabelChip';
 import {MemberAvatar} from '../components/MemberAvatar';
 import {Popup} from '../components/Popup';
 import {RefreshIcon} from '../components/RefreshIcon';
-import {HEADER_ICON_SIZE, ScreenFrame} from '../components/ScreenFrame';
+import {
+  CONTENT_PADDING,
+  HEADER_ICON_SIZE,
+  ScreenFrame,
+} from '../components/ScreenFrame';
 import {SmallButton} from '../components/SmallButton';
 import {SwitchTrack} from '../components/Switch';
 import {NoteIcon, StartIcon} from '../components/ActionIcons';
@@ -64,6 +68,14 @@ const SECTION_TITLES: Record<DetailSection, TranslationKey> = {
   checklists: 'cardDetail.checklists',
   attachments: 'cardDetail.attachments',
   comments: 'cardDetail.comments',
+};
+
+/** Line shown under the heading of a section the card has nothing in. */
+const SECTION_EMPTY: Record<DetailSection, TranslationKey> = {
+  description: 'cardDetail.noDescription',
+  checklists: 'cardDetail.noChecklists',
+  attachments: 'cardDetail.noAttachments',
+  comments: 'cardDetail.noComments',
 };
 
 type DetailState =
@@ -793,6 +805,12 @@ function Block({
           <Text style={styles.paragraph}>{block.text}</Text>
         </View>
       );
+    case 'empty':
+      return (
+        <Text style={styles.emptySection}>
+          {t(SECTION_EMPTY[block.section])}
+        </Text>
+      );
   }
 }
 
@@ -1063,14 +1081,16 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingBottom: spacing.sm,
   },
-  // The card's name stands out on a light grey band, as wide as the page.
+  // The card's name stands out on a grey band drawn right under the title
+  // bar and to both edges of the page, its text kept in line with the page.
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     backgroundColor: colors.titleBand,
-    borderRadius: borders.radius,
-    paddingHorizontal: spacing.md,
+    marginTop: -CONTENT_PADDING,
+    marginHorizontal: -CONTENT_PADDING,
+    paddingHorizontal: CONTENT_PADDING,
     paddingVertical: spacing.sm,
     marginBottom: spacing.md,
   },
@@ -1166,6 +1186,11 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     fontSize: typography.body,
     lineHeight: 30,
+  },
+  emptySection: {
+    color: colors.foreground,
+    fontSize: typography.body,
+    fontStyle: 'italic',
   },
   checklist: {
     flexDirection: 'row',
