@@ -3,6 +3,15 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.59.11 — No Main page section in Settings
+
+- The **General** category of Settings no longer has a **Main page**
+  section.
+- The switch showing the "+" card that adds a public board now opens the
+  **Public boards** section, before the Supernote Roadmap switch.
+- Signed out, the switch showing the Trello connect card now stands in the
+  **Account** section, under the connect card.
+
 ## 0.59.10 — Card actions in the card's name band
 
 - On the card page, **Start work** and **Link in note** (or **Open note**)

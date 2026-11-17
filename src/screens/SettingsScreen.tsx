@@ -114,8 +114,9 @@ export interface SettingsScreenProps {
  * Settings that are rarely needed, kept off the boards page. Laid out like
  * the Supernote system settings: categories in a left column, separated by
  * dotted lines, and the selected one's sections on the right. "General"
- * holds the main page shortcuts, the public boards, the Trello account (and
- * where its token is kept) and the language; "Board" the settings of an open board (layout and mode); "New
+ * holds the public boards (and the "+" card adding one), the Trello account
+ * (where its token is kept, or the connect card when signed out) and the
+ * language; "Board" the settings of an open board (layout and mode); "New
  * card" what the New Trello Card page offers and does; "Start
  * work" what the Start button of a card does; "Links"
  * the tool opening s-INK links; "Support s-INK" feedback (through
@@ -225,8 +226,8 @@ export function SettingsScreen({
             contentContainerStyle={styles.panelContent}>
             {category === 'general' ? (
               <>
-                {/* Shortcuts shown on the boards page. */}
-                <Section title={t('settings.mainPage')}>
+                <Section title={t('settings.publicBoards')}>
+                  {/* The "+" card adding a public board on the boards page. */}
                   <Switch
                     label={t('settings.showAddPublicBoard')}
                     help={t('settings.showAddPublicBoardHelp')}
@@ -238,23 +239,6 @@ export function SettingsScreen({
                       })
                     }
                   />
-                  {/* Signed in, the boards page has no connect button. */}
-                  {!member && (
-                    <Switch
-                      label={t('settings.showConnectCard')}
-                      help={t('settings.showConnectCardHelp')}
-                      value={boardsPreferences.showConnectCard}
-                      onChange={showConnectCard =>
-                        onBoardsPreferencesChange({
-                          ...boardsPreferences,
-                          showConnectCard,
-                        })
-                      }
-                    />
-                  )}
-                </Section>
-
-                <Section title={t('settings.publicBoards')}>
                   <PublicBoardsSettings
                     client={client}
                     ensureNetwork={ensureNetwork}
@@ -273,7 +257,21 @@ export function SettingsScreen({
                       onDisconnect={onDisconnect}
                     />
                   ) : (
-                    <SignedOutCard onConnect={onConnect} />
+                    <>
+                      <SignedOutCard onConnect={onConnect} />
+                      {/* Signed in, the boards page has no connect button. */}
+                      <Switch
+                        label={t('settings.showConnectCard')}
+                        help={t('settings.showConnectCardHelp')}
+                        value={boardsPreferences.showConnectCard}
+                        onChange={showConnectCard =>
+                          onBoardsPreferencesChange({
+                            ...boardsPreferences,
+                            showConnectCard,
+                          })
+                        }
+                      />
+                    </>
                   )}
                 </Section>
 
@@ -708,7 +706,7 @@ function AccountCard({
 
 /**
  * No account connected: a way to connect. The "Trello connect button" switch
- * of the Main page section hides the "My boards" section (and its connect
+ * under it hides the "My boards" section (and its connect
  * card) of the boards page, for someone who only reads public boards.
  */
 function SignedOutCard({
