@@ -1242,9 +1242,10 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     fontSize: typography.body,
   },
+  // Labels and members centred on each other vertically.
   labelsAndMembers: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: spacing.md,
   },
   labels: {
@@ -1257,6 +1258,7 @@ const styles = StyleSheet.create({
   // Natural width, on one line, so that it can be measured.
   members: {
     flexDirection: 'row',
+    alignItems: 'center',
     flexShrink: 0,
     gap: spacing.md,
   },
@@ -1264,6 +1266,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     flexShrink: 1,
+    alignItems: 'center',
     justifyContent: 'flex-end',
     gap: spacing.xs,
   },

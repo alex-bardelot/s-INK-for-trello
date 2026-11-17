@@ -3,6 +3,12 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.61.1 — Labels and members centred on their row
+
+- On the card page, the labels and the members sharing one row are now
+  centred on each other vertically, instead of lining up on their top
+  edge.
+
 ## 0.61.0 — Tick checklist items on the card page
 
 - On the card page, a tap on a checklist item ticks or unticks it, and
