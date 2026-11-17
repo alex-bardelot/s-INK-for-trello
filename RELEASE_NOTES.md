@@ -3,6 +3,33 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.63.0 — Change labels, members and completion, write comments on the card page
+
+- On the card page, a tap on the labels or on the members opens the list
+  of the board's labels or members under them, each with a box: checking
+  or unchecking one puts it on the card or takes it off, and Trello is
+  told at once. A card without labels shows a dashed tag in their place,
+  one without members a dashed head, which open the list too. A label or
+  member goes back, with a line saying so, if Trello refuses.
+- The Comments section of the card page opens with a **Write a comment…**
+  field and a **Save** button, as on Trello. Saved comments are posted as
+  the signed-in member and show at once at the top of the comments. If
+  Trello refuses, the text stays in the field to try again; it is also
+  kept when the page is turned. The field keeps its height while typing,
+  and the page no longer jumps when the keyboard opens.
+- On the card page, a round stands before the card's name, as on Trello:
+  filled with a check when the card is complete, empty when it is not. A
+  tap on it marks the card complete, or not, and Trello is told at once;
+  the round goes back if Trello refuses.
+- The menu opened by a long press on a card of the board offers **Mark
+  complete**, or **Mark incomplete** for a complete card. The board shows
+  the change at once.
+- Complete cards keep their check before their name on the board, now
+  drawn like the card page's; a card marked complete from its page shows
+  so on the board on going back.
+- All of these are offered to members who may edit the board, once the
+  card has loaded.
+
 ## 0.62.1 — Start work popup: − and + labels, stays over Settings
 
 - The popup before Start work shows the labels it takes off after a round

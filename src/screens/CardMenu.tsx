@@ -10,6 +10,10 @@ import {
 } from '../components/ActionIcons';
 import {Button} from '../components/Button';
 import {ChainIcon} from '../components/ChainIcon';
+import {
+  MarkCompleteIcon,
+  MarkIncompleteIcon,
+} from '../components/CompleteMark';
 import {useInkLinkAction} from '../components/InsertInkLinkButton';
 import {Popup} from '../components/Popup';
 import {useTranslation} from '../i18n';
@@ -47,8 +51,9 @@ export interface CardMenuTarget {
 /**
  * The actions of a card, opened by a long press on it on the board: a
  * menu beside the card, on its right or on its left, whichever has room.
- * A tap beside the menu closes it. Start work and Archive are only offered
- * to members who may edit the board.
+ * A tap beside the menu closes it. Start work, Mark complete (or
+ * incomplete) and Archive are only offered to members who may edit the
+ * board.
  */
 export function CardMenu({
   target,
@@ -56,6 +61,7 @@ export function CardMenu({
   canEdit,
   onOpen,
   onStartWork,
+  onToggleComplete,
   onArchive,
   onClose,
 }: {
@@ -65,6 +71,8 @@ export function CardMenu({
   canEdit: boolean;
   onOpen: () => void;
   onStartWork: () => void;
+  /** Marks the card complete, or incomplete when it is. */
+  onToggleComplete: () => void;
   onArchive: () => void;
   onClose: () => void;
 }): React.JSX.Element {
@@ -90,6 +98,19 @@ export function CardMenu({
             icon: StartIcon,
             onPress: onStartWork,
           },
+          card.dueComplete
+            ? {
+                label: t('board.cardIncomplete'),
+                hint: t('board.cardIncompleteHint'),
+                icon: MarkIncompleteIcon,
+                onPress: onToggleComplete,
+              }
+            : {
+                label: t('board.cardComplete'),
+                hint: t('board.cardCompleteHint'),
+                icon: MarkCompleteIcon,
+                onPress: onToggleComplete,
+              },
         ]
       : []),
     {
@@ -235,6 +256,31 @@ export function ArchiveCardPopup({
           {t('board.archiveFailed')}
         </Text>
       )}
+    </Popup>
+  );
+}
+
+/**
+ * Tells that Trello refused to mark a card complete, or incomplete, from
+ * its menu; the card went back as it was.
+ */
+export function CompleteFailedPopup({
+  card,
+  onClose,
+}: {
+  card: TrelloBoardCard;
+  onClose: () => void;
+}): React.JSX.Element {
+  const {t} = useTranslation();
+  return (
+    <Popup
+      title={t('board.completeFailedTitle')}
+      onClose={onClose}
+      actions={<Button primary label={t('common.ok')} onPress={onClose} />}>
+      <Text style={styles.popupCardName}>{card.name}</Text>
+      <Text accessibilityRole="alert" style={styles.popupText}>
+        {t('cardDetail.completeFailed')}
+      </Text>
     </Popup>
   );
 }

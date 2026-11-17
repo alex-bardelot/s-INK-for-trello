@@ -261,6 +261,8 @@ describe('TrelloClient', () => {
     await client.removeCardLabel('c1', 'l2');
     await client.createCardLabel('c1', 'Doing');
     await client.moveCard('c1', 'list2');
+    await client.setCardComplete('c1', true);
+    await client.setCardComplete('c1', false);
     await client.archiveCard('c1');
     const calls = fetchImpl.mock.calls.map(([url, init]) => [
       init.method,
@@ -281,6 +283,8 @@ describe('TrelloClient', () => {
         'https://api.trello.com/1/cards/c1',
         {idList: 'list2', pos: 'top'},
       ],
+      ['PUT', 'https://api.trello.com/1/cards/c1', {dueComplete: true}],
+      ['PUT', 'https://api.trello.com/1/cards/c1', {dueComplete: false}],
       ['PUT', 'https://api.trello.com/1/cards/c1', {closed: true}],
     ]);
   });
@@ -307,5 +311,30 @@ describe('TrelloClient', () => {
         {state: 'incomplete'},
       ],
     ]);
+  });
+
+  it('writes a comment on a card and returns it', async () => {
+    const created = {
+      id: 'a1',
+      date: '2026-11-17T10:00:00.000Z',
+      data: {text: 'Done'},
+      memberCreator: {id: 'm1', fullName: 'Ada', initials: 'A'},
+    };
+    const fetchImpl = jest.fn().mockResolvedValue(jsonResponse(created));
+    const client = clientWith(fetchImpl);
+    await expect(client.addCardComment('c/1', 'Done')).resolves.toEqual(
+      created,
+    );
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(init.method).toBe('POST');
+    expect(url).toBe('https://api.trello.com/1/cards/c%2F1/actions/comments');
+    expect(JSON.parse(init.body)).toEqual({text: 'Done'});
+  });
+
+  it('rejects an answer to a comment that is not a comment', async () => {
+    const client = clientWith(jest.fn().mockResolvedValue(jsonResponse({})));
+    await expect(client.addCardComment('c1', 'Done')).rejects.toMatchObject({
+      kind: 'invalidResponse',
+    });
   });
 });

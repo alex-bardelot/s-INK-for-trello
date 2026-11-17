@@ -9,6 +9,7 @@ import {
   TrelloCard,
   TrelloCardDetail,
   TrelloCardLocation,
+  TrelloComment,
   TrelloLabel,
   TrelloList,
   TrelloMember,
@@ -81,6 +82,8 @@ export const CARD_NAME_MAX_LENGTH = 16384;
 export const CARD_DESC_MAX_LENGTH = 16384;
 /** Trello limit of a checklist or checklist item name. */
 export const CHECKLIST_NAME_MAX_LENGTH = 16384;
+/** Trello limit of a comment's text. */
+export const COMMENT_MAX_LENGTH = 16384;
 
 /**
  * Minimal client for the Trello REST API.
@@ -310,6 +313,25 @@ export class TrelloClient {
     );
   }
 
+  /**
+   * Writes a comment on a card, as the signed-in member, and returns it as
+   * Trello stored it (with its id, date and author).
+   */
+  async addCardComment(cardId: string, text: string): Promise<TrelloComment> {
+    const comment = await this.request<TrelloComment>(
+      `/cards/${encodeURIComponent(cardId)}/actions/comments`,
+      {method: 'POST', body: {text: text.slice(0, COMMENT_MAX_LENGTH)}},
+    );
+    if (
+      !comment ||
+      typeof comment.id !== 'string' ||
+      typeof comment.data?.text !== 'string'
+    ) {
+      throw new TrelloApiError('invalidResponse', 'Expected a comment');
+    }
+    return comment;
+  }
+
   /** Returns the labels of a board, named or not. */
   async getBoardLabels(boardId: string): Promise<TrelloLabel[]> {
     const labels = await this.request<TrelloLabel[]>(
@@ -327,6 +349,16 @@ export class TrelloClient {
     await this.request<unknown>(
       `/cards/${encodeURIComponent(cardId)}/idMembers`,
       {method: 'POST', body: {value: memberId}},
+    );
+  }
+
+  /** Takes a member off a card; they stay on the board. */
+  async removeCardMember(cardId: string, memberId: string): Promise<void> {
+    await this.request<unknown>(
+      `/cards/${encodeURIComponent(cardId)}/idMembers/${encodeURIComponent(
+        memberId,
+      )}`,
+      {method: 'DELETE'},
     );
   }
 
@@ -364,6 +396,17 @@ export class TrelloClient {
     await this.request<unknown>(`/cards/${encodeURIComponent(cardId)}`, {
       method: 'PUT',
       body: {idList: listId, pos: 'top'},
+    });
+  }
+
+  /**
+   * Marks a card complete, or not: the round check before its name on
+   * Trello, kept in the card's `dueComplete` even when it has no due date.
+   */
+  async setCardComplete(cardId: string, complete: boolean): Promise<void> {
+    await this.request<unknown>(`/cards/${encodeURIComponent(cardId)}`, {
+      method: 'PUT',
+      body: {dueComplete: complete},
     });
   }
 

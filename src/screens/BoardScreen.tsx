@@ -32,6 +32,7 @@ import {
 } from '../board/layout';
 import {BoardPreferences, loadBoardPreferences} from '../board/preferences';
 import {useTwoFingerSwipe} from '../board/useTwoFingerSwipe';
+import {withBoardCardComplete} from '../cards/completion';
 import {formatCardDate} from '../cards/detail';
 import {canAddCards} from '../cards/ordering';
 import {
@@ -41,6 +42,7 @@ import {
 } from '../components/BindSelectionButton';
 import {usePendingBinding} from '../inkLink/lassoBinding';
 import {useConnectivity} from '../network/connectivity';
+import {CompleteMark} from '../components/CompleteMark';
 import {InsertInkLinkButton} from '../components/InsertInkLinkButton';
 import {LabelChip} from '../components/LabelChip';
 import {MemberAvatar} from '../components/MemberAvatar';
@@ -68,11 +70,14 @@ import {
   ArchiveState,
   CardMenu,
   CardMenuTarget,
+  CompleteFailedPopup,
   measureCardRect,
 } from './CardMenu';
 import {WaitingScreen} from './StatusScreen';
 
 const CARD_GAP = spacing.sm;
+/** The round before the name of a complete card. */
+const COMPLETE_MARK_SIZE = 24;
 const COLUMN_GAP = spacing.lg;
 /** Space between two lists stacked in the same column (Focus, Review). */
 const LIST_GAP = spacing.lg;
@@ -401,6 +406,51 @@ export function BoardScreen({
     await fetchBoard(true);
   }, [archive, client, fetchBoard, onTokenRejected]);
 
+  // A card marked complete, or not, shows so on the board at once, whether
+  // from its menu or from its page; from the menu, it goes back if Trello
+  // refuses, and a popup tells so.
+  const showComplete = useCallback((cardId: string, complete: boolean) => {
+    setState(current =>
+      current.status === 'loaded'
+        ? {
+            ...current,
+            cardsByList: withBoardCardComplete(
+              current.cardsByList,
+              cardId,
+              complete,
+            ),
+          }
+        : current,
+    );
+  }, []);
+  const [completeFailed, setCompleteFailed] =
+    useState<TrelloBoardCard | null>(null);
+  const toggleComplete = useCallback(
+    async (card: TrelloBoardCard) => {
+      const complete = !card.dueComplete;
+      setCompleteFailed(null);
+      showComplete(card.id, complete);
+      try {
+        await client.setCardComplete(card.id, complete);
+      } catch (error) {
+        console.warn('[sINK] Failed to mark the card complete', error);
+        showComplete(card.id, !complete);
+        if (toSessionError(error) === 'invalidToken') {
+          onTokenRejected();
+          return;
+        }
+        setCompleteFailed(card);
+      }
+    },
+    [client, onTokenRejected, showComplete],
+  );
+  const completeFailedPopup = completeFailed && (
+    <CompleteFailedPopup
+      card={completeFailed}
+      onClose={() => setCompleteFailed(null)}
+    />
+  );
+
   const menuOverlay = menu && state.status === 'loaded' && (
     <CardMenu
       key={menu.card.id}
@@ -415,6 +465,10 @@ export function BoardScreen({
         closeMenu();
         setOpenCard(menu.card);
         setStartOnOpen(true);
+      }}
+      onToggleComplete={() => {
+        closeMenu();
+        toggleComplete(menu.card);
       }}
       onArchive={() => {
         closeMenu();
@@ -440,6 +494,7 @@ export function BoardScreen({
       <CardDetailScreen
         card={openCard}
         startOnOpen={startOnOpen}
+        boardId={board.id}
         boardName={board.name}
         listName={lists.find(list => list.id === openCard.idList)?.name ?? ''}
         members={state.members}
@@ -449,6 +504,7 @@ export function BoardScreen({
         canEdit={canEdit}
         onBack={closeCard}
         onTokenRejected={onTokenRejected}
+        onCompleteChanged={showComplete}
       />
     </View>
   );
@@ -594,6 +650,7 @@ export function BoardScreen({
       {detail}
       {menuOverlay}
       {archivePopup}
+      {completeFailedPopup}
     </View>
   );
 }
@@ -1066,7 +1123,7 @@ function CardTile({
             style={styles.completeMark}
             accessible
             accessibilityLabel={t('board.complete')}>
-            <Text style={styles.completeMarkText}>✓</Text>
+            <CompleteMark size={COMPLETE_MARK_SIZE} complete />
           </View>
         )}
         <Text style={styles.cardName} numberOfLines={3}>
@@ -1225,20 +1282,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: spacing.xs,
   },
+  // Centred on the name's first line.
   completeMark: {
-    width: 24,
-    height: 24,
     marginTop: 2,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.foreground,
-  },
-  completeMarkText: {
-    color: colors.background,
-    fontSize: 16,
-    fontWeight: '700',
-    lineHeight: 20,
   },
   cardName: {
     flex: 1,

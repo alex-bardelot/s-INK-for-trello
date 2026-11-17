@@ -1,11 +1,14 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   LayoutChangeEvent,
   Linking,
   Pressable,
+  StyleProp,
   StyleSheet,
   Text,
+  TextInput,
   View,
+  ViewStyle,
 } from 'react-native';
 
 import {SwipeDirection} from '../board/layout';
@@ -16,10 +19,26 @@ import {
   DetailBlock,
   DetailSection,
   formatCardDate,
+  labelChoices,
   paginateBlocks,
+  withCardLabel,
+  withCardMember,
   withCheckItemState,
+  withComment,
 } from '../cards/detail';
+import {membersMeFirst} from '../cards/newCardForm';
+import {BlockIcon, BlockIconKind} from '../components/BlockIcon';
 import {Button} from '../components/Button';
+import {CompleteMark} from '../components/CompleteMark';
+import {
+  CommentComposer,
+  CommentComposerProps,
+} from '../components/CommentComposer';
+import {
+  FloatingPicker,
+  FloatingPickerPosition,
+  measurePickerPosition,
+} from '../components/FloatingPicker';
 import {GearIcon} from '../components/GearIcon';
 import {useSettingsOpener} from '../components/settingsOpener';
 import {InsertInkLinkButton} from '../components/InsertInkLinkButton';
@@ -52,11 +71,18 @@ import {
   TrelloBoardCard,
   TrelloBoardMember,
   TrelloCardDetail,
+  TrelloLabel,
 } from '../trello/types';
 import {borders, colors, spacing, typography} from '../theme';
 
 const BLOCK_GAP = spacing.sm;
 const AVATAR_SIZE = 40;
+/** The round before the card's name that marks it complete. */
+const COMPLETE_MARK_SIZE = 32;
+/** As in the floating list of the New Trello Card page. */
+const PICKER_AVATAR_SIZE = 28;
+/** Tag or head of the dashed buttons, as high as the members' avatars. */
+const DASHED_ICON_SIZE = 26;
 /** Play sign of the Start work popup, which its tree of steps hangs from. */
 const TREE_ICON_SIZE = 48;
 const TREE_LINE = 2;
@@ -85,12 +111,23 @@ type DetailState =
   | {status: 'loaded'; card: TrelloCardDetail}
   | {status: 'failed'};
 
+type BoardLabelsState =
+  | {status: 'idle' | 'loading' | 'failed'}
+  | {status: 'loaded'; labels: TrelloLabel[]};
+
+/** What the card page's floating list offers. */
+type PickerKind = 'labels' | 'members';
+
 export interface CardDetailScreenProps {
   /** The card as shown on the board, displayed while its detail loads. */
   card: TrelloBoardCard;
+  boardId: string;
   boardName: string;
   listName: string;
-  /** Members of the board, used when the card's own are not returned. */
+  /**
+   * Members of the board, used when the card's own are not returned, and
+   * offered by the card's list of members.
+   */
   members: ReadonlyMap<string, TrelloBoardMember>;
   client: TrelloClient;
   /** Where the Start work settings are kept. */
@@ -107,6 +144,8 @@ export interface CardDetailScreenProps {
   onBack: () => void;
   /** Called when Trello rejects the token while loading. */
   onTokenRejected: () => void;
+  /** The card was marked complete, or not, on Trello from its page. */
+  onCompleteChanged?: (cardId: string, complete: boolean) => void;
 }
 
 /**
@@ -116,6 +155,7 @@ export interface CardDetailScreenProps {
  */
 export function CardDetailScreen({
   card,
+  boardId,
   boardName,
   listName,
   members,
@@ -126,6 +166,7 @@ export function CardDetailScreen({
   startOnOpen = false,
   onBack,
   onTokenRejected,
+  onCompleteChanged,
 }: CardDetailScreenProps): React.JSX.Element {
   const {t} = useTranslation();
   const [state, setState] = useState<DetailState>({status: 'loading'});
@@ -164,44 +205,160 @@ export function CardDetailScreen({
     load();
   }, [load]);
 
-  // A tapped checklist item is ticked or unticked at once, then on Trello;
-  // it goes back if Trello refuses. Items on their way can't be tapped.
-  const [pendingItems, setPendingItems] = useState<ReadonlySet<string>>(
-    () => new Set(),
-  );
-  const [checkFailed, setCheckFailed] = useState(false);
-  const setItemShown = (itemId: string, complete: boolean) =>
+  // A tapped checklist item, label or member changes at once on the page,
+  // then on Trello; it goes back if Trello refuses. What is on its way
+  // can't be tapped again until Trello answers.
+  const [pending, setPending] = useState<ReadonlySet<string>>(() => new Set());
+  const [editFailure, setEditFailure] = useState<TranslationKey | null>(null);
+  const updateShown = (change: (shown: TrelloCardDetail) => TrelloCardDetail) =>
     setState(current =>
       current.status === 'loaded'
-        ? {
-            status: 'loaded',
-            card: withCheckItemState(current.card, itemId, complete),
-          }
+        ? {status: 'loaded', card: change(current.card)}
         : current,
     );
-  const toggleCheckItem = async (itemId: string, complete: boolean) => {
-    if (pendingItems.has(itemId)) {
+  const sendEdit = async ({
+    key,
+    apply,
+    undo,
+    send,
+    failure,
+  }: {
+    key: string;
+    apply: (shown: TrelloCardDetail) => TrelloCardDetail;
+    undo: (shown: TrelloCardDetail) => TrelloCardDetail;
+    send: () => Promise<void>;
+    failure: TranslationKey;
+  }) => {
+    if (pending.has(key)) {
       return;
     }
-    setCheckFailed(false);
-    setItemShown(itemId, complete);
-    setPendingItems(current => new Set(current).add(itemId));
+    setEditFailure(null);
+    updateShown(apply);
+    setPending(current => new Set(current).add(key));
     try {
-      await client.setCheckItemState(card.id, itemId, complete);
+      await send();
     } catch (error) {
-      console.warn('[sINK] Failed to update a checklist item', error);
-      setItemShown(itemId, !complete);
+      console.warn(`[sINK] Failed to update the card (${key})`, error);
+      updateShown(undo);
       if (toSessionError(error) === 'invalidToken') {
         onTokenRejected();
         return;
       }
-      setCheckFailed(true);
+      setEditFailure(failure);
     } finally {
-      setPendingItems(current => {
+      setPending(current => {
         const next = new Set(current);
-        next.delete(itemId);
+        next.delete(key);
         return next;
       });
+    }
+  };
+  // A comment is written in the field atop the comments and shows once
+  // Trello stored it. What is being written is kept here, as the field goes
+  // whenever its page is turned or the pages are laid out again.
+  const commentDraft = useRef('');
+  const [commentSending, setCommentSending] = useState(false);
+  const sendComment = async (text: string): Promise<boolean> => {
+    setEditFailure(null);
+    setCommentSending(true);
+    try {
+      const comment = await client.addCardComment(card.id, text);
+      commentDraft.current = '';
+      updateShown(shown => withComment(shown, comment));
+      return true;
+    } catch (error) {
+      console.warn('[sINK] Failed to add a comment', error);
+      if (toSessionError(error) === 'invalidToken') {
+        onTokenRejected();
+      } else {
+        setEditFailure('cardDetail.commentFailed');
+      }
+      return false;
+    } finally {
+      setCommentSending(false);
+    }
+  };
+
+  // The round before the card's name marks it complete, or not; the board
+  // is told once Trello took it.
+  const toggleComplete = (complete: boolean) =>
+    sendEdit({
+      key: 'complete',
+      apply: shown => ({...shown, dueComplete: complete}),
+      undo: shown => ({...shown, dueComplete: !complete}),
+      send: async () => {
+        await client.setCardComplete(card.id, complete);
+        onCompleteChanged?.(card.id, complete);
+      },
+      failure: 'cardDetail.completeFailed',
+    });
+  const toggleCheckItem = (itemId: string, complete: boolean) =>
+    sendEdit({
+      key: `item:${itemId}`,
+      apply: shown => withCheckItemState(shown, itemId, complete),
+      undo: shown => withCheckItemState(shown, itemId, !complete),
+      send: () => client.setCheckItemState(card.id, itemId, complete),
+      failure: 'cardDetail.checkItemFailed',
+    });
+  const toggleLabel = (label: TrelloLabel, on: boolean) =>
+    sendEdit({
+      key: `label:${label.id}`,
+      apply: shown => withCardLabel(shown, label, on),
+      undo: shown => withCardLabel(shown, label, !on),
+      send: () =>
+        on
+          ? client.addCardLabel(card.id, label.id)
+          : client.removeCardLabel(card.id, label.id),
+      failure: 'cardDetail.labelFailed',
+    });
+  const toggleMember = (member: TrelloBoardMember, on: boolean) =>
+    sendEdit({
+      key: `member:${member.id}`,
+      apply: shown => withCardMember(shown, member, on),
+      undo: shown => withCardMember(shown, member, !on),
+      send: () =>
+        on
+          ? client.addCardMember(card.id, member.id)
+          : client.removeCardMember(card.id, member.id),
+      failure: 'cardDetail.memberFailed',
+    });
+
+  // The board's labels, read the first time the list of labels opens.
+  const [boardLabels, setBoardLabels] = useState<BoardLabelsState>({
+    status: 'idle',
+  });
+  const loadBoardLabels = () => {
+    setBoardLabels({status: 'loading'});
+    client
+      .getBoardLabels(boardId)
+      .then(labels => setBoardLabels({status: 'loaded', labels}))
+      .catch(error => {
+        console.warn('[sINK] Failed to read the board labels', error);
+        if (toSessionError(error) === 'invalidToken') {
+          onTokenRejected();
+          return;
+        }
+        setBoardLabels({status: 'failed'});
+      });
+  };
+
+  // The floating list of labels or members, under what opened it.
+  const rootRef = useRef<View>(null);
+  const [picker, setPicker] = useState<{
+    kind: PickerKind;
+    position: FloatingPickerPosition;
+  } | null>(null);
+  const openPicker = (kind: PickerKind, anchor: View) => {
+    if (
+      kind === 'labels' &&
+      (boardLabels.status === 'idle' || boardLabels.status === 'failed')
+    ) {
+      loadBoardLabels();
+    }
+    if (rootRef.current) {
+      measurePickerPosition(anchor, rootRef.current).then(position =>
+        setPicker({kind, position}),
+      );
     }
   };
 
@@ -273,7 +430,87 @@ export function CardDetailScreen({
   // The list the card is in now: Start may have moved it.
   const shownListName = detail.list?.name ?? listName;
 
+  // Labels and members are changed once the card is loaded, by members
+  // who may edit the board.
+  const editable = canEdit && state.status === 'loaded';
+  const shownMembers = cardMembers(detail, members);
+  // So are comments written: Trello lets board members comment by default.
+  const composer: CommentComposerProps | undefined = editable
+    ? {
+        draft: commentDraft.current,
+        onChangeDraft: text => {
+          commentDraft.current = text;
+        },
+        onSend: sendComment,
+        sending: commentSending,
+      }
+    : undefined;
+  const pickerRows = (kind: PickerKind) => {
+    if (kind === 'labels') {
+      if (boardLabels.status !== 'loaded') {
+        return [];
+      }
+      return labelChoices(boardLabels.labels, detail.labels ?? []).map(
+        label => ({
+          id: label.id,
+          name: label.name || t('cardDetail.unnamedLabel'),
+          selected: (detail.labels ?? []).some(other => other.id === label.id),
+          content: <LabelChip large label={label} />,
+        }),
+      );
+    }
+    // Members of the card the board did not list are kept, to be removed.
+    const choices = membersMeFirst(
+      [
+        ...members.values(),
+        ...shownMembers.filter(member => !members.has(member.id)),
+      ],
+      memberId,
+    );
+    const ids = new Set(shownMembers.map(member => member.id));
+    return choices.map(member => ({
+      id: member.id,
+      name: member.fullName,
+      selected: ids.has(member.id),
+      content: (
+        <>
+          <MemberAvatar
+            initials={member.initials}
+            avatarUrl={member.avatarUrl}
+            size={PICKER_AVATAR_SIZE}
+          />
+          <Text style={styles.pickerText} numberOfLines={1}>
+            {member.fullName}
+          </Text>
+        </>
+      ),
+    }));
+  };
+  const togglePicked = (kind: PickerKind, id: string) => {
+    if (kind === 'labels') {
+      const label =
+        boardLabels.status === 'loaded'
+          ? labelChoices(boardLabels.labels, detail.labels ?? []).find(
+              choice => choice.id === id,
+            )
+          : undefined;
+      if (label) {
+        toggleLabel(
+          label,
+          !(detail.labels ?? []).some(other => other.id === id),
+        );
+      }
+      return;
+    }
+    const shown = shownMembers.find(member => member.id === id);
+    const picked = shown ?? members.get(id);
+    if (picked) {
+      toggleMember(picked, !shown);
+    }
+  };
+
   return (
+    <View ref={rootRef} collapsable={false} style={styles.root}>
     <ScreenFrame
       // Where the card is: its board and its list.
       title={`${boardName} / ${shownListName}`}
@@ -302,14 +539,24 @@ export function CardDetailScreen({
       }>
       {/* The card's name and its own actions, above every page. */}
       <View style={styles.titleRow}>
-        {detail.dueComplete && (
-          <View
-            style={styles.completeMark}
-            accessible
-            accessibilityLabel={t('board.complete')}>
-            <Text style={styles.completeMarkText}>✓</Text>
-          </View>
-        )}
+        {/* Whether the card is complete; a tap changes it on Trello. */}
+        <Pressable
+          accessibilityRole="checkbox"
+          accessibilityLabel={t(
+            detail.dueComplete ? 'board.cardIncomplete' : 'board.cardComplete',
+          )}
+          accessibilityState={{
+            checked: detail.dueComplete,
+            disabled: !editable || pending.has('complete'),
+          }}
+          disabled={!editable || pending.has('complete')}
+          hitSlop={spacing.sm}
+          onPress={() => toggleComplete(!detail.dueComplete)}>
+          <CompleteMark
+            size={COMPLETE_MARK_SIZE}
+            complete={detail.dueComplete}
+          />
+        </Pressable>
         <Text accessibilityRole="header" style={styles.cardName}>
           {detail.name}
         </Text>
@@ -348,28 +595,28 @@ export function CardDetailScreen({
           onClose={startWork.dismissReport}
         />
       )}
-      {checkFailed && (
+      {editFailure && (
         <View accessibilityRole="alert" style={styles.checkFailure}>
           <Text style={[styles.message, styles.checkFailureText]}>
-            {t('cardDetail.checkItemFailed')}
+            {t(editFailure)}
           </Text>
           <SmallButton
             label={t('common.ok')}
             accessibilityLabel={t('common.ok')}
-            onPress={() => setCheckFailed(false)}
+            onPress={() => setEditFailure(null)}
           />
         </View>
       )}
       <DetailPages
-        // Pages are measured again for new content; ticking an item keeps
-        // the page shown.
+        // Pages are measured again for new content; ticking an item or
+        // changing a label keeps the page shown.
         key={`${state.status}:${version}`}
         card={detail}
-        members={cardMembers(detail, members)}
-        onToggleCheckItem={
-          canEdit && state.status === 'loaded' ? toggleCheckItem : undefined
-        }
-        pendingItems={pendingItems}
+        members={shownMembers}
+        onToggleCheckItem={editable ? toggleCheckItem : undefined}
+        onOpenPicker={editable ? openPicker : undefined}
+        composer={composer}
+        pending={pending}
         footer={
           state.status === 'loading' ? (
             <Text style={styles.message}>{t('cardDetail.loading')}</Text>
@@ -386,6 +633,25 @@ export function CardDetailScreen({
         }
       />
     </ScreenFrame>
+      {picker && (
+        <FloatingPicker
+          position={picker.position}
+          closeLabel={t('common.close')}
+          onClose={() => setPicker(null)}
+          emptyMessage={
+            picker.kind === 'members'
+              ? t('cardDetail.noBoardMembers')
+              : boardLabels.status === 'loaded'
+              ? t('cardDetail.noBoardLabels')
+              : boardLabels.status === 'failed'
+              ? t('cardDetail.boardLabelsFailed')
+              : t('card.loading')
+          }
+          rows={pickerRows(picker.kind)}
+          onToggle={id => togglePicked(picker.kind, id)}
+        />
+      )}
+    </View>
   );
 }
 
@@ -695,8 +961,15 @@ interface DetailPagesProps {
   footer: React.ReactNode;
   /** Ticks or unticks a checklist item; unset, items can't be tapped. */
   onToggleCheckItem?: (itemId: string, complete: boolean) => void;
-  /** Items whose new state is on its way to Trello. */
-  pendingItems: ReadonlySet<string>;
+  /**
+   * Opens the list of labels or members under `anchor`; unset, labels and
+   * members can't be tapped.
+   */
+  onOpenPicker?: (kind: PickerKind, anchor: View) => void;
+  /** Changes on their way to Trello (`item:<id>`, `label:<id>`…). */
+  pending: ReadonlySet<string>;
+  /** Field to write a comment; unset, comments are only read. */
+  composer?: CommentComposerProps;
 }
 
 /**
@@ -709,10 +982,16 @@ function DetailPages({
   members,
   footer,
   onToggleCheckItem,
-  pendingItems,
+  onOpenPicker,
+  pending,
+  composer,
 }: DetailPagesProps): React.JSX.Element {
   const {t} = useTranslation();
-  const blocks = useMemo(() => buildDetailBlocks(card), [card]);
+  const canComment = !!composer;
+  const blocks = useMemo(
+    () => buildDetailBlocks(card, {canComment}),
+    [card, canComment],
+  );
   const [areaHeight, setAreaHeight] = useState(0);
   const [heights, setHeights] = useState<Readonly<Record<string, number>>>({});
   const [page, setPage] = useState(0);
@@ -761,7 +1040,9 @@ function DetailPages({
       members={members}
       footer={footer}
       onToggleCheckItem={onToggleCheckItem}
-      pendingItems={pendingItems}
+      onOpenPicker={onOpenPicker}
+      pending={pending}
+      composer={composer}
     />
   );
 
@@ -771,6 +1052,11 @@ function DetailPages({
         style={styles.area}
         onLayout={event => {
           const {height} = event.nativeEvent.layout;
+          // The keyboard of the comment field may shrink the page: laying
+          // the pages out again would take the field away while typing.
+          if (TextInput.State.currentlyFocusedInput() && height < areaHeight) {
+            return;
+          }
           setAreaHeight(current => (current === height ? current : height));
         }}>
         <View style={styles.measureLayer} pointerEvents="none">
@@ -817,7 +1103,9 @@ interface BlockProps {
   members: readonly TrelloBoardMember[];
   footer: React.ReactNode;
   onToggleCheckItem?: (itemId: string, complete: boolean) => void;
-  pendingItems: ReadonlySet<string>;
+  onOpenPicker?: (kind: PickerKind, anchor: View) => void;
+  pending: ReadonlySet<string>;
+  composer?: CommentComposerProps;
 }
 
 function Block({
@@ -826,8 +1114,10 @@ function Block({
   members,
   footer,
   onToggleCheckItem,
-  pendingItems,
-}: BlockProps): React.JSX.Element {
+  onOpenPicker,
+  pending,
+  composer,
+}: BlockProps): React.JSX.Element | null {
   const {t, locale} = useTranslation();
   switch (block.kind) {
     case 'summary':
@@ -836,6 +1126,7 @@ function Block({
           card={card}
           members={members}
           footer={footer}
+          onOpenPicker={onOpenPicker}
         />
       );
     case 'heading':
@@ -884,14 +1175,14 @@ function Block({
         );
       }
       // The whole row ticks or unticks the item, here and on Trello.
-      const pending = pendingItems.has(block.itemId);
+      const busy = pending.has(`item:${block.itemId}`);
       return (
         <Pressable
           style={styles.checkItem}
           accessibilityRole="checkbox"
-          accessibilityState={{checked: block.complete, busy: pending}}
+          accessibilityState={{checked: block.complete, busy}}
           accessibilityLabel={block.name}
-          disabled={pending}
+          disabled={busy}
           hitSlop={{top: BLOCK_GAP / 2, bottom: BLOCK_GAP / 2}}
           onPress={() => onToggleCheckItem(block.itemId, !block.complete)}>
           {content}
@@ -940,6 +1231,8 @@ function Block({
           <Text style={styles.paragraph}>{block.text}</Text>
         </View>
       );
+    case 'commentComposer':
+      return composer ? <CommentComposer {...composer} /> : null;
     case 'empty':
       return (
         <Text style={styles.emptySection}>
@@ -957,13 +1250,21 @@ function Summary({
   card,
   members,
   footer,
-}: Pick<BlockProps, 'card' | 'members' | 'footer'>): React.JSX.Element {
+  onOpenPicker,
+}: Pick<
+  BlockProps,
+  'card' | 'members' | 'footer' | 'onOpenPicker'
+>): React.JSX.Element {
   const {t, locale} = useTranslation();
   const labels = card.labels ?? [];
   return (
     <View style={styles.summary}>
-      {(labels.length > 0 || members.length > 0) && (
-        <LabelsAndMembers labels={labels} members={members} />
+      {(labels.length > 0 || members.length > 0 || !!onOpenPicker) && (
+        <LabelsAndMembers
+          labels={labels}
+          members={members}
+          onOpenPicker={onOpenPicker}
+        />
       )}
       {(card.start || card.due) && (
         <View style={styles.dates}>
@@ -996,21 +1297,37 @@ function Summary({
  * Members are shown with their full name while it fits; when they would
  * take more than half the row next to labels (or the whole row without
  * labels), only their round avatars are shown.
+ *
+ * Where the card can be changed, a tap on the labels or on the members
+ * opens the list of them under it; a card without labels shows a dashed
+ * tag in their place, one without members a dashed head, which open it
+ * too.
  */
 function LabelsAndMembers({
   labels,
   members,
+  onOpenPicker,
 }: {
   labels: NonNullable<TrelloCardDetail['labels']>;
   members: readonly TrelloBoardMember[];
+  onOpenPicker?: (kind: PickerKind, anchor: View) => void;
 }): React.JSX.Element {
+  const {t} = useTranslation();
   const [rowWidth, setRowWidth] = useState(0);
   const [namesWidth, setNamesWidth] = useState(0);
+  const labelsRef = useRef<View>(null);
+  const membersRef = useRef<View>(null);
   const memberIds = members.map(member => member.id).join(',');
   // Measured again whenever the members change.
   useEffect(() => setNamesWidth(0), [memberIds]);
-  const room = labels.length > 0 ? rowWidth / 2 : rowWidth;
+  const labelsShown = labels.length > 0 || !!onOpenPicker;
+  const room = labelsShown ? rowWidth / 2 : rowWidth;
   const compact = rowWidth > 0 && namesWidth > room;
+  const open = (kind: PickerKind, anchor: React.RefObject<View | null>) => {
+    if (onOpenPicker && anchor.current) {
+      onOpenPicker(kind, anchor.current);
+    }
+  };
   return (
     <View
       style={styles.labelsAndMembers}
@@ -1018,59 +1335,203 @@ function LabelsAndMembers({
         const {width} = event.nativeEvent.layout;
         setRowWidth(current => (current === width ? current : width));
       }}>
-      <View style={styles.labels}>
+      <Tappable
+        anchorRef={labelsRef}
+        accessibilityLabel={
+          onOpenPicker && labels.length > 0
+            ? t('cardDetail.editLabels')
+            : undefined
+        }
+        onPress={
+          onOpenPicker && labels.length > 0
+            ? () => open('labels', labelsRef)
+            : undefined
+        }
+        style={styles.labels}>
         {labels.map(label => (
           <LabelChip key={label.id} label={label} />
         ))}
-      </View>
-      {members.length > 0 &&
-        (compact ? (
-          <View
-            style={[
-              styles.membersCompact,
-              labels.length > 0 && styles.membersBesideLabels,
-            ]}>
-            {members.map(member => (
-              <View
-                key={member.id}
-                accessible
-                accessibilityLabel={member.fullName}>
-                <MemberAvatar
-                  initials={member.initials}
-                  avatarUrl={member.avatarUrl}
-                  size={AVATAR_SIZE}
-                />
-              </View>
-            ))}
-          </View>
-        ) : (
-          <View
-            style={styles.members}
-            onLayout={event => {
-              const {width} = event.nativeEvent.layout;
-              setNamesWidth(current => (current === width ? current : width));
-            }}>
-            {members.map(member => (
-              <View key={member.id} style={styles.member}>
-                <MemberAvatar
-                  initials={member.initials}
-                  avatarUrl={member.avatarUrl}
-                  size={AVATAR_SIZE}
-                />
-                <Text style={styles.meta} numberOfLines={1}>
-                  {member.fullName}
-                </Text>
-              </View>
-            ))}
-          </View>
-        ))}
+        {onOpenPicker && labels.length === 0 && (
+          <DashedIconButton
+            icon="labels"
+            accessibilityLabel={t('cardDetail.addLabel')}
+            onPress={() => open('labels', labelsRef)}
+          />
+        )}
+      </Tappable>
+      {members.length === 0 ? (
+        onOpenPicker && (
+          <Tappable anchorRef={membersRef}>
+            <DashedIconButton
+              icon="members"
+              accessibilityLabel={t('cardDetail.addMember')}
+              onPress={() => open('members', membersRef)}
+            />
+          </Tappable>
+        )
+      ) : compact ? (
+        <Tappable
+          anchorRef={membersRef}
+          accessibilityLabel={
+            onOpenPicker ? t('cardDetail.editMembers') : undefined
+          }
+          onPress={onOpenPicker ? () => open('members', membersRef) : undefined}
+          style={[
+            styles.membersCompact,
+            labelsShown && styles.membersBesideLabels,
+          ]}>
+          {members.map(member => (
+            <View
+              key={member.id}
+              accessible={!onOpenPicker}
+              accessibilityLabel={member.fullName}>
+              <MemberAvatar
+                initials={member.initials}
+                avatarUrl={member.avatarUrl}
+                size={AVATAR_SIZE}
+              />
+            </View>
+          ))}
+        </Tappable>
+      ) : (
+        <Tappable
+          anchorRef={membersRef}
+          accessibilityLabel={
+            onOpenPicker ? t('cardDetail.editMembers') : undefined
+          }
+          onPress={onOpenPicker ? () => open('members', membersRef) : undefined}
+          style={styles.members}
+          onLayout={event => {
+            const {width} = event.nativeEvent.layout;
+            setNamesWidth(current => (current === width ? current : width));
+          }}>
+          {members.map(member => (
+            <View key={member.id} style={styles.member}>
+              <MemberAvatar
+                initials={member.initials}
+                avatarUrl={member.avatarUrl}
+                size={AVATAR_SIZE}
+              />
+              <Text style={styles.meta} numberOfLines={1}>
+                {member.fullName}
+              </Text>
+            </View>
+          ))}
+        </Tappable>
+      )}
     </View>
   );
 }
 
+/**
+ * A view the floating list opens under: pressable when `onPress` is set,
+ * a plain view otherwise.
+ */
+function Tappable({
+  anchorRef,
+  onPress,
+  accessibilityLabel,
+  style,
+  onLayout,
+  children,
+}: {
+  anchorRef: React.RefObject<View | null>;
+  onPress?: () => void;
+  accessibilityLabel?: string;
+  style?: StyleProp<ViewStyle>;
+  onLayout?: (event: LayoutChangeEvent) => void;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  if (!onPress) {
+    return (
+      <View
+        ref={anchorRef}
+        collapsable={false}
+        style={style}
+        onLayout={onLayout}>
+        {children}
+      </View>
+    );
+  }
+  return (
+    <Pressable
+      ref={anchorRef}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      onPress={onPress}
+      style={style}
+      onLayout={onLayout}>
+      {children}
+    </Pressable>
+  );
+}
+
+/**
+ * Dashed pill holding a tag or a head and a "+", standing for labels or
+ * members the card does not have yet; inverted while pressed.
+ */
+function DashedIconButton({
+  icon,
+  accessibilityLabel,
+  onPress,
+}: {
+  icon: BlockIconKind;
+  accessibilityLabel: string;
+  onPress: () => void;
+}): React.JSX.Element {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      hitSlop={spacing.xs}
+      onPress={onPress}
+      style={({pressed}) => [
+        styles.dashedButton,
+        pressed && styles.dashedButtonPressed,
+      ]}>
+      {({pressed}) => {
+        const color = pressed ? colors.background : colors.foreground;
+        return (
+          <>
+            <BlockIcon kind={icon} size={DASHED_ICON_SIZE} color={color} />
+            <Text style={[styles.dashedButtonText, {color}]}>+</Text>
+          </>
+        );
+      }}
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   container: {
     flex: 1,
+  },
+  pickerText: {
+    flexShrink: 1,
+    color: colors.foreground,
+    fontSize: typography.body,
+  },
+  dashedButton: {
+    height: AVATAR_SIZE,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderColor: colors.foreground,
+    borderRadius: AVATAR_SIZE / 2,
+    borderStyle: 'dashed',
+    borderWidth: borders.width,
+    backgroundColor: colors.background,
+  },
+  dashedButtonPressed: {
+    backgroundColor: colors.foreground,
+  },
+  dashedButtonText: {
+    fontSize: typography.label,
+    fontWeight: '700',
   },
   area: {
     flex: 1,
@@ -1259,19 +1720,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     marginLeft: spacing.sm,
-  },
-  completeMark: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.foreground,
-  },
-  completeMarkText: {
-    color: colors.background,
-    fontSize: 20,
-    fontWeight: '700',
   },
   meta: {
     color: colors.foreground,

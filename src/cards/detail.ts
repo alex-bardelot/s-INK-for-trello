@@ -4,6 +4,8 @@ import type {
   TrelloCardDetail,
   TrelloCheckItem,
   TrelloChecklist,
+  TrelloComment,
+  TrelloLabel,
 } from '../trello/types';
 
 /**
@@ -33,6 +35,8 @@ export type DetailBlock =
     }
   /** Stands under the heading of a section the card has nothing in. */
   | {kind: 'empty'; key: string; section: DetailSection}
+  /** Field to write a new comment, at the top of the comments. */
+  | {kind: 'commentComposer'; key: string}
   | {
       kind: 'attachment';
       key: string;
@@ -61,9 +65,13 @@ const MAX_PARAGRAPH_LINES = 8;
  * Builds the blocks of the detail page of a card, in reading order. The
  * description, attachments and comments always have their heading, with a
  * line saying there are none when the card has none; checklists only show
- * when the card has some.
+ * when the card has some. With `canComment`, a field to write a comment
+ * opens the comments, as on Trello.
  */
-export function buildDetailBlocks(card: TrelloCardDetail): DetailBlock[] {
+export function buildDetailBlocks(
+  card: TrelloCardDetail,
+  {canComment = false}: {canComment?: boolean} = {},
+): DetailBlock[] {
   const blocks: DetailBlock[] = [{kind: 'summary', key: 'summary'}];
   const empty = (section: DetailSection) =>
     blocks.push({kind: 'empty', key: `e-${section}`, section});
@@ -134,6 +142,9 @@ export function buildDetailBlocks(card: TrelloCardDetail): DetailBlock[] {
     section: 'comments',
     ...(comments.length > 0 && {count: String(comments.length)}),
   });
+  if (canComment) {
+    blocks.push({kind: 'commentComposer', key: 'comment-composer'});
+  }
   if (comments.length === 0) {
     empty('comments');
   }
@@ -165,6 +176,21 @@ export function webUrl(url: string | null | undefined): string | null {
     return null;
   }
   return WEB_URL_PATTERN.test(trimmed) ? trimmed : null;
+}
+
+/**
+ * The card with a comment Trello just stored, newest first; one already
+ * there (the card was reloaded meanwhile) is not added twice.
+ */
+export function withComment(
+  card: TrelloCardDetail,
+  comment: TrelloComment,
+): TrelloCardDetail {
+  const actions = card.actions ?? [];
+  if (actions.some(action => action.id === comment.id)) {
+    return card;
+  }
+  return {...card, actions: [comment, ...actions]};
 }
 
 /** Checklists and their items in board order (Trello does not sort them). */
@@ -205,6 +231,70 @@ export function withCheckItemState(
     };
   });
   return found ? {...card, checklists} : card;
+}
+
+/**
+ * The card with a label put on (`on`) or taken off, as shown while Trello
+ * is told. A label already there, or already gone, leaves the card as is.
+ */
+export function withCardLabel(
+  card: TrelloCardDetail,
+  label: TrelloLabel,
+  on: boolean,
+): TrelloCardDetail {
+  const labels = card.labels ?? [];
+  const has = labels.some(other => other.id === label.id);
+  if (has === on) {
+    return card;
+  }
+  return {
+    ...card,
+    labels: on
+      ? [...labels, label]
+      : labels.filter(other => other.id !== label.id),
+  };
+}
+
+/**
+ * The card with a member added (`on`) or removed, in its ids and, when the
+ * detail holds them, in its members.
+ */
+export function withCardMember(
+  card: TrelloCardDetail,
+  member: TrelloBoardMember,
+  on: boolean,
+): TrelloCardDetail {
+  const ids = card.idMembers ?? [];
+  if (ids.includes(member.id) === on) {
+    return card;
+  }
+  const idMembers = on
+    ? [...ids, member.id]
+    : ids.filter(id => id !== member.id);
+  if (!card.members) {
+    return {...card, idMembers};
+  }
+  return {
+    ...card,
+    idMembers,
+    members: on
+      ? [...card.members.filter(other => other.id !== member.id), member]
+      : card.members.filter(other => other.id !== member.id),
+  };
+}
+
+/**
+ * Labels offered by the card page's floating list: the board's named
+ * labels, then those of the card the board did not give (unnamed ones),
+ * so that they can be taken off.
+ */
+export function labelChoices(
+  boardLabels: readonly TrelloLabel[],
+  cardLabels: readonly TrelloLabel[],
+): TrelloLabel[] {
+  const named = boardLabels.filter(label => label.name.trim() !== '');
+  const ids = new Set(named.map(label => label.id));
+  return [...named, ...cardLabels.filter(label => !ids.has(label.id))];
 }
 
 /** Members of the card, from the nested members or the board's. */

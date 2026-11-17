@@ -3,10 +3,14 @@ import {
   cardMembers,
   descriptionParagraphs,
   formatCardDate,
+  labelChoices,
   paginateBlocks,
   plainMarkdown,
   webUrl,
+  withCardLabel,
+  withCardMember,
   withCheckItemState,
+  withComment,
 } from '../src/cards/detail';
 import {TrelloClient} from '../src/trello/TrelloClient';
 import {TrelloBoardMember, TrelloCardDetail} from '../src/trello/types';
@@ -115,6 +119,15 @@ describe('buildDetailBlocks', () => {
     expect(blocks[13]).toMatchObject({author: 'Ann', text: 'new'});
   });
 
+  it('opens the comments with a field to write one, when allowed', () => {
+    const keys = (canComment: boolean) =>
+      buildDetailBlocks(card(), {canComment})
+        .map(block => block.key)
+        .slice(-3);
+    expect(keys(true)).toEqual(['h-comments', 'comment-composer', 'e-comments']);
+    expect(keys(false)).toEqual(['e-attachments', 'h-comments', 'e-comments']);
+  });
+
   it('keeps an attachment that is not a web page, without its address', () => {
     const blocks = buildDetailBlocks(
       card({
@@ -129,6 +142,30 @@ describe('buildDetailBlocks', () => {
       name: 'Report',
       url: null,
     });
+  });
+});
+
+describe('withComment', () => {
+  const written = {
+    id: 'new',
+    date: '2026-11-17T10:00:00Z',
+    data: {text: 'Done'},
+  };
+
+  it('puts the new comment first', () => {
+    const old = {id: 'old', date: '2026-01-01T00:00:00Z', data: {text: 'x'}};
+    const shown = withComment(card({actions: [old]}), written);
+    expect(shown.actions).toEqual([written, old]);
+    expect(
+      buildDetailBlocks(shown, {canComment: true})
+        .map(block => block.key)
+        .slice(-4),
+    ).toEqual(['h-comments', 'comment-composer', 'c-new', 'c-old']);
+  });
+
+  it('does not add a comment twice', () => {
+    const withIt = card({actions: [written]});
+    expect(withComment(withIt, written)).toBe(withIt);
   });
 });
 
@@ -178,6 +215,79 @@ describe('withCheckItemState', () => {
     expect(withCheckItemState(withLists, 'x', true)).toBe(withLists);
     const bare = card();
     expect(withCheckItemState(bare, 'a', true)).toBe(bare);
+  });
+});
+
+describe('withCardLabel', () => {
+  const bug = {id: 'l-bug', name: 'Bug', color: 'red'};
+  const wip = {id: 'l-wip', name: 'WIP', color: null};
+
+  it('puts a label on and takes it off', () => {
+    const tagged = withCardLabel(card({labels: [bug]}), wip, true);
+    expect(tagged.labels).toEqual([bug, wip]);
+    expect(withCardLabel(tagged, bug, false).labels).toEqual([wip]);
+  });
+
+  it('leaves the card as it is when nothing changes', () => {
+    const tagged = card({labels: [bug]});
+    expect(withCardLabel(tagged, bug, true)).toBe(tagged);
+    expect(withCardLabel(tagged, wip, false)).toBe(tagged);
+  });
+});
+
+describe('withCardMember', () => {
+  it('adds and removes the id and the member', () => {
+    const shown = card({idMembers: ['a'], members: [member('a')]});
+    const added = withCardMember(shown, member('b'), true);
+    expect(added.idMembers).toEqual(['a', 'b']);
+    expect(added.members?.map(m => m.id)).toEqual(['a', 'b']);
+    const removed = withCardMember(added, member('a'), false);
+    expect(removed.idMembers).toEqual(['b']);
+    expect(removed.members?.map(m => m.id)).toEqual(['b']);
+  });
+
+  it('changes only the ids when the detail has no members', () => {
+    const added = withCardMember(card({idMembers: ['a']}), member('b'), true);
+    expect(added.idMembers).toEqual(['a', 'b']);
+    expect(added.members).toBeUndefined();
+    expect(cardMembers(added, new Map([['b', member('b')]]))).toEqual([
+      member('b'),
+    ]);
+  });
+
+  it('leaves the card as it is when nothing changes', () => {
+    const shown = card({idMembers: ['a']});
+    expect(withCardMember(shown, member('a'), true)).toBe(shown);
+    expect(withCardMember(shown, member('b'), false)).toBe(shown);
+  });
+});
+
+describe('labelChoices', () => {
+  it("offers the board's named labels, then the card's others", () => {
+    const named = {id: 'n', name: 'Bug', color: 'red'};
+    const unnamed = {id: 'u', name: '', color: 'green'};
+    const blank = {id: 'b', name: '  ', color: 'blue'};
+    expect(labelChoices([named, unnamed, blank], [unnamed, named])).toEqual([
+      named,
+      unnamed,
+    ]);
+    expect(labelChoices([named, unnamed], [])).toEqual([named]);
+  });
+});
+
+describe('TrelloClient.removeCardMember', () => {
+  it('deletes the member from the card', async () => {
+    const fetchImpl = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => '{}',
+      json: async () => ({}),
+    });
+    const client = new TrelloClient({apiKey: 'k', token: 't', fetchImpl});
+    await client.removeCardMember('card 1', 'm1');
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(url).toBe('https://api.trello.com/1/cards/card%201/idMembers/m1');
+    expect(init.method).toBe('DELETE');
   });
 });
 
