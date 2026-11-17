@@ -101,11 +101,8 @@ describe('reviewBoard', () => {
 
 describe('focus labels', () => {
   it('lists distinct named labels plus the selected ones', () => {
-    const cards = [
-      card('a', 'l', {labels: ['WIP', 'TODO', '']}),
-      card('b', 'l', {labels: ['todo', 'Best Effort']}),
-    ];
-    expect(focusLabelChoices(cards, ['Urgent'])).toEqual([
+    const names = ['WIP', 'TODO', '', 'todo', ' Best Effort '];
+    expect(focusLabelChoices(names, ['Urgent', 'wip'])).toEqual([
       'Best Effort',
       'TODO',
       'Urgent',

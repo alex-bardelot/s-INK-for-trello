@@ -106,11 +106,12 @@ function filterBoard(
 }
 
 /**
- * The distinct named labels used on the cards, sorted by name, plus the
- * selected Focus labels missing from this board (so they can be unselected).
+ * The distinct label names of a board (unnamed ones left out), sorted by
+ * name, plus the selected Focus labels missing from it (so they can be
+ * unselected).
  */
 export function focusLabelChoices(
-  cards: Iterable<TrelloBoardCard>,
+  names: Iterable<string>,
   selected: readonly string[],
 ): string[] {
   const byKey = new Map<string, string>();
@@ -120,10 +121,8 @@ export function focusLabelChoices(
       byKey.set(key, name.trim());
     }
   };
-  for (const card of cards) {
-    for (const label of card.labels ?? []) {
-      add(label.name ?? '');
-    }
+  for (const name of names) {
+    add(name ?? '');
   }
   selected.forEach(add);
   return [...byKey.values()].sort((a, b) =>

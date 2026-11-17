@@ -3,6 +3,21 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.62.0 — Faster Focus mode, its tags in Settings
+
+- Focus and Review modes show much sooner on boards with many cards. The
+  cards were measured one by one, and the board was drawn again after
+  each of them; their heights are now taken all at once. Long lists of the
+  full board open faster for the same reason, and the hidden copies used
+  for measuring no longer download the members' pictures.
+- The **Tags** button is gone from the board's title bar. The tags Focus
+  mode keeps are chosen in **Settings › Board › Mode**, under the default
+  mode. Opened from a board, Settings offers all of that board's named
+  tags; opened elsewhere, it lists the checked ones, which can be
+  unchecked.
+- A board under Settings reads its column counts and Focus tags again when
+  Settings closes, so changes made there apply at once.
+
 ## 0.61.1 — Labels and members centred on their row
 
 - On the card page, the labels and the members sharing one row are now

@@ -14,14 +14,11 @@ import {
   ModeChoice,
   FocusSettings,
   focusBoard,
-  focusLabelChoices,
-  labelKey,
   ListBlock,
   loadFocusSettings,
   reviewBoard,
   saveFocusSettings,
   stackLists,
-  toggleFocusLabel,
 } from '../board/focus';
 import {
   clampPage,
@@ -44,13 +41,13 @@ import {
 } from '../components/BindSelectionButton';
 import {usePendingBinding} from '../inkLink/lassoBinding';
 import {useConnectivity} from '../network/connectivity';
-import {Checkbox} from '../components/Checkbox';
 import {InsertInkLinkButton} from '../components/InsertInkLinkButton';
 import {LabelChip} from '../components/LabelChip';
 import {MemberAvatar} from '../components/MemberAvatar';
 import {RefreshIcon} from '../components/RefreshIcon';
 import {Segment, SegmentGroup} from '../components/SegmentedControl';
 import {HEADER_ICON_SIZE, ScreenFrame} from '../components/ScreenFrame';
+import {useSettingsOpener} from '../components/settingsOpener';
 import {SmallButton} from '../components/SmallButton';
 import {WaitingBox} from '../components/WaitingBox';
 import {Locale, useTranslation} from '../i18n';
@@ -86,6 +83,55 @@ type MembersById = ReadonlyMap<string, TrelloBoardMember>;
 type OpenCard = (card: TrelloBoardCard) => void;
 /** A long press on a card: `tile` is the view it is drawn in. */
 type PressCardLong = (card: TrelloBoardCard, tile: View) => void;
+/** Records the height of the view laid out for `key`. */
+type MeasureView = (key: string, event: LayoutChangeEvent) => void;
+
+/**
+ * Heights of views laid out in an invisible layer, by key. Each layout
+ * event only notes its height; the heights are handed over in one render,
+ * once every key of `keys` has one (and again when one changes after
+ * that). Storing each height as it came re-rendered the screen, and every
+ * card of the layer, once per card: on a board with many cards, Focus
+ * mode took seconds to show.
+ *
+ * @param keys the views to measure; memoize it.
+ */
+function useMeasuredHeights(
+  keys: readonly string[],
+): [Readonly<Record<string, number>>, MeasureView] {
+  const measured = useRef<Record<string, number>>({});
+  const [heights, setHeights] = useState<Readonly<Record<string, number>>>({});
+  const keysRef = useRef(keys);
+  keysRef.current = keys;
+
+  const commitIfComplete = useCallback(() => {
+    const all = measured.current;
+    if (keysRef.current.every(key => all[key] !== undefined)) {
+      setHeights(current =>
+        keysRef.current.every(key => current[key] === all[key])
+          ? current
+          : {...all},
+      );
+    }
+  }, []);
+
+  const measure = useCallback<MeasureView>(
+    (key, event) => {
+      const height = Math.ceil(event.nativeEvent.layout.height);
+      if (measured.current[key] !== height) {
+        measured.current[key] = height;
+        commitIfComplete();
+      }
+    },
+    [commitIfComplete],
+  );
+
+  // Views dropped from the layer send no event: what is left may already
+  // be measured.
+  useEffect(commitIfComplete, [commitIfComplete, keys]);
+
+  return [heights, measure];
+}
 
 type BoardState =
   | {status: 'loading'}
@@ -139,13 +185,19 @@ export function BoardScreen({
     useState<BoardPreferences>(DEFAULT_COLUMNS);
   const [firstList, setFirstList] = useState(0);
   const [focus, setFocus] = useState<FocusSettings>(DEFAULT_FOCUS_SETTINGS);
-  const [tagsOpen, setTagsOpen] = useState(false);
   const [openCard, setOpenCard] = useState<TrelloBoardCard | null>(null);
   // Opened at a card, the whole board shows whatever the saved mode, so
   // that the card is there; choosing a mode goes back to it.
   const [wholeBoard, setWholeBoard] = useState(!!initialCardId);
 
+  // Settings opens over the board, which stays mounted (the opener is
+  // `null` meanwhile): the columns and the Focus tags chosen there are read
+  // again once it closes.
+  const settingsClosed = useSettingsOpener() !== null;
   useEffect(() => {
+    if (!settingsClosed) {
+      return;
+    }
     let active = true;
     loadBoardPreferences(store).then(
       loaded => active && setPreferences(loaded),
@@ -154,7 +206,7 @@ export function BoardScreen({
     return () => {
       active = false;
     };
-  }, [store]);
+  }, [settingsClosed, store]);
 
   // A quiet load keeps the board shown until the new one comes, and keeps
   // it when the load fails.
@@ -247,7 +299,6 @@ export function BoardScreen({
     (choice: ModeChoice) => {
       updateFocus({...focus, mode: choice === 'all' ? null : choice});
       setWholeBoard(false);
-      setTagsOpen(false);
     },
     [focus, updateFocus],
   );
@@ -255,7 +306,6 @@ export function BoardScreen({
   // Supernote's roadmap, where the board is always shown in full.
   const modesAvailable = !isSupernoteRoadmap(board);
   const mode = modesAvailable && !wholeBoard ? focus.mode : null;
-  const focusOn = mode === 'focus';
   const modeChoices: Segment<ModeChoice>[] = [
     {value: 'all', label: t('settings.modeAll')},
     {value: 'focus', label: t('board.focus')},
@@ -281,16 +331,6 @@ export function BoardScreen({
         return null;
     }
   }, [focus.labels, mode, memberId, state]);
-  const tagChoices = useMemo(
-    () =>
-      state.status === 'loaded'
-        ? focusLabelChoices(
-            Array.from(state.cardsByList.values()).flat(),
-            focus.labels,
-          )
-        : [],
-    [focus.labels, state],
-  );
 
   const lists = state.status === 'loaded' ? state.lists : [];
   const listPages = pageCount(lists.length, columns);
@@ -443,14 +483,6 @@ export function BoardScreen({
         settingsCategory="boards"
         actions={
           <>
-            {focusOn && (
-              <SmallButton
-                label={t('board.focusTags')}
-                accessibilityLabel={t('board.focusTagsHint')}
-                active={tagsOpen}
-                onPress={() => setTagsOpen(open => !open)}
-              />
-            )}
             {modesAvailable && (
               <SegmentGroup
                 label={t('settings.boardMode')}
@@ -493,21 +525,7 @@ export function BoardScreen({
           </View>
         )}
 
-        {state.status === 'loaded' && tagsOpen && focusOn && (
-          <FocusTagsPanel
-            choices={tagChoices}
-            selected={focus.labels}
-            onToggle={name =>
-              updateFocus({
-                ...focus,
-                labels: toggleFocusLabel(focus.labels, name),
-              })
-            }
-            onClose={() => setTagsOpen(false)}
-          />
-        )}
-
-        {state.status === 'loaded' && !tagsOpen && focused && (
+        {state.status === 'loaded' && focused && (
           <StackedBoard
             // Measured heights depend on the column width and on the mode.
             key={`${mode}-${columns}-${width}`}
@@ -607,7 +625,8 @@ function BoardColumn({
 }: BoardColumnProps): React.JSX.Element {
   const {t, locale} = useTranslation();
   const [bodyHeight, setBodyHeight] = useState(0);
-  const [heights, setHeights] = useState<Readonly<Record<string, number>>>({});
+  const cardIds = useMemo(() => cards.map(card => card.id), [cards]);
+  const [heights, measureCard] = useMeasuredHeights(cardIds);
   const [page, setPage] = useState(0);
 
   const pages = useMemo(() => {
@@ -648,13 +667,6 @@ function BoardColumn({
     [pageIndex, totalPages],
   );
 
-  const measureCard = useCallback((id: string, event: LayoutChangeEvent) => {
-    const measured = Math.ceil(event.nativeEvent.layout.height);
-    setHeights(current =>
-      current[id] === measured ? current : {...current, [id]: measured},
-    );
-  }, []);
-
   // Like turning pages in a document: swipe left for the next lists, up for
   // the next cards of this list.
   const swipeHandlers = useTwoFingerSwipe((direction: SwipeDirection) => {
@@ -677,13 +689,12 @@ function BoardColumn({
       <View
         style={styles.columnBody}
         onLayout={event => setBodyHeight(event.nativeEvent.layout.height)}>
-        <View style={styles.measureLayer} pointerEvents="none">
-          {cards.map(card => (
-            <View key={card.id} onLayout={event => measureCard(card.id, event)}>
-              <CardTile card={card} members={members} locale={locale} />
-            </View>
-          ))}
-        </View>
+        <CardsMeasureLayer
+          cards={cards}
+          members={members}
+          locale={locale}
+          onMeasure={measureCard}
+        />
         {cards.length === 0 && (
           <Text style={styles.message}>{t('board.noCards')}</Text>
         )}
@@ -773,18 +784,19 @@ function StackedBoard({
 }: StackedBoardProps): React.JSX.Element {
   const {t, locale} = useTranslation();
   const [area, setArea] = useState({width: 0, height: 0});
-  const [heights, setHeights] = useState<Readonly<Record<string, number>>>({});
+  const keys = useMemo(
+    () =>
+      lists.flatMap(list => [
+        `list:${list.id}`,
+        ...(cardsByList.get(list.id) ?? []).map(card => `card:${card.id}`),
+      ]),
+    [cardsByList, lists],
+  );
+  const [heights, measure] = useMeasuredHeights(keys);
   const [page, setPage] = useState(0);
 
   const columnWidth =
     area.width > 0 ? (area.width - COLUMN_GAP * (columns - 1)) / columns : 0;
-
-  const measure = useCallback((key: string, event: LayoutChangeEvent) => {
-    const measured = Math.ceil(event.nativeEvent.layout.height);
-    setHeights(current =>
-      current[key] === measured ? current : {...current, [key]: measured},
-    );
-  }, []);
 
   const pages = useMemo(() => {
     if (columnWidth <= 0 || area.height <= 0) {
@@ -851,27 +863,14 @@ function StackedBoard({
           );
         }}>
         {columnWidth > 0 && (
-          <View
-            style={[styles.measureLayer, {width: columnWidth}]}
-            pointerEvents="none">
-            {lists.map(list => {
-              const cards = cardsByList.get(list.id) ?? [];
-              return (
-                <React.Fragment key={list.id}>
-                  <View onLayout={event => measure(`list:${list.id}`, event)}>
-                    <ListHeader name={list.name} count={cards.length} />
-                  </View>
-                  {cards.map(card => (
-                    <View
-                      key={card.id}
-                      onLayout={event => measure(`card:${card.id}`, event)}>
-                      <CardTile card={card} members={members} locale={locale} />
-                    </View>
-                  ))}
-                </React.Fragment>
-              );
-            })}
-          </View>
+          <StackMeasureLayer
+            lists={lists}
+            cardsByList={cardsByList}
+            members={members}
+            locale={locale}
+            width={columnWidth}
+            onMeasure={measure}
+          />
         )}
         <View style={styles.columns}>
           {Array.from({length: columns}, (_, i) => (
@@ -931,54 +930,80 @@ function StackedBoard({
   );
 }
 
-/** Picks the label names Focus mode keeps, among those used on the board. */
-function FocusTagsPanel({
-  choices,
-  selected,
-  onToggle,
-  onClose,
+/**
+ * The invisible copies of a list's cards, measured by `onMeasure` under
+ * their card ids. Memoized, so that turning pages does not draw them again.
+ */
+const CardsMeasureLayer = React.memo(function CardsMeasureLayer({
+  cards,
+  members,
+  locale,
+  onMeasure,
 }: {
-  choices: readonly string[];
-  selected: readonly string[];
-  onToggle: (name: string) => void;
-  onClose: () => void;
+  cards: readonly TrelloBoardCard[];
+  members: MembersById;
+  locale: Locale;
+  onMeasure: MeasureView;
 }): React.JSX.Element {
-  const {t} = useTranslation();
-  const selectedKeys = new Set(selected.map(labelKey));
   return (
-    <View style={styles.panel}>
-      <Text style={styles.panelTitle}>{t('board.focusTagsTitle')}</Text>
-      <Text style={styles.message}>{t('board.focusTagsHelp')}</Text>
-      {choices.length === 0 ? (
-        <Text style={styles.message}>{t('board.focusTagsNone')}</Text>
-      ) : (
-        <View style={styles.tagGrid}>
-          {choices.map(name => (
-            <View key={labelKey(name)} style={styles.tagCell}>
-              <Checkbox
-                label={name}
-                checked={selectedKeys.has(labelKey(name))}
-                onChange={() => onToggle(name)}
-              />
-            </View>
-          ))}
+    <View style={styles.measureLayer} pointerEvents="none">
+      {cards.map(card => (
+        <View key={card.id} onLayout={event => onMeasure(card.id, event)}>
+          <CardTile card={card} members={members} locale={locale} />
         </View>
-      )}
-      <View style={styles.panelActions}>
-        <SmallButton
-          label={t('common.close')}
-          accessibilityLabel={t('common.close')}
-          onPress={onClose}
-        />
-      </View>
+      ))}
     </View>
   );
-}
+});
+
+/**
+ * The invisible copies of the stacked lists, one column wide: each header
+ * is measured as `list:<id>`, each card as `card:<id>`. Memoized, so that
+ * turning pages does not draw them again.
+ */
+const StackMeasureLayer = React.memo(function StackMeasureLayer({
+  lists,
+  cardsByList,
+  members,
+  locale,
+  width,
+  onMeasure,
+}: {
+  lists: readonly TrelloList[];
+  cardsByList: ReadonlyMap<string, TrelloBoardCard[]>;
+  members: MembersById;
+  locale: Locale;
+  width: number;
+  onMeasure: MeasureView;
+}): React.JSX.Element {
+  return (
+    <View style={[styles.measureLayer, {width}]} pointerEvents="none">
+      {lists.map(list => {
+        const cards = cardsByList.get(list.id) ?? [];
+        return (
+          <React.Fragment key={list.id}>
+            <View onLayout={event => onMeasure(`list:${list.id}`, event)}>
+              <ListHeader name={list.name} count={cards.length} />
+            </View>
+            {cards.map(card => (
+              <View
+                key={card.id}
+                onLayout={event => onMeasure(`card:${card.id}`, event)}>
+                <CardTile card={card} members={members} locale={locale} />
+              </View>
+            ))}
+          </React.Fragment>
+        );
+      })}
+    </View>
+  );
+});
 
 /**
  * A card of the board. With `onPress`, tapping it opens its detail and a
  * long press opens its menu; the copies laid out only to be measured have
- * neither.
+ * neither, and their avatars are empty circles of the same size, so that
+ * the pictures are not downloaded twice.
  */
 function CardTile({
   card,
@@ -1054,18 +1079,22 @@ function CardTile({
             {badges.join('   ')}
           </Text>
           <View style={styles.avatars}>
-            {cardMembers.slice(0, MAX_AVATARS).map(member => (
-              <View
-                key={member.id}
-                accessible
-                accessibilityLabel={member.fullName}>
-                <MemberAvatar
-                  initials={member.initials}
-                  avatarUrl={member.avatarUrl}
-                  size={AVATAR_SIZE}
-                />
-              </View>
-            ))}
+            {cardMembers.slice(0, MAX_AVATARS).map(member =>
+              onPress ? (
+                <View
+                  key={member.id}
+                  accessible
+                  accessibilityLabel={member.fullName}>
+                  <MemberAvatar
+                    initials={member.initials}
+                    avatarUrl={member.avatarUrl}
+                    size={AVATAR_SIZE}
+                  />
+                </View>
+              ) : (
+                <View key={member.id} style={styles.avatarSpace} />
+              ),
+            )}
             {cardMembers.length > MAX_AVATARS && (
               <Text style={styles.cardBadges}>
                 +{cardMembers.length - MAX_AVATARS}
@@ -1150,6 +1179,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     opacity: 0,
+  },
+  /** Stands for an avatar in the measured copies of the cards. */
+  avatarSpace: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
   },
   columnFooter: {
     height: 56,
@@ -1246,25 +1280,6 @@ const styles = StyleSheet.create({
   },
   segmentSpaced: {
     marginTop: LIST_GAP,
-  },
-  panel: {
-    gap: spacing.md,
-  },
-  panelTitle: {
-    color: colors.foreground,
-    fontSize: typography.label,
-    fontWeight: '700',
-  },
-  tagGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  tagCell: {
-    width: '50%',
-    paddingRight: spacing.md,
-  },
-  panelActions: {
-    alignItems: 'flex-start',
   },
   footer: {
     flexDirection: 'row',

@@ -5,9 +5,12 @@ import pluginConfig from '../../PluginConfig.json';
 import {
   DEFAULT_FOCUS_SETTINGS,
   FocusSettings,
+  focusLabelChoices,
+  labelKey,
   loadFocusSettings,
   ModeChoice,
   saveFocusSettings,
+  toggleFocusLabel,
 } from '../board/focus';
 import {
   COLUMN_COUNTS,
@@ -24,6 +27,7 @@ import {
 import {StartIcon} from '../components/ActionIcons';
 import {BlockIcon} from '../components/BlockIcon';
 import {Button} from '../components/Button';
+import {Checkbox} from '../components/Checkbox';
 import {ChainIcon} from '../components/ChainIcon';
 import {GearIcon} from '../components/GearIcon';
 import {MemberAvatar} from '../components/MemberAvatar';
@@ -64,7 +68,12 @@ import {
   unlockDiagnostics,
 } from '../settings/rapidTaps';
 import {KeyValueStore} from '../storage/keyValueStore';
-import {TrelloBoard, TrelloClient, TrelloMember} from '../trello';
+import {
+  isSupernoteRoadmap,
+  TrelloBoard,
+  TrelloClient,
+  TrelloMember,
+} from '../trello';
 import {NewCardSettingsPanel} from './NewCardSettingsPanel';
 import {PublicBoardsSettings} from './PublicBoardsSettings';
 import {SupportSettings} from './SupportSettings';
@@ -278,7 +287,11 @@ export function SettingsScreen({
                 <LanguageSettings store={store} />
               </>
             ) : category === 'boards' ? (
-              <BoardPageSettings store={store} />
+              <BoardPageSettings
+                store={store}
+                client={client}
+                board={currentBoard}
+              />
             ) : category === 'newCard' ? (
               <NewCardSettingsPanel store={store} />
             ) : category === 'startWork' ? (
@@ -489,11 +502,20 @@ function NoteLinkSettings({store}: {store: KeyValueStore}): React.JSX.Element {
 }
 
 /**
- * The Board category: column counts and opening mode. Both are read before
- * anything is drawn, so the controls do not first show the defaults and
- * then jump to the saved values.
+ * The Board category: column counts, opening mode and Focus mode tags. They
+ * are read before anything is drawn, so the controls do not first show the
+ * defaults and then jump to the saved values.
  */
-function BoardPageSettings({store}: {store: KeyValueStore}): React.JSX.Element {
+function BoardPageSettings({
+  store,
+  client,
+  board,
+}: {
+  store: KeyValueStore;
+  client: TrelloClient;
+  /** Board Settings was opened from, whose tags Focus mode offers. */
+  board: TrelloBoard | null;
+}): React.JSX.Element {
   const [loaded, setLoaded] = useState<{
     columns: BoardPreferences;
     focus: FocusSettings;
@@ -516,7 +538,13 @@ function BoardPageSettings({store}: {store: KeyValueStore}): React.JSX.Element {
     <>
       <BoardLayoutSettings store={store} initial={loaded.columns} />
 
-      <BoardModeSettings store={store} initial={loaded.focus} />
+      <BoardModeSettings
+        store={store}
+        client={client}
+        // Supernote's roadmap has no modes: its tags are not offered.
+        board={board && !isSupernoteRoadmap(board) ? board : null}
+        initial={loaded.focus}
+      />
     </>
   );
 }
@@ -576,28 +604,86 @@ function BoardLayoutSettings({
   );
 }
 
+/** Tags of the board Settings was opened from, offered to Focus mode. */
+type BoardTagsState =
+  | {status: 'noBoard' | 'loading' | 'failed'}
+  | {status: 'loaded'; names: string[]};
+
 /**
  * Mode boards open in (all cards, focus or review), shared with the board
- * view's toolbar like the column counts.
+ * view's toolbar like the column counts, and the tags Focus mode keeps.
+ * Opened from a board, the tags offered are that board's; otherwise only
+ * the checked ones are listed, so that they can be unchecked.
  */
 function BoardModeSettings({
   store,
+  client,
+  board,
   initial,
 }: {
   store: KeyValueStore;
+  client: TrelloClient;
+  board: TrelloBoard | null;
   initial: FocusSettings;
 }): React.JSX.Element {
   const {t} = useTranslation();
   const [focus, setFocus] = useState<FocusSettings>(initial);
+  const [tags, setTags] = useState<BoardTagsState>({
+    status: board ? 'loading' : 'noBoard',
+  });
 
-  const changeMode = useCallback(
-    (choice: ModeChoice) => {
-      const next = {...focus, mode: choice === 'all' ? null : choice};
+  const update = useCallback(
+    (change: Partial<FocusSettings>) => {
+      const next = {...focus, ...change};
       setFocus(next);
       saveFocusSettings(store, next);
     },
     [focus, store],
   );
+  const changeMode = useCallback(
+    (choice: ModeChoice) => update({mode: choice === 'all' ? null : choice}),
+    [update],
+  );
+
+  const loadTags = useCallback(() => {
+    if (!board) {
+      setTags({status: 'noBoard'});
+      return () => {};
+    }
+    let active = true;
+    setTags({status: 'loading'});
+    client
+      .getBoardLabels(board.id)
+      .then(labels =>
+        active && setTags({status: 'loaded', names: labels.map(l => l.name)}),
+      )
+      .catch(error => {
+        console.warn('[sINK] Failed to read the board tags', error);
+        if (active) {
+          setTags({status: 'failed'});
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [board, client]);
+  useEffect(loadTags, [loadTags]);
+
+  const choices = focusLabelChoices(
+    tags.status === 'loaded' ? tags.names : [],
+    focus.labels,
+  );
+  const checked = new Set(focus.labels.map(labelKey));
+  const tagsNote =
+    tags.status === 'noBoard'
+      ? t('settings.focusTagsNoBoard')
+      : tags.status === 'loading'
+      ? t('settings.focusTagsLoading')
+      : tags.status === 'failed'
+      ? t('settings.focusTagsFailed')
+      : choices.length === 0
+      ? t('settings.focusTagsNone')
+      : null;
 
   const modes: {value: ModeChoice; label: string}[] = [
     {value: 'all', label: t('settings.modeAll')},
@@ -614,6 +700,38 @@ function BoardModeSettings({
         value={focus.mode ?? 'all'}
         onChange={changeMode}
       />
+
+      <View style={styles.focusTags}>
+        <Text style={styles.focusTagsTitle}>
+          {t('settings.focusTagsTitle')}
+        </Text>
+        <Text style={styles.focusTagsHelp}>{t('settings.focusTagsHelp')}</Text>
+        {choices.length > 0 && (
+          <View style={styles.tagGrid}>
+            {choices.map(name => (
+              <View key={labelKey(name)} style={styles.tagCell}>
+                <Checkbox
+                  label={name}
+                  checked={checked.has(labelKey(name))}
+                  onChange={() =>
+                    update({labels: toggleFocusLabel(focus.labels, name)})
+                  }
+                />
+              </View>
+            ))}
+          </View>
+        )}
+        {tagsNote && <Text style={styles.focusTagsHelp}>{tagsNote}</Text>}
+        {tags.status === 'failed' && (
+          <View style={styles.tagsRetry}>
+            <SmallButton
+              label={t('common.retry')}
+              accessibilityLabel={t('common.retry')}
+              onPress={loadTags}
+            />
+          </View>
+        )}
+      </View>
     </Section>
   );
 }
@@ -928,6 +1046,31 @@ const styles = StyleSheet.create({
   },
   columnsControl: {
     flex: 1,
+  },
+  focusTags: {
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+  },
+  focusTagsTitle: {
+    color: colors.foreground,
+    fontSize: typography.label,
+    fontWeight: '600',
+  },
+  focusTagsHelp: {
+    color: colors.foreground,
+    fontSize: typography.small,
+  },
+  tagGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingTop: spacing.sm,
+  },
+  tagCell: {
+    width: '50%',
+    paddingRight: spacing.md,
+  },
+  tagsRetry: {
+    alignItems: 'flex-start',
   },
   diagnostics: {
     gap: spacing.sm,
