@@ -3,6 +3,11 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.59.9 — No ® in the Main page header
+
+- The Main page header reads **s-INK for Trello**, without the ® sign.
+  The other pages keep their name as it was.
+
 ## 0.59.8 — No star in the board header
 
 - The board page no longer puts a star before the name of a starred

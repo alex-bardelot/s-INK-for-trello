@@ -1,5 +1,6 @@
 {
   "app.name": "s-INK for Trello®",
+  "app.title": "s-INK for Trello",
   "button.toolbar.name": "s-INK for Trello",
   "common.close": "Close",
   "common.on": "ON",
@@ -227,7 +228,6 @@
   "board.openCardHint": "Opens the card detail",
   "cardDetail.loading": "Loading the card detail…",
   "cardDetail.loadFailed": "The card detail could not be loaded.",
-  "cardDetail.inList": "In list {list}",
   "cardDetail.start": "Start: {date}",
   "cardDetail.due": "Due: {date}",
   "cardDetail.dueComplete": "Due: {date} (complete)",

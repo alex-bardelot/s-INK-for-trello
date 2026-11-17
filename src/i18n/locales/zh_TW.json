@@ -1,5 +1,6 @@
 {
   "app.name": "s-INK for Trello®",
+  "app.title": "s-INK for Trello",
   "button.toolbar.name": "s-INK for Trello",
   "common.close": "關閉",
   "common.on": "開",
@@ -227,7 +228,6 @@
   "board.openCardHint": "開啟卡片詳情",
   "cardDetail.loading": "正在載入卡片詳情…",
   "cardDetail.loadFailed": "無法載入卡片詳情。",
-  "cardDetail.inList": "所在列表：{list}",
   "cardDetail.start": "開始：{date}",
   "cardDetail.due": "截止：{date}",
   "cardDetail.dueComplete": "截止：{date}（已完成）",
