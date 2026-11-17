@@ -21,11 +21,21 @@ import {
   loadBoardPreferences,
   saveBoardPreferences,
 } from '../board/preferences';
+import {StartIcon} from '../components/ActionIcons';
+import {BlockIcon} from '../components/BlockIcon';
 import {Button} from '../components/Button';
+import {ChainIcon} from '../components/ChainIcon';
+import {GearIcon} from '../components/GearIcon';
 import {MemberAvatar} from '../components/MemberAvatar';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {SegmentedControl, SegmentGroup} from '../components/SegmentedControl';
 import {SettingsSection} from '../components/SettingsSection';
+import {
+  HeartIcon,
+  InfoIcon,
+  InspectIcon,
+  NewCardIcon,
+} from '../components/SettingsIcons';
 import {SmallButton} from '../components/SmallButton';
 import {clearInkLinkLog, useInkLinkLog} from '../inkLink/diagnostics';
 import {
@@ -189,6 +199,9 @@ export function SettingsScreen({
                     accessibilityState={{selected}}
                     onPress={() => select(item.value)}
                     style={styles.category}>
+                    <View style={styles.categoryIcon}>
+                      <CategoryIcon category={item.value} />
+                    </View>
                     <Text
                       style={[styles.categoryLabel, selected && styles.bold]}
                       numberOfLines={1}>
@@ -721,7 +734,44 @@ function Confirmation({
 
 const Section = SettingsSection;
 
-const SIDEBAR_WIDTH = 240;
+/** Size of the icon in front of each category name. */
+const CATEGORY_ICON_SIZE = typography.icon;
+/** Wide enough for the longest category names beside their icon. */
+const SIDEBAR_WIDTH = 300;
+
+/**
+ * Icon in front of a category name: the same signs as elsewhere in the
+ * plugin where there is one (gear, board, play, chain), and a heart for
+ * Support s-INK.
+ */
+function CategoryIcon({
+  category,
+}: {
+  category: SettingsCategory;
+}): React.JSX.Element {
+  const size = CATEGORY_ICON_SIZE;
+  const color = colors.foreground;
+  switch (category) {
+    case 'general':
+      return (
+        <GearIcon size={size} color={color} holeColor={colors.background} />
+      );
+    case 'boards':
+      return <BlockIcon kind="board" size={size} color={color} />;
+    case 'newCard':
+      return <NewCardIcon size={size} color={color} />;
+    case 'startWork':
+      return <StartIcon size={size} color={color} />;
+    case 'links':
+      return <ChainIcon size={size} color={color} />;
+    case 'support':
+      return <HeartIcon size={size} color={color} />;
+    case 'about':
+      return <InfoIcon size={size} color={color} />;
+    case 'diagnostics':
+      return <InspectIcon size={size} color={color} />;
+  }
+}
 const DOT_SIZE = 2;
 /** Dots of a separator: one every three dot widths across the column. */
 const DOT_COUNT = Math.floor(SIDEBAR_WIDTH / (DOT_SIZE * 3));
@@ -761,11 +811,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'stretch',
   },
+  categoryIcon: {
+    justifyContent: 'center',
+    paddingLeft: spacing.md,
+  },
   categoryLabel: {
     flex: 1,
     color: colors.foreground,
     fontSize: typography.label,
-    paddingHorizontal: spacing.md,
+    paddingLeft: spacing.sm + spacing.xs,
+    paddingRight: spacing.md,
     paddingVertical: spacing.md,
   },
   selectionBar: {

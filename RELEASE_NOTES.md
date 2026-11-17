@@ -3,6 +3,16 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.58.0 — Settings category icons
+
+- Each category in the left column of **Settings** now has an icon in
+  front of its name: a gear for General, a board for Board page, a card
+  with a plus for New card, a play triangle for Start work, a chain for
+  Links, a heart for Support s-INK, an "i" in a circle for About and a
+  magnifying glass for Diagnostics.
+- The category column is a little wider, so that the longer names still
+  fit beside their icon.
+
 ## 0.57.1 — Ko-fi donation page
 
 - **Settings › Support s-INK › Make a donation** now shows the QR code
