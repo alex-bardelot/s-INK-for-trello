@@ -285,6 +285,7 @@
   "startWork.previewCreateNote": "カードのノートを作成して開く",
   "startWork.previewOpenNote": "カードのノートを開く",
   "startWork.confirmSettings": "これらの手順は設定の「作業開始」で変更できます。",
+  "startWork.confirmOnce": "ここでオフにした手順は今回だけ飛ばされます。次の「作業開始」は設定の内容から始まります。",
   "startWork.reportDone": "作業を開始しました",
   "startWork.reportFailed": "作業を開始しましたが、問題があります",
   "startWork.allDisabled": "設定の「作業開始」で、すべての操作がオフになっています。",

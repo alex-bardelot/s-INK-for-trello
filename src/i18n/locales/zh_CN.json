@@ -285,6 +285,7 @@
   "startWork.previewCreateNote": "创建卡片的笔记并打开",
   "startWork.previewOpenNote": "打开卡片的笔记",
   "startWork.confirmSettings": "这些步骤可在设置的“开始工作”中更改。",
+  "startWork.confirmOnce": "在此关闭的步骤仅本次跳过；下次“开始工作”仍按设置进行。",
   "startWork.reportDone": "工作已开始",
   "startWork.reportFailed": "工作已开始，但有问题",
   "startWork.allDisabled": "设置中“开始工作”的所有操作均已关闭。",

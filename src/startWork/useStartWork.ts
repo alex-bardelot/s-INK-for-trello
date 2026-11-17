@@ -40,16 +40,23 @@ export interface StartWorkReport {
   failed: boolean;
 }
 
+/** The steps of Start listed to confirm, and the settings they come from. */
+export interface StartWorkPreview {
+  settings: StartWorkSettings;
+  steps: StartWorkPreviewStep[];
+}
+
 export interface StartWorkControls {
   /** Path of the card's note, once found or created. */
   notePath: string | null;
   /** Start was already done on the card: it is not offered again. */
   started: boolean;
   /** What Start is about to do, read from the saved settings, to confirm. */
-  loadPreview: () => Promise<StartWorkPreviewStep[]>;
+  loadPreview: () => Promise<StartWorkPreview>;
   busy: boolean;
   report: StartWorkReport | null;
-  start: () => void;
+  /** Runs Start with these settings, for this run alone, or the saved ones. */
+  start: (settings?: StartWorkSettings) => void;
   openNote: () => void;
   dismissReport: () => void;
 }
@@ -116,12 +123,15 @@ export function useStartWork({
     cardIsStarted(current, currentList, savedSettings, memberId, !!notePath);
   // Settings may have changed since the page opened (they open over it):
   // they are read again each time the steps are listed.
-  const loadPreview = async (): Promise<StartWorkPreviewStep[]> => {
+  const loadPreview = async (): Promise<StartWorkPreview> => {
     const settings = await loadStartWorkSettings(store);
     setSavedSettings(settings);
-    return current
-      ? previewStartWork(current, currentList, settings, memberId, !!notePath)
-      : [];
+    return {
+      settings,
+      steps: current
+        ? previewStartWork(current, currentList, settings, memberId, !!notePath)
+        : [],
+    };
   };
 
   // The Open note button shows if the card already has one. Never prompts here,
@@ -139,7 +149,7 @@ export function useStartWork({
     };
   }, [boardName, cardName, shortLink, store]);
 
-  const start = useCallback(async () => {
+  const start = useCallback(async (forRun?: StartWorkSettings) => {
     if (!card?.idBoard || busy) {
       return;
     }
@@ -147,7 +157,7 @@ export function useStartWork({
     setBusy(true);
     setReport(null);
     try {
-      const settings = await loadStartWorkSettings(store);
+      const settings = forRun ?? (await loadStartWorkSettings(store));
       if (startWorkDisabled(settings)) {
         setReport({steps: [], note: null, disabled: true, failed: false});
         return;

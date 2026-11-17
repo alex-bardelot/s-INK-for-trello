@@ -3,6 +3,16 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.59.3 — Steps turned off for one Start work
+
+- Each step of the **Start work** popup now has an ON / OFF switch:
+  turned off, the step is skipped this time only. The next Start work
+  lists the steps again as **Settings › Start work** says; the saved
+  settings never change from the popup.
+- The note's step is always listed, on or off as the settings say, so
+  that a note can be made, or left out, just this once.
+- **Start work** in the popup is unavailable while every step is off.
+
 ## 0.59.2 — Settings from the Start work popup
 
 - The **Start work** popup has a **Settings** button with a gear, on the

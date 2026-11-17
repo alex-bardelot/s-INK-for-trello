@@ -102,20 +102,27 @@ export function planIsEmpty(plan: StartWorkPlan): boolean {
   );
 }
 
-/** One step Start is about to take, listed before it runs. */
-export type StartWorkPreviewStep =
+/**
+ * One step Start is about to take, listed before it runs. `on` says
+ * whether this run takes it: it starts as the settings say and can be
+ * turned off for this run alone.
+ */
+export type StartWorkPreviewStep = {on: boolean} & (
   | {kind: 'assign'}
   | {kind: 'removeLabel'; name: string}
   | {kind: 'addLabel'; name: string}
   | {kind: 'move'; name: string}
   | {kind: 'createNote'}
-  | {kind: 'openNote'};
+  | {kind: 'openNote'}
+);
 
 /**
  * What Start is about to do on a card, from the card and the settings
  * alone, to be confirmed before it runs: the board is not read, so a label
  * or list the board lacks is still listed (the report says so afterwards).
- * Steps with nothing to change are left out, in the order Start takes them.
+ * Steps with nothing to change are left out, in the order Start takes them,
+ * all on. The note's step is always listed, on as the settings say, so that
+ * it can be made this once.
  *
  * @param listName - Name of the card's list.
  * @param hasNote - The card's note was found: Start opens it again.
@@ -129,7 +136,7 @@ export function previewStartWork(
 ): StartWorkPreviewStep[] {
   const steps: StartWorkPreviewStep[] = [];
   if (settings.assignMe && !!memberId && !card.idMembers.includes(memberId)) {
-    steps.push({kind: 'assign'});
+    steps.push({kind: 'assign', on: true});
   }
 
   const addKeys = new Set(settings.addLabelNames.map(labelKey));
@@ -140,7 +147,7 @@ export function previewStartWork(
       !addKeys.has(key) &&
       settings.removeLabelNames.some(name => labelKey(name) === key)
     ) {
-      steps.push({kind: 'removeLabel', name: label.name});
+      steps.push({kind: 'removeLabel', name: label.name, on: true});
     }
   }
   const onCard = new Set(card.labels.map(label => labelKey(label.name ?? '')));
@@ -148,7 +155,7 @@ export function previewStartWork(
     const key = labelKey(name);
     if (key && !onCard.has(key)) {
       onCard.add(key);
-      steps.push({kind: 'addLabel', name: name.trim()});
+      steps.push({kind: 'addLabel', name: name.trim(), on: true});
     }
   }
 
@@ -158,13 +165,50 @@ export function previewStartWork(
     target &&
     labelKey(listName) !== labelKey(target)
   ) {
-    steps.push({kind: 'move', name: target});
+    steps.push({kind: 'move', name: target, on: true});
   }
 
-  if (settings.createNote) {
-    steps.push({kind: hasNote ? 'openNote' : 'createNote'});
-  }
+  steps.push({
+    kind: hasNote ? 'openNote' : 'createNote',
+    on: settings.createNote,
+  });
   return steps;
+}
+
+/**
+ * The settings of one run of Start, once its steps were confirmed: those
+ * turned off in the popup are left out, the note's step sets whether a
+ * note is made. The saved settings are not changed.
+ */
+export function settingsForRun(
+  settings: StartWorkSettings,
+  steps: readonly StartWorkPreviewStep[],
+): StartWorkSettings {
+  const off = (kind: StartWorkPreviewStep['kind']) =>
+    steps.some(step => step.kind === kind && !step.on);
+  const offLabels = (kind: 'removeLabel' | 'addLabel') =>
+    new Set(
+      steps
+        .filter(step => step.kind === kind && !step.on)
+        .map(step => labelKey((step as {name: string}).name)),
+    );
+  const offRemoved = offLabels('removeLabel');
+  const offAdded = offLabels('addLabel');
+  const note = steps.find(
+    step => step.kind === 'createNote' || step.kind === 'openNote',
+  );
+  return {
+    ...settings,
+    assignMe: settings.assignMe && !off('assign'),
+    removeLabelNames: settings.removeLabelNames.filter(
+      name => !offRemoved.has(labelKey(name)),
+    ),
+    addLabelNames: settings.addLabelNames.filter(
+      name => !offAdded.has(labelKey(name)),
+    ),
+    moveToList: settings.moveToList && !off('move'),
+    createNote: note ? note.on : settings.createNote,
+  };
 }
 
 /**

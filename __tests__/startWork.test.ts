@@ -3,6 +3,7 @@ import {
   planIsEmpty,
   planStartWork,
   previewStartWork,
+  settingsForRun,
 } from '../src/startWork/plan';
 import {
   boardNotesDir,
@@ -368,11 +369,11 @@ describe('previewStartWork', () => {
   it('lists the steps Start is about to take, in its order', () => {
     const settings = settingsWith({moveToList: true, listName: ' In progress '});
     expect(previewStartWork(card, 'To do', settings, ME, false)).toEqual([
-      {kind: 'assign'},
-      {kind: 'removeLabel', name: 'todo'},
-      {kind: 'addLabel', name: 'WIP'},
-      {kind: 'move', name: 'In progress'},
-      {kind: 'createNote'},
+      {kind: 'assign', on: true},
+      {kind: 'removeLabel', name: 'todo', on: true},
+      {kind: 'addLabel', name: 'WIP', on: true},
+      {kind: 'move', name: 'In progress', on: true},
+      {kind: 'createNote', on: true},
     ]);
   });
 
@@ -384,7 +385,7 @@ describe('previewStartWork', () => {
     };
     const settings = settingsWith({moveToList: true, listName: 'In progress'});
     expect(previewStartWork(done, 'in progress', settings, ME, true)).toEqual(
-      [{kind: 'openNote'}],
+      [{kind: 'openNote', on: true}],
     );
   });
 
@@ -395,7 +396,10 @@ describe('previewStartWork', () => {
       addLabelNames: ['bug'],
       createNote: false,
     });
-    expect(previewStartWork(card, 'To do', settings, ME, false)).toEqual([]);
+    // The note is always listed, off as the settings say.
+    expect(previewStartWork(card, 'To do', settings, ME, false)).toEqual([
+      {kind: 'createNote', on: false},
+    ]);
   });
 
   it('lists a label even if the board may lack it', () => {
@@ -406,8 +410,50 @@ describe('previewStartWork', () => {
       createNote: false,
     });
     expect(previewStartWork(card, 'To do', settings, ME, false)).toEqual([
-      {kind: 'addLabel', name: 'Urgent'},
+      {kind: 'addLabel', name: 'Urgent', on: true},
+      {kind: 'createNote', on: false},
     ]);
+  });
+});
+
+describe('settingsForRun', () => {
+  const settings = settingsWith({moveToList: true, listName: 'In progress'});
+  const steps = previewStartWork(card, 'To do', settings, ME, false);
+
+  it('keeps the settings when every step stays as listed', () => {
+    expect(settingsForRun(settings, steps)).toEqual(settings);
+  });
+
+  it('leaves out the steps turned off, for this run alone', () => {
+    const off = steps.map(step => ({...step, on: false}));
+    expect(settingsForRun(settings, off)).toEqual({
+      ...settings,
+      assignMe: false,
+      removeLabelNames: [],
+      addLabelNames: [],
+      moveToList: false,
+      createNote: false,
+    });
+    // The saved settings are not touched.
+    expect(settings.assignMe).toBe(true);
+  });
+
+  it('turns one label off by name, whatever its case', () => {
+    const run = settingsForRun(
+      settingsWith({removeLabelNames: ['TODO', 'Bug']}),
+      [
+        {kind: 'removeLabel', name: 'todo', on: false},
+        {kind: 'removeLabel', name: 'Bug', on: true},
+      ],
+    );
+    expect(run.removeLabelNames).toEqual(['Bug']);
+  });
+
+  it('makes the note this once when its step is turned on', () => {
+    const run = settingsForRun(settingsWith({createNote: false}), [
+      {kind: 'createNote', on: true},
+    ]);
+    expect(run.createNote).toBe(true);
   });
 });
 

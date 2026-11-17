@@ -28,13 +28,15 @@ import {Popup} from '../components/Popup';
 import {RefreshIcon} from '../components/RefreshIcon';
 import {HEADER_ICON_SIZE, ScreenFrame} from '../components/ScreenFrame';
 import {SmallButton} from '../components/SmallButton';
+import {Switch} from '../components/Switch';
 import {NoteIcon, StartIcon} from '../components/ActionIcons';
 import {TranslationKey, useTranslation} from '../i18n';
 import {toSessionError} from '../session/trelloSession';
-import {StartWorkPreviewStep} from '../startWork/plan';
+import {settingsForRun, StartWorkPreviewStep} from '../startWork/plan';
 import {StartWorkStep} from '../startWork/startWork';
 import {
   NoteOutcome,
+  StartWorkPreview,
   StartWorkReport,
   useStartWork,
 } from '../startWork/useStartWork';
@@ -152,28 +154,22 @@ export function CardDetailScreen({
     onTokenRejected,
   });
 
-  // What Start is about to do is listed first, to be confirmed or cancelled.
-  // With nothing to list (every action turned off), it runs and says so.
-  const [confirmSteps, setConfirmSteps] = useState<
-    StartWorkPreviewStep[] | null
-  >(null);
-  const askStart = async () => {
-    const steps = await startWork.loadPreview();
-    if (steps.length > 0) {
-      setConfirmSteps(steps);
-    } else {
-      startWork.start();
+  // What Start is about to do is listed first, each step with a switch for
+  // this run alone, from the saved settings each time; then confirmed or
+  // cancelled.
+  const [preview, setPreview] = useState<StartWorkPreview | null>(null);
+  const askStart = async () => setPreview(await startWork.loadPreview());
+  const confirmStart = (steps: readonly StartWorkPreviewStep[]) => {
+    if (preview) {
+      setPreview(null);
+      startWork.start(settingsForRun(preview.settings, steps));
     }
-  };
-  const confirmStart = () => {
-    setConfirmSteps(null);
-    startWork.start();
   };
   // The popup's Settings button opens Settings at Start work, over the card.
   const openSettings = useSettingsOpener();
   const openStartWorkSettings = openSettings
     ? () => {
-        setConfirmSteps(null);
+        setPreview(null);
         openSettings('startWork');
       }
     : undefined;
@@ -185,10 +181,10 @@ export function CardDetailScreen({
       // The card's Start button follows the Start work settings.
       settingsCategory="startWork"
       overlay={
-        confirmSteps && (
+        preview && (
           <StartWorkConfirmPopup
-            steps={confirmSteps}
-            onCancel={() => setConfirmSteps(null)}
+            steps={preview.steps}
+            onCancel={() => setPreview(null)}
             onConfirm={confirmStart}
             onOpenSettings={openStartWorkSettings}
           />
@@ -307,22 +303,29 @@ const settingsIcon = (color: string, background: string) => (
 );
 
 /**
- * Asks before Start runs: lists what it is about to do on the card, with
- * Settings (at Start work) on the left, Cancel and Start work on the right.
+ * Asks before Start runs: lists what it is about to do on the card, each
+ * step with a switch that turns it off for this run alone, then Settings
+ * (at Start work) on the left, Cancel and Start work on the right. Start
+ * work is unavailable while every step is off.
  */
 function StartWorkConfirmPopup({
-  steps,
+  steps: initialSteps,
   onCancel,
   onConfirm,
   onOpenSettings,
 }: {
   steps: readonly StartWorkPreviewStep[];
   onCancel: () => void;
-  onConfirm: () => void;
+  onConfirm: (steps: readonly StartWorkPreviewStep[]) => void;
   /** Unset where Settings cannot be opened: the button is left out. */
   onOpenSettings?: () => void;
 }): React.JSX.Element {
   const {t} = useTranslation();
+  const [steps, setSteps] = useState(initialSteps);
+  const toggle = (index: number, on: boolean) =>
+    setSteps(current =>
+      current.map((step, i) => (i === index ? {...step, on} : step)),
+    );
   return (
     <Popup
       title={t('startWork.confirmTitle')}
@@ -339,17 +342,26 @@ function StartWorkConfirmPopup({
             </View>
           )}
           <Button label={t('common.cancel')} onPress={onCancel} />
-          <Button primary label={t('startWork.start')} onPress={onConfirm} />
+          <Button
+            primary
+            label={t('startWork.start')}
+            disabled={!steps.some(step => step.on)}
+            onPress={() => onConfirm(steps)}
+          />
         </>
       }>
       <Text style={styles.popupText}>{t('startWork.confirmIntro')}</Text>
-      <View style={styles.popupSteps}>
+      <View>
         {steps.map((step, index) => (
-          <Text key={index} style={styles.popupText}>
-            {`→ ${describePreviewStep(step, t)}`}
-          </Text>
+          <Switch
+            key={index}
+            label={describePreviewStep(step, t)}
+            value={step.on}
+            onChange={on => toggle(index, on)}
+          />
         ))}
       </View>
+      <Text style={styles.popupHint}>{t('startWork.confirmOnce')}</Text>
       {/* Said in words only when the Settings button cannot be shown. */}
       {!onOpenSettings && (
         <Text style={styles.popupHint}>{t('startWork.confirmSettings')}</Text>
@@ -818,10 +830,6 @@ const styles = StyleSheet.create({
   popupText: {
     color: colors.foreground,
     fontSize: typography.label,
-  },
-  popupSteps: {
-    gap: spacing.xs,
-    marginLeft: spacing.sm,
   },
   popupHint: {
     color: colors.foreground,
