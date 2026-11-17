@@ -19,6 +19,8 @@ import {
   paginateBlocks,
 } from '../cards/detail';
 import {Button} from '../components/Button';
+import {GearIcon} from '../components/GearIcon';
+import {useSettingsOpener} from '../components/settingsOpener';
 import {InsertInkLinkButton} from '../components/InsertInkLinkButton';
 import {LabelChip} from '../components/LabelChip';
 import {MemberAvatar} from '../components/MemberAvatar';
@@ -152,13 +154,29 @@ export function CardDetailScreen({
 
   // What Start is about to do is listed first, to be confirmed or cancelled.
   // With nothing to list (every action turned off), it runs and says so.
-  const [confirming, setConfirming] = useState(false);
-  const askStart = () =>
-    startWork.preview.length > 0 ? setConfirming(true) : startWork.start();
+  const [confirmSteps, setConfirmSteps] = useState<
+    StartWorkPreviewStep[] | null
+  >(null);
+  const askStart = async () => {
+    const steps = await startWork.loadPreview();
+    if (steps.length > 0) {
+      setConfirmSteps(steps);
+    } else {
+      startWork.start();
+    }
+  };
   const confirmStart = () => {
-    setConfirming(false);
+    setConfirmSteps(null);
     startWork.start();
   };
+  // The popup's Settings button opens Settings at Start work, over the card.
+  const openSettings = useSettingsOpener();
+  const openStartWorkSettings = openSettings
+    ? () => {
+        setConfirmSteps(null);
+        openSettings('startWork');
+      }
+    : undefined;
 
   return (
     <ScreenFrame
@@ -167,11 +185,12 @@ export function CardDetailScreen({
       // The card's Start button follows the Start work settings.
       settingsCategory="startWork"
       overlay={
-        confirming && (
+        confirmSteps && (
           <StartWorkConfirmPopup
-            steps={startWork.preview}
-            onCancel={() => setConfirming(false)}
+            steps={confirmSteps}
+            onCancel={() => setConfirmSteps(null)}
             onConfirm={confirmStart}
+            onOpenSettings={openStartWorkSettings}
           />
         )
       }
@@ -282,18 +301,26 @@ function describePreviewStep(
   }
 }
 
+/** Gear of the popup's Settings button, in the button's colors. */
+const settingsIcon = (color: string, background: string) => (
+  <GearIcon size={24} color={color} holeColor={background} />
+);
+
 /**
  * Asks before Start runs: lists what it is about to do on the card, with
- * Cancel and Start work.
+ * Settings (at Start work) on the left, Cancel and Start work on the right.
  */
 function StartWorkConfirmPopup({
   steps,
   onCancel,
   onConfirm,
+  onOpenSettings,
 }: {
   steps: readonly StartWorkPreviewStep[];
   onCancel: () => void;
   onConfirm: () => void;
+  /** Unset where Settings cannot be opened: the button is left out. */
+  onOpenSettings?: () => void;
 }): React.JSX.Element {
   const {t} = useTranslation();
   return (
@@ -302,6 +329,15 @@ function StartWorkConfirmPopup({
       onClose={onCancel}
       actions={
         <>
+          {onOpenSettings && (
+            <View style={styles.popupSettings}>
+              <Button
+                label={t('settings.open')}
+                onPress={onOpenSettings}
+                icon={settingsIcon}
+              />
+            </View>
+          )}
           <Button label={t('common.cancel')} onPress={onCancel} />
           <Button primary label={t('startWork.start')} onPress={onConfirm} />
         </>
@@ -314,7 +350,10 @@ function StartWorkConfirmPopup({
           </Text>
         ))}
       </View>
-      <Text style={styles.popupHint}>{t('startWork.confirmSettings')}</Text>
+      {/* Said in words only when the Settings button cannot be shown. */}
+      {!onOpenSettings && (
+        <Text style={styles.popupHint}>{t('startWork.confirmSettings')}</Text>
+      )}
     </Popup>
   );
 }
@@ -787,6 +826,10 @@ const styles = StyleSheet.create({
   popupHint: {
     color: colors.foreground,
     fontSize: typography.small,
+  },
+  // Settings stands apart, on the left of Cancel and Start work.
+  popupSettings: {
+    marginRight: 'auto',
   },
   failure: {
     gap: spacing.md,

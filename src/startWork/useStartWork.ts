@@ -45,8 +45,8 @@ export interface StartWorkControls {
   notePath: string | null;
   /** Start was already done on the card: it is not offered again. */
   started: boolean;
-  /** What Start is about to do, confirmed before it runs. */
-  preview: StartWorkPreviewStep[];
+  /** What Start is about to do, read from the saved settings, to confirm. */
+  loadPreview: () => Promise<StartWorkPreviewStep[]>;
   busy: boolean;
   report: StartWorkReport | null;
   start: () => void;
@@ -114,16 +114,15 @@ export function useStartWork({
     !!current &&
     !!savedSettings &&
     cardIsStarted(current, currentList, savedSettings, memberId, !!notePath);
-  const preview =
-    current && savedSettings
-      ? previewStartWork(
-          current,
-          currentList,
-          savedSettings,
-          memberId,
-          !!notePath,
-        )
+  // Settings may have changed since the page opened (they open over it):
+  // they are read again each time the steps are listed.
+  const loadPreview = async (): Promise<StartWorkPreviewStep[]> => {
+    const settings = await loadStartWorkSettings(store);
+    setSavedSettings(settings);
+    return current
+      ? previewStartWork(current, currentList, settings, memberId, !!notePath)
       : [];
+  };
 
   // The Open note button shows if the card already has one. Never prompts here,
   // nor reads every note: a note of a renamed card is found on Start.
@@ -261,7 +260,7 @@ export function useStartWork({
   return {
     notePath,
     started,
-    preview,
+    loadPreview,
     busy,
     report,
     start,

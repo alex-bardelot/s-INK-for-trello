@@ -3,6 +3,14 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.59.2 — Settings from the Start work popup
+
+- The **Start work** popup has a **Settings** button with a gear, on the
+  left of Cancel: it closes the popup and opens **Settings › Start work**
+  over the card. The line saying where the steps are set is gone.
+- The popup's steps are read again from the saved settings each time it
+  opens, so that changes made in Settings meanwhile are listed.
+
 ## 0.59.1 — One title bar height
 
 - The title bar has the same height on every page: on Settings and the
