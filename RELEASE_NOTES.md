@@ -3,6 +3,15 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.58.1 — Why donations fund a Nomad
+
+- **Settings › Support s-INK › Make a donation** now opens with a short
+  presentation, before the goal card: who develops s-INK and why, and
+  why donations are asked for: to fund a Supernote Nomad, whose smaller
+  screen s-INK is not adapted to yet, so that Nomad users benefit too.
+- The line at the top of the category, which said about the same, is
+  gone, and so is the goal card's own explanation.
+
 ## 0.58.0 — Settings category icons
 
 - Each category in the left column of **Settings** now has an icon in

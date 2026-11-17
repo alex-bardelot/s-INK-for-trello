@@ -34,9 +34,9 @@ export interface SupportSettingsProps {
 
 /**
  * The Support s-INK category: feedback first (bugs, ideas and ratings go
- * through InkHub for now), then donations toward the current funding
- * goal, with the amount raised read from the relay (the last one read is
- * shown offline).
+ * through InkHub for now), then donations: why they fund a Supernote
+ * Nomad, and the goal with the amount raised read from the relay (the
+ * last one read is shown offline).
  */
 export function SupportSettings({
   store,
@@ -50,17 +50,17 @@ export function SupportSettings({
 
   return (
     <>
-      <Text style={[styles.text, styles.intro]}>{t('support.intro')}</Text>
-
       <SettingsSection title={t('support.feedback')}>
         <Text style={styles.text}>{t('support.feedbackText')}</Text>
         <LinkBlock url={INKHUB_URL} label={t('support.inkhubQr')} />
       </SettingsSection>
 
       <SettingsSection title={t('support.donate')}>
+        <Text style={[styles.text, styles.donateText]}>
+          {t('support.donateText')}
+        </Text>
         <View style={styles.card}>
           <Text style={styles.goalTitle}>{t('support.goalTitle')}</Text>
-          <Text style={styles.text}>{t('support.goalWhy')}</Text>
 
           <View
             accessible
@@ -181,8 +181,8 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     fontSize: typography.body,
   },
-  intro: {
-    marginBottom: spacing.lg,
+  donateText: {
+    marginBottom: spacing.sm,
   },
   bold: {
     fontWeight: '700',
