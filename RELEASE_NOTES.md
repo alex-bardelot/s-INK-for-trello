@@ -3,6 +3,12 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.59.4 — Even gaps between the title bar icons
+
+- The refresh, settings and close icons of the title bar stand at the
+  same distance from each other: the gap before the settings gear was
+  much wider than the one between the gear and the close cross.
+
 ## 0.59.3 — Steps turned off for one Start work
 
 - Each step of the **Start work** popup now has an ON / OFF switch:

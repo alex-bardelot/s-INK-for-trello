@@ -24,6 +24,13 @@ const HEADER_HEIGHT =
   HEADER_ICON_SIZE + spacing.sm * 2 + spacing.md * 2 + borders.width;
 /** The gear fills its square more than the close cross: a bit smaller. */
 const SETTINGS_ICON_SIZE = 28;
+/**
+ * Padding of the settings button: its smaller gear gets the difference, so
+ * the button is as big as the others and the gaps between the icons of
+ * the bar (refresh, settings, close) come out the same.
+ */
+const SETTINGS_PADDING =
+  spacing.sm + (HEADER_ICON_SIZE - SETTINGS_ICON_SIZE) / 2;
 
 export interface ScreenFrameProps {
   title: string;
@@ -143,7 +150,7 @@ export function ScreenFrame({
             accessibilityLabel={t('settings.open')}
             hitSlop={spacing.md}
             onPress={() => openSettings(settingsCategory)}
-            style={styles.closeButton}>
+            style={styles.settingsButton}>
             {({pressed}) => (
               <GearIcon
                 size={SETTINGS_ICON_SIZE}
@@ -277,14 +284,20 @@ const styles = StyleSheet.create({
     fontSize: typography.heading,
     fontWeight: '700',
   },
+  // No margin on the right: the actions end with an icon button (refresh
+  // or offline), which then sits next to settings and close like they sit
+  // next to each other, their paddings alone between them.
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    marginHorizontal: spacing.md,
+    marginLeft: spacing.md,
   },
   closeButton: {
     padding: spacing.sm,
+  },
+  settingsButton: {
+    padding: SETTINGS_PADDING,
   },
   backButton: {
     paddingRight: spacing.md,
