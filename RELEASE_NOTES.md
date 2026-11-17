@@ -3,6 +3,11 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.59.12 — Card name band visible on the display
+
+- The grey band behind the card's name on the card page is a darker grey:
+  the former one came out white on the E Ink display.
+
 ## 0.59.11 — No Main page section in Settings
 
 - The **General** category of Settings no longer has a **Main page**
