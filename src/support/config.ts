@@ -23,6 +23,6 @@ export const FUNDING_URL = TRELLO_RELAY_URL
 /** Current funding goal; its texts are in the `support.goal*` keys. */
 export const FUNDING_GOAL = {
   /** Amount to raise, in {@link FUNDING_GOAL.currency}. */
-  target: 528,
+  target: 480,
   currency: 'EUR',
 } as const;

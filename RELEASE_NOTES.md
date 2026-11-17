@@ -3,6 +3,11 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.58.2 — Nomad goal at €480
+
+- The **Support s-INK** funding goal is now €480: the Nomad €402 and the
+  Standard Push-Up pen €78. Shipping is no longer counted.
+
 ## 0.58.1 — Why donations fund a Nomad
 
 - **Settings › Support s-INK › Make a donation** now opens with a short
