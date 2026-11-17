@@ -3,6 +3,13 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.59.6 — Board settings without a flash
+
+- The **Board page** category of Settings is renamed **Board**.
+- Opening it no longer shows the default column counts and mode for a
+  moment before the saved ones: its settings are read first, then drawn
+  at once.
+
 ## 0.59.5 — Start work popup as a tree
 
 - The **Start work** popup is drawn as a tree: a large play sign with

@@ -115,7 +115,7 @@ export interface SettingsScreenProps {
  * the Supernote system settings: categories in a left column, separated by
  * dotted lines, and the selected one's sections on the right. "General"
  * holds the main page shortcuts, the public boards, the Trello account (and
- * where its token is kept) and the language; "Board page" the settings of an open board (layout and mode); "New
+ * where its token is kept) and the language; "Board" the settings of an open board (layout and mode); "New
  * card" what the New Trello Card page offers and does; "Start
  * work" what the Start button of a card does; "Links"
  * the tool opening s-INK links; "Support s-INK" feedback (through
@@ -280,11 +280,7 @@ export function SettingsScreen({
                 <LanguageSettings store={store} />
               </>
             ) : category === 'boards' ? (
-              <>
-                <BoardLayoutSettings store={store} />
-
-                <BoardModeSettings store={store} />
-              </>
+              <BoardPageSettings store={store} />
             ) : category === 'newCard' ? (
               <NewCardSettingsPanel store={store} />
             ) : category === 'startWork' ? (
@@ -495,24 +491,51 @@ function NoteLinkSettings({store}: {store: KeyValueStore}): React.JSX.Element {
 }
 
 /**
+ * The Board category: column counts and opening mode. Both are read before
+ * anything is drawn, so the controls do not first show the defaults and
+ * then jump to the saved values.
+ */
+function BoardPageSettings({store}: {store: KeyValueStore}): React.JSX.Element {
+  const [loaded, setLoaded] = useState<{
+    columns: BoardPreferences;
+    focus: FocusSettings;
+  } | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([loadBoardPreferences(store), loadFocusSettings(store)])
+      .catch(() => [DEFAULT_COLUMNS, DEFAULT_FOCUS_SETTINGS] as const)
+      .then(([columns, focus]) => active && setLoaded({columns, focus}));
+    return () => {
+      active = false;
+    };
+  }, [store]);
+
+  if (!loaded) {
+    return <></>;
+  }
+  return (
+    <>
+      <BoardLayoutSettings store={store} initial={loaded.columns} />
+
+      <BoardModeSettings store={store} initial={loaded.focus} />
+    </>
+  );
+}
+
+/**
  * Column counts per orientation, the same settings the board view changes
  * from its toolbar: they are read and saved in the same place.
  */
 function BoardLayoutSettings({
   store,
+  initial,
 }: {
   store: KeyValueStore;
+  initial: BoardPreferences;
 }): React.JSX.Element {
   const {t} = useTranslation();
-  const [columns, setColumns] = useState<BoardPreferences>(DEFAULT_COLUMNS);
-
-  useEffect(() => {
-    let active = true;
-    loadBoardPreferences(store).then(loaded => active && setColumns(loaded));
-    return () => {
-      active = false;
-    };
-  }, [store]);
+  const [columns, setColumns] = useState<BoardPreferences>(initial);
 
   const changeColumns = useCallback(
     (orientation: keyof BoardPreferences, count: ColumnCount) => {
@@ -559,17 +582,15 @@ function BoardLayoutSettings({
  * Mode boards open in (all cards, focus or review), shared with the board
  * view's toolbar like the column counts.
  */
-function BoardModeSettings({store}: {store: KeyValueStore}): React.JSX.Element {
+function BoardModeSettings({
+  store,
+  initial,
+}: {
+  store: KeyValueStore;
+  initial: FocusSettings;
+}): React.JSX.Element {
   const {t} = useTranslation();
-  const [focus, setFocus] = useState<FocusSettings>(DEFAULT_FOCUS_SETTINGS);
-
-  useEffect(() => {
-    let active = true;
-    loadFocusSettings(store).then(loaded => active && setFocus(loaded));
-    return () => {
-      active = false;
-    };
-  }, [store]);
+  const [focus, setFocus] = useState<FocusSettings>(initial);
 
   const changeMode = useCallback(
     (choice: ModeChoice) => {
