@@ -987,10 +987,15 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingBottom: spacing.sm,
   },
+  // The card's name stands out on a light grey band, as wide as the page.
   titleRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
+    backgroundColor: colors.titleBand,
+    borderRadius: borders.radius,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
   cardName: {
     flex: 1,

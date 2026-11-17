@@ -14,6 +14,8 @@ export const colors = {
   labelBorder: '#8A8A8A',
   /** Fallback disc behind member initials. */
   avatar: '#D0D0D0',
+  /** Band behind the card's name on the card page. */
+  titleBand: '#E2E2E2',
   /** Light Wi-Fi sign while offline, like the tablet's own when Wi-Fi is off. */
   wifiOff: '#8A8A8A',
   /** Action that cannot be used yet, on the black dialog title bar. */

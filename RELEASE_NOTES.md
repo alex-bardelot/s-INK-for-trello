@@ -3,6 +3,12 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.59.7 — Card name on a grey band
+
+- On the card page, the card's name stands out on a light grey band as
+  wide as the page and as tall as the name, with some room around the
+  text.
+
 ## 0.59.6 — Board settings without a flash
 
 - The **Board page** category of Settings is renamed **Board**.
