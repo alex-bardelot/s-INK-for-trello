@@ -3,6 +3,13 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.59.13 — Labels and members on one row
+
+- On the card page, the card's labels and its members share one row:
+  labels on the left, members on the right.
+- When the members' names would take too much of the row (more than half
+  of it next to labels), only their round avatars are shown.
+
 ## 0.59.12 — Card name band visible on the display
 
 - The grey band behind the card's name on the card page is a darker grey:

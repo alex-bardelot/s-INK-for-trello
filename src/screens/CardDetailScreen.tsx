@@ -789,26 +789,8 @@ function Summary({
   const labels = card.labels ?? [];
   return (
     <View style={styles.summary}>
-      {labels.length > 0 && (
-        <View style={styles.labels}>
-          {labels.map(label => (
-            <LabelChip key={label.id} label={label} />
-          ))}
-        </View>
-      )}
-      {members.length > 0 && (
-        <View style={styles.members}>
-          {members.map(member => (
-            <View key={member.id} style={styles.member}>
-              <MemberAvatar
-                initials={member.initials}
-                avatarUrl={member.avatarUrl}
-                size={AVATAR_SIZE}
-              />
-              <Text style={styles.meta}>{member.fullName}</Text>
-            </View>
-          ))}
-        </View>
+      {(labels.length > 0 || members.length > 0) && (
+        <LabelsAndMembers labels={labels} members={members} />
       )}
       {(card.start || card.due) && (
         <View style={styles.dates}>
@@ -832,6 +814,83 @@ function Summary({
         </View>
       )}
       {footer}
+    </View>
+  );
+}
+
+/**
+ * The card's labels on the left and its members on the right, on one row.
+ * Members are shown with their full name while it fits; when they would
+ * take more than half the row next to labels (or the whole row without
+ * labels), only their round avatars are shown.
+ */
+function LabelsAndMembers({
+  labels,
+  members,
+}: {
+  labels: NonNullable<TrelloCardDetail['labels']>;
+  members: readonly TrelloBoardMember[];
+}): React.JSX.Element {
+  const [rowWidth, setRowWidth] = useState(0);
+  const [namesWidth, setNamesWidth] = useState(0);
+  const memberIds = members.map(member => member.id).join(',');
+  // Measured again whenever the members change.
+  useEffect(() => setNamesWidth(0), [memberIds]);
+  const room = labels.length > 0 ? rowWidth / 2 : rowWidth;
+  const compact = rowWidth > 0 && namesWidth > room;
+  return (
+    <View
+      style={styles.labelsAndMembers}
+      onLayout={event => {
+        const {width} = event.nativeEvent.layout;
+        setRowWidth(current => (current === width ? current : width));
+      }}>
+      <View style={styles.labels}>
+        {labels.map(label => (
+          <LabelChip key={label.id} label={label} />
+        ))}
+      </View>
+      {members.length > 0 &&
+        (compact ? (
+          <View
+            style={[
+              styles.membersCompact,
+              labels.length > 0 && styles.membersBesideLabels,
+            ]}>
+            {members.map(member => (
+              <View
+                key={member.id}
+                accessible
+                accessibilityLabel={member.fullName}>
+                <MemberAvatar
+                  initials={member.initials}
+                  avatarUrl={member.avatarUrl}
+                  size={AVATAR_SIZE}
+                />
+              </View>
+            ))}
+          </View>
+        ) : (
+          <View
+            style={styles.members}
+            onLayout={event => {
+              const {width} = event.nativeEvent.layout;
+              setNamesWidth(current => (current === width ? current : width));
+            }}>
+            {members.map(member => (
+              <View key={member.id} style={styles.member}>
+                <MemberAvatar
+                  initials={member.initials}
+                  avatarUrl={member.avatarUrl}
+                  size={AVATAR_SIZE}
+                />
+                <Text style={styles.meta} numberOfLines={1}>
+                  {member.fullName}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ))}
     </View>
   );
 }
@@ -1025,15 +1084,34 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     fontSize: typography.body,
   },
+  labelsAndMembers: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+  },
   labels: {
+    flex: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
+    alignItems: 'center',
     gap: spacing.xs,
   },
+  // Natural width, on one line, so that it can be measured.
   members: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexShrink: 0,
     gap: spacing.md,
+  },
+  membersCompact: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    flexShrink: 1,
+    justifyContent: 'flex-end',
+    gap: spacing.xs,
+  },
+  // Labels keep at least half the row.
+  membersBesideLabels: {
+    maxWidth: '50%',
   },
   member: {
     flexDirection: 'row',
