@@ -31,6 +31,36 @@ export function canAddCards(
 }
 
 /**
+ * `true` if the member can comment on the board's cards, following the
+ * board's `comments` preference: an editor may also be refused (comments
+ * disabled), and an observer or a non-member allowed. Workspace membership
+ * is not known: on an `org` board, only the board's own members are
+ * allowed. Without the preference, Trello's default (`members`) applies.
+ */
+export function canComment(
+  board: Pick<TrelloBoard, 'memberships' | 'prefs'>,
+  memberId: string,
+): boolean {
+  const level = board.prefs?.comments ?? 'members';
+  if (level === 'disabled') {
+    return false;
+  }
+  if (level === 'public') {
+    return true;
+  }
+  if (canAddCards(board, memberId, false)) {
+    return true;
+  }
+  const mine = board.memberships?.find(
+    membership => membership.idMember === memberId && !membership.deactivated,
+  );
+  return (
+    mine?.memberType === 'observer' &&
+    (level === 'observers' || level === 'org')
+  );
+}
+
+/**
  * `true` if the member is known to be only an observer of the board, who
  * can read it but not add cards.
  */

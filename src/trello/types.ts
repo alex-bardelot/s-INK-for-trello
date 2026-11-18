@@ -54,6 +54,12 @@ export interface TrelloBoardMembership {
 export interface TrelloBoardPrefs {
   /** Who can see the board: `public`, `org`, `private`… */
   permissionLevel?: string;
+  /**
+   * Who can comment on cards: `disabled`, `members` (normal and admin
+   * members), `observers` (and observers), `org` (and workspace members) or
+   * `public` (any Trello member).
+   */
+  comments?: string;
   backgroundColor?: string | null;
   backgroundTopColor?: string | null;
   backgroundBottomColor?: string | null;

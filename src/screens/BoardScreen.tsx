@@ -34,7 +34,7 @@ import {BoardPreferences, loadBoardPreferences} from '../board/preferences';
 import {useTwoFingerSwipe} from '../board/useTwoFingerSwipe';
 import {withBoardCardComplete, withBoardCardDetail} from '../cards/completion';
 import {formatCardDate} from '../cards/detail';
-import {canAddCards} from '../cards/ordering';
+import {canAddCards, canComment} from '../cards/ordering';
 import {
   BIND_TAB_HEIGHT,
   BIND_TAB_ROOM,
@@ -369,6 +369,8 @@ export function BoardScreen({
   }, []);
   // Start changes the card: only for members who may edit the board.
   const canEdit = !!memberId && canAddCards(board, memberId, false);
+  // Commenting has its own rule: observers may comment, editors may not.
+  const commentAllowed = !!memberId && canComment(board, memberId);
 
   // A long press on a card opens its menu beside it.
   const screenRef = useRef<View>(null);
@@ -521,6 +523,7 @@ export function BoardScreen({
         store={store}
         memberId={memberId}
         canEdit={canEdit}
+        canComment={commentAllowed}
         onBack={closeCard}
         onTokenRejected={onTokenRejected}
         onCompleteChanged={showComplete}

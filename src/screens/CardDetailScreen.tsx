@@ -140,6 +140,11 @@ export interface CardDetailScreenProps {
   /** The member may edit the board's cards: Start is offered. */
   canEdit: boolean;
   /**
+   * The member may comment on the board's cards, a right of its own: an
+   * observer may comment, an editor may not when comments are disabled.
+   */
+  canComment: boolean;
+  /**
    * Start work was chosen in the card's menu on the board: once the card
    * is loaded, its steps are listed to confirm, unless it is started.
    */
@@ -171,6 +176,7 @@ export function CardDetailScreen({
   store,
   memberId,
   canEdit,
+  canComment,
   startOnOpen = false,
   onBack,
   onTokenRejected,
@@ -481,18 +487,19 @@ export function CardDetailScreen({
   // who may edit the board.
   const editable = canEdit && state.status === 'loaded';
   const shownMembers = cardMembers(detail, members);
-  // So are comments written: Trello lets board members comment by default.
-  const composer: CommentComposerProps | undefined = editable
-    ? {
-        draft: commentDraft.current,
-        onChangeDraft: text => {
-          commentDraft.current = text;
-        },
-        onSend: sendComment,
-        sending: commentSending,
-        controlRef: commentControl,
-      }
-    : undefined;
+  // Comments are written by members the board lets comment.
+  const composer: CommentComposerProps | undefined =
+    canComment && state.status === 'loaded'
+      ? {
+          draft: commentDraft.current,
+          onChangeDraft: text => {
+            commentDraft.current = text;
+          },
+          onSend: sendComment,
+          sending: commentSending,
+          controlRef: commentControl,
+        }
+      : undefined;
   const pickerRows = (kind: PickerKind) => {
     if (kind === 'labels') {
       if (boardLabels.status !== 'loaded') {
@@ -596,27 +603,31 @@ export function CardDetailScreen({
         }>
         {/* The card's name and its own actions, above every page. */}
         <View style={styles.titleRow}>
-          {/* Whether the card is complete; a tap changes it on Trello. */}
-          <Pressable
-            accessibilityRole="checkbox"
-            accessibilityLabel={t(
-              detail.dueComplete
-                ? 'board.cardIncomplete'
-                : 'board.cardComplete',
-            )}
-            accessibilityState={{
-              checked: detail.dueComplete,
-              disabled: !editable || pending.has('complete'),
-            }}
-            disabled={!editable || pending.has('complete')}
-            hitSlop={spacing.sm}
-            style={styles.completeToggle}
-            onPress={() => toggleComplete(!detail.dueComplete)}>
-            <CompleteMark
-              size={COMPLETE_MARK_SIZE}
-              complete={detail.dueComplete}
-            />
-          </Pressable>
+          {/* Whether the card is complete; a tap changes it on Trello.
+            Without the right to edit, an empty mark would only invite a
+            tap that does nothing: only a complete card shows it. */}
+          {(canEdit || detail.dueComplete) && (
+            <Pressable
+              accessibilityRole="checkbox"
+              accessibilityLabel={t(
+                detail.dueComplete
+                  ? 'board.cardIncomplete'
+                  : 'board.cardComplete',
+              )}
+              accessibilityState={{
+                checked: detail.dueComplete,
+                disabled: !editable || pending.has('complete'),
+              }}
+              disabled={!editable || pending.has('complete')}
+              hitSlop={spacing.sm}
+              style={styles.completeToggle}
+              onPress={() => toggleComplete(!detail.dueComplete)}>
+              <CompleteMark
+                size={COMPLETE_MARK_SIZE}
+                complete={detail.dueComplete}
+              />
+            </Pressable>
+          )}
           <Text accessibilityRole="header" style={styles.cardName}>
             {detail.name}
           </Text>

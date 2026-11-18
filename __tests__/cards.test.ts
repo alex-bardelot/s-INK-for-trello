@@ -2,6 +2,7 @@ jest.mock('sn-plugin-lib', () => ({}));
 
 import {
   canAddCards,
+  canComment,
   hasHiddenBoards,
   isObserverOf,
   offerBoards,
@@ -209,6 +210,28 @@ describe('board permissions', () => {
   it('falls back without membership data', () => {
     expect(canAddCards(BOARDS[0], 'me', true)).toBe(true);
     expect(canAddCards(BOARDS[0], 'me', false)).toBe(false);
+  });
+
+  it('lets members comment following the board preference', () => {
+    const commenting = (
+      memberType: string | null,
+      comments: string | undefined,
+    ): boolean => {
+      const base = memberType
+        ? withMembership(BOARDS[0], memberType)
+        : BOARDS[0];
+      return canComment({...base, prefs: {...base.prefs, comments}}, 'me');
+    };
+    // Trello's default lets editors comment, not observers.
+    expect(commenting('normal', undefined)).toBe(true);
+    expect(commenting('observer', undefined)).toBe(false);
+    expect(commenting('admin', 'members')).toBe(true);
+    expect(commenting('observer', 'members')).toBe(false);
+    expect(commenting('observer', 'observers')).toBe(true);
+    expect(commenting('observer', 'org')).toBe(true);
+    expect(commenting(null, 'org')).toBe(false);
+    expect(commenting(null, 'public')).toBe(true);
+    expect(commenting('admin', 'disabled')).toBe(false);
   });
 
   it('spots observers only', () => {

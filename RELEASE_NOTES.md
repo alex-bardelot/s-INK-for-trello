@@ -3,6 +3,16 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.64.1 — Card page follows the board's rights
+
+- On the card page of a board you cannot edit, the round before the
+  card's name only shows when the card is complete: an empty round no
+  longer invites a tap that does nothing.
+- The comment field follows the board's own comment setting instead of
+  the right to edit: observers can comment when the board allows them
+  (or anyone, on a board open to public comments), and editors get no
+  field when comments are turned off.
+
 ## 0.64.0 — Comment kept until you choose
 
 - On the card page, while a comment is written in its field, a tap
