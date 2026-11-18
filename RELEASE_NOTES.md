@@ -3,6 +3,16 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.64.0 — Comment kept until you choose
+
+- On the card page, while a comment is written in its field, a tap
+  anywhere else (Back, a page turn, a label, Start work...) no longer acts:
+  a popup says the comment is not on Trello yet and offers **Discard**
+  (the field is emptied), **Keep editing** (the cursor goes back in the
+  field, as does a tap beside the popup) or **Save** (the comment is saved
+  on Trello, as with the field's Save button). Taps on the field and its
+  Save button work as before.
+
 ## 0.63.5 — Titled label and member lists
 
 - The floating lists that change labels or members (card page, New Trello

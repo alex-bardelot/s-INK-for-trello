@@ -1,5 +1,7 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
+  GestureResponderEvent,
+  Keyboard,
   LayoutChangeEvent,
   Linking,
   Pressable,
@@ -32,6 +34,7 @@ import {Button} from '../components/Button';
 import {CompleteMark} from '../components/CompleteMark';
 import {
   CommentComposer,
+  CommentComposerControl,
   CommentComposerProps,
 } from '../components/CommentComposer';
 import {
@@ -284,6 +287,44 @@ export function CardDetailScreen({
       setCommentSending(false);
     }
   };
+  // A tap beside the field while a comment is written there asks first
+  // whether to drop it, go on writing or save it; the tap does nothing
+  // else (Back, a page turn, a label...), so nothing is lost by mistake.
+  const commentControl = useRef<CommentComposerControl>(null);
+  const [leavingComment, setLeavingComment] = useState(false);
+  const guardComment = (event: GestureResponderEvent): boolean => {
+    if (
+      leavingComment ||
+      commentSending ||
+      commentDraft.current.trim() === ''
+    ) {
+      return false;
+    }
+    const {pageX, pageY} = event.nativeEvent;
+    if (commentControl.current?.contains(pageX, pageY)) {
+      return false;
+    }
+    Keyboard.dismiss();
+    setLeavingComment(true);
+    return true;
+  };
+  const keepComment = () => {
+    setLeavingComment(false);
+    commentControl.current?.focus();
+  };
+  const discardComment = () => {
+    setLeavingComment(false);
+    commentDraft.current = '';
+    commentControl.current?.discard();
+  };
+  const saveComment = () => {
+    setLeavingComment(false);
+    if (commentControl.current) {
+      commentControl.current.send();
+    } else {
+      sendComment(commentDraft.current.trim());
+    }
+  };
 
   // The round before the card's name marks it complete, or not; the board
   // is told once Trello took it.
@@ -449,6 +490,7 @@ export function CardDetailScreen({
         },
         onSend: sendComment,
         sending: commentSending,
+        controlRef: commentControl,
       }
     : undefined;
   const pickerRows = (kind: PickerKind) => {
@@ -516,138 +558,146 @@ export function CardDetailScreen({
   };
 
   return (
-    <View ref={rootRef} collapsable={false} style={styles.root}>
-    <ScreenFrame
-      // Where the card is: its board and its list.
-      title={`${boardName} / ${shownListName}`}
-      onBack={() => {
-        if (state.status === 'loaded') {
-          onLeave?.(state.card);
+    <View
+      ref={rootRef}
+      collapsable={false}
+      style={styles.root}
+      onStartShouldSetResponderCapture={guardComment}>
+      <ScreenFrame
+        // Where the card is: its board and its list.
+        title={`${boardName} / ${shownListName}`}
+        onBack={() => {
+          if (state.status === 'loaded') {
+            onLeave?.(state.card);
+          }
+          onBack();
+        }}
+        // The card's Start button follows the Start work settings.
+        settingsCategory="startWork"
+        overlay={
+          preview && (
+            <StartWorkConfirmPopup
+              steps={preview.steps}
+              onCancel={() => setPreview(null)}
+              onConfirm={confirmStart}
+              onOpenSettings={openStartWorkSettings}
+            />
+          )
         }
-        onBack();
-      }}
-      // The card's Start button follows the Start work settings.
-      settingsCategory="startWork"
-      overlay={
-        preview && (
-          <StartWorkConfirmPopup
-            steps={preview.steps}
-            onCancel={() => setPreview(null)}
-            onConfirm={confirmStart}
-            onOpenSettings={openStartWorkSettings}
-          />
-        )
-      }
-      actions={
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('board.refresh')}
-          hitSlop={spacing.md}
-          onPress={load}
-          style={styles.iconButton}>
-          <RefreshIcon size={HEADER_ICON_SIZE} color={colors.foreground} />
-        </Pressable>
-      }>
-      {/* The card's name and its own actions, above every page. */}
-      <View style={styles.titleRow}>
-        {/* Whether the card is complete; a tap changes it on Trello. */}
-        <Pressable
-          accessibilityRole="checkbox"
-          accessibilityLabel={t(
-            detail.dueComplete ? 'board.cardIncomplete' : 'board.cardComplete',
-          )}
-          accessibilityState={{
-            checked: detail.dueComplete,
-            disabled: !editable || pending.has('complete'),
-          }}
-          disabled={!editable || pending.has('complete')}
-          hitSlop={spacing.sm}
-          style={styles.completeToggle}
-          onPress={() => toggleComplete(!detail.dueComplete)}>
-          <CompleteMark
-            size={COMPLETE_MARK_SIZE}
-            complete={detail.dueComplete}
-          />
-        </Pressable>
-        <Text accessibilityRole="header" style={styles.cardName}>
-          {detail.name}
-        </Text>
-        <View style={styles.cardActions}>
-          {/* Not offered again once the card is started, unless running,
-              nor on a card already done. */}
-          {canEdit &&
-            (startWork.busy ||
-              (!startWork.started && !detail.dueComplete)) && (
-            <SmallButton
-              label={t(startWork.busy ? 'startWork.busy' : 'startWork.start')}
-              accessibilityLabel={t('startWork.startHint')}
-              disabled={startWork.busy || state.status !== 'loaded'}
-              onPress={askStart}
-              icon={StartIcon}
+        actions={
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('board.refresh')}
+            hitSlop={spacing.md}
+            onPress={load}
+            style={styles.iconButton}>
+            <RefreshIcon size={HEADER_ICON_SIZE} color={colors.foreground} />
+          </Pressable>
+        }>
+        {/* The card's name and its own actions, above every page. */}
+        <View style={styles.titleRow}>
+          {/* Whether the card is complete; a tap changes it on Trello. */}
+          <Pressable
+            accessibilityRole="checkbox"
+            accessibilityLabel={t(
+              detail.dueComplete
+                ? 'board.cardIncomplete'
+                : 'board.cardComplete',
+            )}
+            accessibilityState={{
+              checked: detail.dueComplete,
+              disabled: !editable || pending.has('complete'),
+            }}
+            disabled={!editable || pending.has('complete')}
+            hitSlop={spacing.sm}
+            style={styles.completeToggle}
+            onPress={() => toggleComplete(!detail.dueComplete)}>
+            <CompleteMark
+              size={COMPLETE_MARK_SIZE}
+              complete={detail.dueComplete}
             />
-          )}
-          {startWork.notePath ? (
-            <SmallButton
-              label={t('startWork.openNote')}
-              accessibilityLabel={t('startWork.openNoteHint')}
-              onPress={startWork.openNote}
-              icon={NoteIcon}
-            />
-          ) : (
-            // The card's note already holds a link to it.
-            <InsertInkLinkButton
-              target={{kind: 'card', shortLink: detail.shortLink ?? card.id}}
-              name={detail.name}
-            />
-          )}
-        </View>
-      </View>
-      {startWork.report && (
-        <StartWorkReportView
-          report={startWork.report}
-          notePath={startWork.notePath}
-          onOpenNote={startWork.openNote}
-          onClose={startWork.dismissReport}
-        />
-      )}
-      {editFailure && (
-        <View accessibilityRole="alert" style={styles.checkFailure}>
-          <Text style={[styles.message, styles.checkFailureText]}>
-            {t(editFailure)}
+          </Pressable>
+          <Text accessibilityRole="header" style={styles.cardName}>
+            {detail.name}
           </Text>
-          <SmallButton
-            label={t('common.ok')}
-            accessibilityLabel={t('common.ok')}
-            onPress={() => setEditFailure(null)}
-          />
-        </View>
-      )}
-      <DetailPages
-        // Pages are measured again for new content; ticking an item or
-        // changing a label keeps the page shown.
-        key={`${state.status}:${version}`}
-        card={detail}
-        members={shownMembers}
-        onToggleCheckItem={editable ? toggleCheckItem : undefined}
-        onOpenPicker={editable ? openPicker : undefined}
-        composer={composer}
-        pending={pending}
-        footer={
-          state.status === 'loading' ? (
-            <Text style={styles.message}>{t('cardDetail.loading')}</Text>
-          ) : state.status === 'failed' ? (
-            <View style={styles.failure}>
-              <Text style={styles.message}>{t('cardDetail.loadFailed')}</Text>
+          <View style={styles.cardActions}>
+            {/* Not offered again once the card is started, unless running,
+              nor on a card already done. */}
+            {canEdit &&
+              (startWork.busy ||
+                (!startWork.started && !detail.dueComplete)) && (
+                <SmallButton
+                  label={t(
+                    startWork.busy ? 'startWork.busy' : 'startWork.start',
+                  )}
+                  accessibilityLabel={t('startWork.startHint')}
+                  disabled={startWork.busy || state.status !== 'loaded'}
+                  onPress={askStart}
+                  icon={StartIcon}
+                />
+              )}
+            {startWork.notePath ? (
               <SmallButton
-                label={t('common.retry')}
-                accessibilityLabel={t('common.retry')}
-                onPress={load}
+                label={t('startWork.openNote')}
+                accessibilityLabel={t('startWork.openNoteHint')}
+                onPress={startWork.openNote}
+                icon={NoteIcon}
               />
-            </View>
-          ) : null
-        }
-      />
-    </ScreenFrame>
+            ) : (
+              // The card's note already holds a link to it.
+              <InsertInkLinkButton
+                target={{kind: 'card', shortLink: detail.shortLink ?? card.id}}
+                name={detail.name}
+              />
+            )}
+          </View>
+        </View>
+        {startWork.report && (
+          <StartWorkReportView
+            report={startWork.report}
+            notePath={startWork.notePath}
+            onOpenNote={startWork.openNote}
+            onClose={startWork.dismissReport}
+          />
+        )}
+        {editFailure && (
+          <View accessibilityRole="alert" style={styles.checkFailure}>
+            <Text style={[styles.message, styles.checkFailureText]}>
+              {t(editFailure)}
+            </Text>
+            <SmallButton
+              label={t('common.ok')}
+              accessibilityLabel={t('common.ok')}
+              onPress={() => setEditFailure(null)}
+            />
+          </View>
+        )}
+        <DetailPages
+          // Pages are measured again for new content; ticking an item or
+          // changing a label keeps the page shown.
+          key={`${state.status}:${version}`}
+          card={detail}
+          members={shownMembers}
+          onToggleCheckItem={editable ? toggleCheckItem : undefined}
+          onOpenPicker={editable ? openPicker : undefined}
+          composer={composer}
+          pending={pending}
+          footer={
+            state.status === 'loading' ? (
+              <Text style={styles.message}>{t('cardDetail.loading')}</Text>
+            ) : state.status === 'failed' ? (
+              <View style={styles.failure}>
+                <Text style={styles.message}>{t('cardDetail.loadFailed')}</Text>
+                <SmallButton
+                  label={t('common.retry')}
+                  accessibilityLabel={t('common.retry')}
+                  onPress={load}
+                />
+              </View>
+            ) : null
+          }
+        />
+      </ScreenFrame>
       {picker && (
         <FloatingPicker
           title={
@@ -668,6 +718,32 @@ export function CardDetailScreen({
           rows={pickerRows(picker.kind)}
           onToggle={id => togglePicked(picker.kind, id)}
         />
+      )}
+      {leavingComment && (
+        <Popup
+          title={t('cardDetail.leaveCommentTitle')}
+          onClose={keepComment}
+          actions={
+            <>
+              <Button
+                label={t('cardDetail.discardComment')}
+                onPress={discardComment}
+              />
+              <Button
+                label={t('cardDetail.keepEditingComment')}
+                onPress={keepComment}
+              />
+              <Button
+                primary
+                label={t('cardDetail.sendComment')}
+                onPress={saveComment}
+              />
+            </>
+          }>
+          <Text style={styles.paragraph}>
+            {t('cardDetail.leaveCommentText')}
+          </Text>
+        </Popup>
       )}
     </View>
   );
@@ -1051,7 +1127,9 @@ function DetailPages({
     turnPage(direction === 'left' || direction === 'up' ? 1 : -1),
   );
 
-  const renderBlock = (block: DetailBlock) => (
+  // The measured copy of the comment field is not the one the page acts on.
+  const measuredComposer = composer && {...composer, controlRef: undefined};
+  const renderBlock = (block: DetailBlock, measured = false) => (
     <Block
       block={block}
       card={card}
@@ -1060,7 +1138,7 @@ function DetailPages({
       onToggleCheckItem={onToggleCheckItem}
       onOpenPicker={onOpenPicker}
       pending={pending}
-      composer={composer}
+      composer={measured ? measuredComposer : composer}
     />
   );
 
@@ -1080,7 +1158,7 @@ function DetailPages({
         <View style={styles.measureLayer} pointerEvents="none">
           {blocks.map(block => (
             <View key={block.key} onLayout={event => measure(block.key, event)}>
-              {renderBlock(block)}
+              {renderBlock(block, true)}
             </View>
           ))}
         </View>

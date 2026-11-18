@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useImperativeHandle, useRef, useState} from 'react';
 import {StyleSheet, TextInput, View} from 'react-native';
 
 import {useTranslation} from '../i18n';
@@ -22,6 +22,41 @@ export interface CommentComposerProps {
   onSend: (text: string) => Promise<boolean>;
   /** A comment is on its way to Trello. */
   sending: boolean;
+  /**
+   * Lets the page tell a tap on the field from a tap beside it, and act on
+   * the field. Only for the field shown, not for its measured copy.
+   */
+  controlRef?: React.Ref<CommentComposerControl>;
+}
+
+/** What the page can ask of the comment field shown. */
+export interface CommentComposerControl {
+  /** Whether a touch at these page coordinates falls on the field or Save. */
+  contains: (pageX: number, pageY: number) => boolean;
+  /** Puts the cursor back in the field, to go on writing. */
+  focus: () => void;
+  /** Empties the field: the comment being written is dropped. */
+  discard: () => void;
+  /** Saves the comment on Trello, as the Save button does. */
+  send: () => void;
+}
+
+interface Rect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** Whether a point falls in a rectangle, edges included. */
+export function rectContains(rect: Rect | null, x: number, y: number): boolean {
+  return (
+    !!rect &&
+    x >= rect.x &&
+    x <= rect.x + rect.width &&
+    y >= rect.y &&
+    y <= rect.y + rect.height
+  );
 }
 
 /**
@@ -39,6 +74,7 @@ export function CommentComposer({
   onChangeDraft,
   onSend,
   sending,
+  controlRef,
 }: CommentComposerProps): React.JSX.Element {
   const {t} = useTranslation();
   // Typing only redraws the field, not the whole card page.
@@ -60,6 +96,31 @@ export function CommentComposer({
       setText('');
     }
   };
+
+  // Where the field and its button are on the page, read again after each
+  // drawing: what is above it (a failure line) may move it without its own
+  // layout changing. Touches are checked against it as they start.
+  const rowRef = useRef<View>(null);
+  const inputRef = useRef<TextInput>(null);
+  const rect = useRef<Rect | null>(null);
+  const remeasure = () =>
+    rowRef.current?.measure((_x, _y, width, height, pageX, pageY) => {
+      rect.current = {x: pageX, y: pageY, width, height};
+    });
+  useEffect(() => {
+    if (controlRef) {
+      remeasure();
+    }
+  });
+  useImperativeHandle(controlRef, () => ({
+    contains: (pageX, pageY) => rectContains(rect.current, pageX, pageY),
+    focus: () => inputRef.current?.focus(),
+    discard: () => {
+      inputRef.current?.blur();
+      change('');
+    },
+    send,
+  }));
   const saveButton = (
     <SmallButton
       label={t(
@@ -71,8 +132,13 @@ export function CommentComposer({
     />
   );
   return (
-    <View style={styles.row}>
+    <View
+      ref={rowRef}
+      collapsable={false}
+      style={styles.row}
+      onLayout={controlRef ? remeasure : undefined}>
       <TextInput
+        ref={inputRef}
         accessibilityLabel={t('cardDetail.writeComment')}
         placeholder={t('cardDetail.writeComment')}
         placeholderTextColor={colors.labelBorder}
