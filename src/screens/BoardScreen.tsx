@@ -32,7 +32,7 @@ import {
 } from '../board/layout';
 import {BoardPreferences, loadBoardPreferences} from '../board/preferences';
 import {useTwoFingerSwipe} from '../board/useTwoFingerSwipe';
-import {withBoardCardComplete} from '../cards/completion';
+import {withBoardCardComplete, withBoardCardDetail} from '../cards/completion';
 import {formatCardDate} from '../cards/detail';
 import {canAddCards} from '../cards/ordering';
 import {
@@ -60,6 +60,7 @@ import {
   TrelloBoard,
   TrelloBoardCard,
   TrelloBoardMember,
+  TrelloCardDetail,
   TrelloClient,
   TrelloList,
 } from '../trello';
@@ -423,8 +424,26 @@ export function BoardScreen({
         : current,
     );
   }, []);
-  const [completeFailed, setCompleteFailed] =
-    useState<TrelloBoardCard | null>(null);
+  // Back from a card's page, its tile shows what the page last showed
+  // (labels, members, dates...), at no cost; only a card moved to another
+  // list, by Start work, has the board read again, quietly.
+  const showLeftCard = useCallback(
+    (shown: TrelloCardDetail) => {
+      if (state.status !== 'loaded') {
+        return;
+      }
+      const next = withBoardCardDetail(state.cardsByList, shown);
+      if (next === null) {
+        fetchBoard(true);
+      } else if (next !== state.cardsByList) {
+        setState({...state, cardsByList: next});
+      }
+    },
+    [fetchBoard, state],
+  );
+  const [completeFailed, setCompleteFailed] = useState<TrelloBoardCard | null>(
+    null,
+  );
   const toggleComplete = useCallback(
     async (card: TrelloBoardCard) => {
       const complete = !card.dueComplete;
@@ -505,6 +524,7 @@ export function BoardScreen({
         onBack={closeCard}
         onTokenRejected={onTokenRejected}
         onCompleteChanged={showComplete}
+        onLeave={showLeftCard}
       />
     </View>
   );

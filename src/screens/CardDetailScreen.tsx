@@ -146,6 +146,11 @@ export interface CardDetailScreenProps {
   onTokenRejected: () => void;
   /** The card was marked complete, or not, on Trello from its page. */
   onCompleteChanged?: (cardId: string, complete: boolean) => void;
+  /**
+   * Going back, with the card as the page last showed it (if it loaded),
+   * so that the board shows the changes made on it.
+   */
+  onLeave?: (shown: TrelloCardDetail) => void;
 }
 
 /**
@@ -167,6 +172,7 @@ export function CardDetailScreen({
   onBack,
   onTokenRejected,
   onCompleteChanged,
+  onLeave,
 }: CardDetailScreenProps): React.JSX.Element {
   const {t} = useTranslation();
   const [state, setState] = useState<DetailState>({status: 'loading'});
@@ -514,7 +520,12 @@ export function CardDetailScreen({
     <ScreenFrame
       // Where the card is: its board and its list.
       title={`${boardName} / ${shownListName}`}
-      onBack={onBack}
+      onBack={() => {
+        if (state.status === 'loaded') {
+          onLeave?.(state.card);
+        }
+        onBack();
+      }}
       // The card's Start button follows the Start work settings.
       settingsCategory="startWork"
       overlay={

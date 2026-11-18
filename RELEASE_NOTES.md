@@ -3,6 +3,15 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.63.3 — Board up to date after a card page
+
+- Back on the board from a card's page, the card's tile shows what the
+  page showed: labels and members put on or taken off there, completion,
+  name, dates, checklist counts and description. This sends no request to
+  Trello: the tile takes the card the page already read. Only a card moved
+  to another list, by **Start work**, has the board read again, while it
+  stays shown.
+
 ## 0.63.2 — Complete round evenly spaced
 
 - On the card page, the round that marks the card complete stands as far
