@@ -3,6 +3,13 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.63.4 — Comment field opens on a tap
+
+- On the card page, the comment field is closed at first: one line, as
+  high as a button, across the whole width, without its **Save** button.
+  A tap opens it to four lines, with **Save** beside it at the top. It
+  closes again once left empty, or once the comment is saved.
+
 ## 0.63.3 — Board up to date after a card page
 
 - Back on the board from a card's page, the card's tile shows what the
