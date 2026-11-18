@@ -9,8 +9,12 @@ import {
   labelKey,
   loadFocusSettings,
   ModeChoice,
+  ModeFilter,
+  modeMemberChoices,
+  ReviewCompletion,
   saveFocusSettings,
   toggleFocusLabel,
+  toggleModeMember,
 } from '../board/focus';
 import {
   COLUMN_COUNTS,
@@ -71,6 +75,7 @@ import {KeyValueStore} from '../storage/keyValueStore';
 import {
   isSupernoteRoadmap,
   TrelloBoard,
+  TrelloBoardMember,
   TrelloClient,
   TrelloMember,
 } from '../trello';
@@ -291,6 +296,7 @@ export function SettingsScreen({
                 store={store}
                 client={client}
                 board={currentBoard}
+                member={member}
               />
             ) : category === 'newCard' ? (
               <NewCardSettingsPanel store={store} />
@@ -502,19 +508,21 @@ function NoteLinkSettings({store}: {store: KeyValueStore}): React.JSX.Element {
 }
 
 /**
- * The Board category: column counts, opening mode and Focus mode tags. They
- * are read before anything is drawn, so the controls do not first show the
- * defaults and then jump to the saved values.
+ * The Board category: column counts, opening mode and what the Focus and
+ * Review modes keep. They are read before anything is drawn, so the
+ * controls do not first show the defaults and then jump to the saved values.
  */
 function BoardPageSettings({
   store,
   client,
   board,
+  member,
 }: {
   store: KeyValueStore;
   client: TrelloClient;
-  /** Board Settings was opened from, whose tags Focus mode offers. */
+  /** Board Settings was opened from, whose labels and members modes offer. */
   board: TrelloBoard | null;
+  member: TrelloMember | null;
 }): React.JSX.Element {
   const [loaded, setLoaded] = useState<{
     columns: BoardPreferences;
@@ -543,6 +551,7 @@ function BoardPageSettings({
         client={client}
         // Supernote's roadmap has no modes: its tags are not offered.
         board={board && !isSupernoteRoadmap(board) ? board : null}
+        member={member}
         initial={loaded.focus}
       />
     </>
@@ -604,91 +613,107 @@ function BoardLayoutSettings({
   );
 }
 
-/** Tags of the board Settings was opened from, offered to Focus mode. */
-type BoardTagsState =
+/**
+ * Labels and members of the board Settings was opened from, offered to the
+ * Focus and Review modes.
+ */
+type BoardChoicesState =
   | {status: 'noBoard' | 'loading' | 'failed'}
-  | {status: 'loaded'; names: string[]};
+  | {status: 'loaded'; labels: string[]; members: TrelloBoardMember[]};
 
 /**
  * Mode boards open in (all cards, focus or review), shared with the board
- * view's toolbar like the column counts, and the tags Focus mode keeps.
- * Opened from a board, the tags offered are that board's; otherwise only
- * the checked ones are listed, so that they can be unchecked.
+ * view's toolbar like the column counts, then a sub-section per mode with
+ * the labels and members it keeps (and, for Review, the completion).
+ * Opened from a board, the labels and members offered are that board's;
+ * otherwise only the checked ones are listed, so that they can be
+ * unchecked. The tablet's account is always offered.
  */
 function BoardModeSettings({
   store,
   client,
   board,
+  member,
   initial,
 }: {
   store: KeyValueStore;
   client: TrelloClient;
   board: TrelloBoard | null;
+  /** The connected member, offered as the tablet's account. */
+  member: TrelloMember | null;
   initial: FocusSettings;
 }): React.JSX.Element {
   const {t} = useTranslation();
-  const [focus, setFocus] = useState<FocusSettings>(initial);
-  const [tags, setTags] = useState<BoardTagsState>({
+  const [settings, setSettings] = useState<FocusSettings>(initial);
+  const [choices, setChoices] = useState<BoardChoicesState>({
     status: board ? 'loading' : 'noBoard',
   });
 
   const update = useCallback(
     (change: Partial<FocusSettings>) => {
-      const next = {...focus, ...change};
-      setFocus(next);
+      const next = {...settings, ...change};
+      setSettings(next);
       saveFocusSettings(store, next);
     },
-    [focus, store],
+    [settings, store],
   );
   const changeMode = useCallback(
     (choice: ModeChoice) => update({mode: choice === 'all' ? null : choice}),
     [update],
   );
 
-  const loadTags = useCallback(() => {
+  const loadChoices = useCallback(() => {
     if (!board) {
-      setTags({status: 'noBoard'});
+      setChoices({status: 'noBoard'});
       return () => {};
     }
     let active = true;
-    setTags({status: 'loading'});
-    client
-      .getBoardLabels(board.id)
-      .then(labels =>
-        active && setTags({status: 'loaded', names: labels.map(l => l.name)}),
+    setChoices({status: 'loading'});
+    Promise.all([
+      client.getBoardLabels(board.id),
+      client.getBoardMembers(board.id),
+    ])
+      .then(
+        ([labels, members]) =>
+          active &&
+          setChoices({
+            status: 'loaded',
+            labels: labels.map(label => label.name),
+            members,
+          }),
       )
       .catch(error => {
-        console.warn('[sINK] Failed to read the board tags', error);
+        console.warn('[sINK] Failed to read the board labels and members', error);
         if (active) {
-          setTags({status: 'failed'});
+          setChoices({status: 'failed'});
         }
       });
     return () => {
       active = false;
     };
   }, [board, client]);
-  useEffect(loadTags, [loadTags]);
+  useEffect(loadChoices, [loadChoices]);
 
-  const choices = focusLabelChoices(
-    tags.status === 'loaded' ? tags.names : [],
-    focus.labels,
-  );
-  const checked = new Set(focus.labels.map(labelKey));
-  const tagsNote =
-    tags.status === 'noBoard'
-      ? t('settings.focusTagsNoBoard')
-      : tags.status === 'loading'
-      ? t('settings.focusTagsLoading')
-      : tags.status === 'failed'
-      ? t('settings.focusTagsFailed')
-      : choices.length === 0
-      ? t('settings.focusTagsNone')
+  const boardNote =
+    choices.status === 'noBoard'
+      ? t('settings.modeChoicesNoBoard')
+      : choices.status === 'loading'
+      ? t('settings.modeChoicesLoading')
+      : choices.status === 'failed'
+      ? t('settings.modeChoicesFailed')
       : null;
+  const boardLabels = choices.status === 'loaded' ? choices.labels : [];
+  const boardMembers = choices.status === 'loaded' ? choices.members : [];
 
   const modes: {value: ModeChoice; label: string}[] = [
     {value: 'all', label: t('settings.modeAll')},
     {value: 'focus', label: t('board.focus')},
     {value: 'review', label: t('board.review')},
+  ];
+  const completions: {value: ReviewCompletion; label: string}[] = [
+    {value: 'all', label: t('settings.reviewAll')},
+    {value: 'complete', label: t('settings.reviewComplete')},
+    {value: 'incomplete', label: t('settings.reviewIncomplete')},
   ];
 
   return (
@@ -697,42 +722,144 @@ function BoardModeSettings({
         label={t('settings.boardModeDefault')}
         help={t('settings.boardModeHelp')}
         segments={modes}
-        value={focus.mode ?? 'all'}
+        value={settings.mode ?? 'all'}
         onChange={changeMode}
       />
 
-      <View style={styles.focusTags}>
-        <Text style={styles.focusTagsTitle}>
-          {t('settings.focusTagsTitle')}
-        </Text>
-        <Text style={styles.focusTagsHelp}>{t('settings.focusTagsHelp')}</Text>
-        {choices.length > 0 && (
-          <View style={styles.tagGrid}>
-            {choices.map(name => (
-              <View key={labelKey(name)} style={styles.tagCell}>
-                <Checkbox
-                  label={name}
-                  checked={checked.has(labelKey(name))}
-                  onChange={() =>
-                    update({labels: toggleFocusLabel(focus.labels, name)})
-                  }
-                />
-              </View>
-            ))}
-          </View>
-        )}
-        {tagsNote && <Text style={styles.focusTagsHelp}>{tagsNote}</Text>}
-        {tags.status === 'failed' && (
-          <View style={styles.tagsRetry}>
-            <SmallButton
-              label={t('common.retry')}
-              accessibilityLabel={t('common.retry')}
-              onPress={loadTags}
+      {boardNote && <Text style={styles.modeHelp}>{boardNote}</Text>}
+      {choices.status === 'failed' && (
+        <View style={styles.tagsRetry}>
+          <SmallButton
+            label={t('common.retry')}
+            accessibilityLabel={t('common.retry')}
+            onPress={loadChoices}
+          />
+        </View>
+      )}
+
+      <ModeFilterSettings
+        title={t('settings.focusSection')}
+        help={t('settings.focusHelp')}
+        filter={settings.focus}
+        boardLabels={boardLabels}
+        boardMembers={boardMembers}
+        boardLoaded={choices.status === 'loaded'}
+        member={member}
+        onChange={focus => update({focus})}
+      />
+
+      <ModeFilterSettings
+        title={t('settings.reviewSection')}
+        help={t('settings.reviewHelp')}
+        filter={settings.review}
+        boardLabels={boardLabels}
+        boardMembers={boardMembers}
+        boardLoaded={choices.status === 'loaded'}
+        member={member}
+        onChange={filter => update({review: {...settings.review, ...filter}})}>
+        <SegmentedControl
+          label={t('settings.reviewCompletion')}
+          segments={completions}
+          value={settings.review.completion}
+          onChange={completion =>
+            update({review: {...settings.review, completion}})
+          }
+        />
+      </ModeFilterSettings>
+    </Section>
+  );
+}
+
+/**
+ * Sub-section of the Mode section for one mode: its help, any control of
+ * its own (`children`), then the labels and the members it keeps, as
+ * checkboxes.
+ */
+function ModeFilterSettings({
+  title,
+  help,
+  filter,
+  boardLabels,
+  boardMembers,
+  boardLoaded,
+  member,
+  onChange,
+  children,
+}: {
+  title: string;
+  help: string;
+  filter: ModeFilter;
+  boardLabels: readonly string[];
+  boardMembers: readonly TrelloBoardMember[];
+  /** Whether the board's labels were read: "no label" is said only then. */
+  boardLoaded: boolean;
+  member: TrelloMember | null;
+  onChange: (filter: ModeFilter) => void;
+  children?: React.ReactNode;
+}): React.JSX.Element {
+  const {t} = useTranslation();
+  const labels = focusLabelChoices(boardLabels, filter.labels);
+  const checkedLabels = new Set(filter.labels.map(labelKey));
+  const members = modeMemberChoices(
+    boardMembers,
+    filter.members,
+    member?.id ?? null,
+  );
+  const checkedMembers = new Set(filter.members.map(m => m.id));
+  const selfName = member
+    ? t('settings.modeSelf', {name: member.fullName})
+    : t('settings.modeSelfSignedOut');
+
+  return (
+    <View style={styles.modeFilter}>
+      <Text accessibilityRole="header" style={styles.modeFilterTitle}>
+        {title}
+      </Text>
+      <Text style={styles.modeHelp}>{help}</Text>
+      {children}
+
+      <Text style={styles.modeGroupTitle}>{t('settings.modeLabels')}</Text>
+      {labels.length > 0 ? (
+        <View style={styles.tagGrid}>
+          {labels.map(name => (
+            <View key={labelKey(name)} style={styles.tagCell}>
+              <Checkbox
+                label={name}
+                checked={checkedLabels.has(labelKey(name))}
+                onChange={() =>
+                  onChange({
+                    ...filter,
+                    labels: toggleFocusLabel(filter.labels, name),
+                  })
+                }
+              />
+            </View>
+          ))}
+        </View>
+      ) : (
+        boardLoaded && (
+          <Text style={styles.modeHelp}>{t('settings.modeLabelsNone')}</Text>
+        )
+      )}
+
+      <Text style={styles.modeGroupTitle}>{t('settings.modeMembers')}</Text>
+      <View style={styles.tagGrid}>
+        {members.map(choice => (
+          <View key={choice.id} style={styles.tagCell}>
+            <Checkbox
+              label={choice.self ? selfName : choice.name}
+              checked={checkedMembers.has(choice.id)}
+              onChange={() =>
+                onChange({
+                  ...filter,
+                  members: toggleModeMember(filter.members, choice),
+                })
+              }
             />
           </View>
-        )}
+        ))}
       </View>
-    </Section>
+    </View>
   );
 }
 
@@ -1047,16 +1174,25 @@ const styles = StyleSheet.create({
   columnsControl: {
     flex: 1,
   },
-  focusTags: {
+  modeFilter: {
     gap: spacing.xs,
-    paddingVertical: spacing.sm,
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopColor: colors.foreground,
+    borderTopWidth: borders.width / 2,
   },
-  focusTagsTitle: {
+  modeFilterTitle: {
+    color: colors.foreground,
+    fontSize: typography.label,
+    fontWeight: '700',
+  },
+  modeGroupTitle: {
     color: colors.foreground,
     fontSize: typography.label,
     fontWeight: '600',
+    paddingTop: spacing.sm,
   },
-  focusTagsHelp: {
+  modeHelp: {
     color: colors.foreground,
     fontSize: typography.small,
   },

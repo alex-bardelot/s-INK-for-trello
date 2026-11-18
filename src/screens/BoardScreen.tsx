@@ -329,14 +329,19 @@ export function BoardScreen({
           state.lists,
           state.cardsByList,
           memberId,
-          focus.labels,
+          focus.focus,
         );
       case 'review':
-        return reviewBoard(state.lists, state.cardsByList);
+        return reviewBoard(
+          state.lists,
+          state.cardsByList,
+          memberId,
+          focus.review,
+        );
       default:
         return null;
     }
-  }, [focus.labels, mode, memberId, state]);
+  }, [focus.focus, focus.review, mode, memberId, state]);
 
   const lists = state.status === 'loaded' ? state.lists : [];
   const listPages = pageCount(lists.length, columns);

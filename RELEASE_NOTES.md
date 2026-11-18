@@ -3,6 +3,21 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.65.0 — Focus and Review settings
+
+- In Settings > Board, the **Mode** section gets two sub-sections,
+  **Focus mode** and **Review mode**. Each lists the labels and the
+  members it keeps, as checkboxes: a card needs one of the checked labels
+  and one of the checked members (a list with nothing checked is
+  ignored). Opened from a board, Settings offers that board's labels and
+  members; the account of the tablet is always offered.
+- Both modes keep the cards of the tablet's account by default. Review
+  mode no longer shows the completed cards of everyone: check the members
+  to include, or uncheck them all to see everyone's.
+- Review mode gets a **Cards** choice: **All**, **Complete** (the
+  default) or **Not complete**.
+- The labels chosen for Focus mode before this version are kept.
+
 ## 0.64.1 — Card page follows the board's rights
 
 - On the card page of a board you cannot edit, the round before the
