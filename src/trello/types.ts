@@ -222,6 +222,8 @@ export interface TrelloCard {
   shortUrl: string;
   /** Short id used in card URLs (`trello.com/c/{shortLink}/...`). */
   shortLink?: string;
+  /** List the card is in, returned with a created card. */
+  idList?: string;
 }
 
 /** A checklist, as returned by `POST /1/checklists` (without its items). */

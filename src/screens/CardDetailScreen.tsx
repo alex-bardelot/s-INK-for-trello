@@ -332,6 +332,24 @@ export function CardDetailScreen({
     }
   };
 
+  // The description is changed in its own page, over the card, and shows
+  // on the card once Trello took it; a refusal keeps the page and its text.
+  const [editingDescription, setEditingDescription] = useState(false);
+  const saveDescription = async (text: string): Promise<boolean> => {
+    try {
+      await client.setCardDescription(card.id, text);
+    } catch (error) {
+      console.warn('[sINK] Failed to change the description', error);
+      if (toSessionError(error) === 'invalidToken') {
+        onTokenRejected();
+      }
+      return false;
+    }
+    updateShown(shown => ({...shown, desc: text}));
+    setEditingDescription(false);
+    return true;
+  };
+
   // The round before the card's name marks it complete, or not; the board
   // is told once Trello took it.
   const toggleComplete = (complete: boolean) =>
@@ -691,6 +709,9 @@ export function CardDetailScreen({
           members={shownMembers}
           onToggleCheckItem={editable ? toggleCheckItem : undefined}
           onOpenPicker={editable ? openPicker : undefined}
+          onEditDescription={
+            editable ? () => setEditingDescription(true) : undefined
+          }
           composer={composer}
           pending={pending}
           footer={
@@ -729,6 +750,16 @@ export function CardDetailScreen({
           rows={pickerRows(picker.kind)}
           onToggle={id => togglePicked(picker.kind, id)}
         />
+      )}
+      {editingDescription && state.status === 'loaded' && (
+        <View style={styles.editorOverlay}>
+          <DescriptionEditor
+            cardName={detail.name}
+            initial={state.card.desc ?? ''}
+            onCancel={() => setEditingDescription(false)}
+            onSave={saveDescription}
+          />
+        </View>
       )}
       {leavingComment && (
         <Popup
@@ -775,6 +806,78 @@ function fromBoardCard(card: TrelloBoardCard): TrelloCardDetail {
     labels: card.labels ?? [],
     idMembers: card.idMembers ?? [],
   };
+}
+
+/**
+ * Page to change the card's description, over the card: the title bar of
+ * the tablet's creation dialogs (Cancel, Save), the card's name, then the
+ * description as Trello stores it (Markdown), in a field taking the rest of
+ * the page. Save is offered once the text changed; if Trello refuses it,
+ * the page stays with its text and says so.
+ */
+function DescriptionEditor({
+  cardName,
+  initial,
+  onCancel,
+  onSave,
+}: {
+  cardName: string;
+  initial: string;
+  onCancel: () => void;
+  /** Resolves `false` when Trello did not take the description. */
+  onSave: (text: string) => Promise<boolean>;
+}): React.JSX.Element {
+  const {t} = useTranslation();
+  const [text, setText] = useState(initial);
+  const [saving, setSaving] = useState(false);
+  const [failed, setFailed] = useState(false);
+  // Blank lines and spaces left at the end are not kept.
+  const cleaned = text.replace(/\s+$/, '');
+  const save = async () => {
+    setSaving(true);
+    setFailed(false);
+    // Once saved, the page is closed: nothing is left to update.
+    if (!(await onSave(cleaned))) {
+      setSaving(false);
+      setFailed(true);
+    }
+  };
+  return (
+    <ScreenFrame
+      title={t('cardDetail.editDescriptionTitle')}
+      dialog={{
+        cancelLabel: t('common.cancel'),
+        onCancel,
+        confirmLabel: t(
+          saving ? 'cardDetail.savingDescription' : 'cardDetail.saveDescription',
+        ),
+        onConfirm: save,
+        confirmDisabled: saving || cleaned === initial.replace(/\s+$/, ''),
+      }}>
+      <View style={styles.editor}>
+        <Text style={styles.editorCardName} numberOfLines={2}>
+          {cardName}
+        </Text>
+        {failed && (
+          <Text accessibilityRole="alert" style={styles.message}>
+            {t('cardDetail.descriptionFailed')}
+          </Text>
+        )}
+        <TextInput
+          accessibilityLabel={t('cardDetail.description')}
+          autoFocus
+          multiline
+          editable={!saving}
+          onChangeText={setText}
+          placeholder={t('cardDetail.descriptionPlaceholder')}
+          placeholderTextColor={colors.labelBorder}
+          style={styles.editorInput}
+          textAlignVertical="top"
+          value={text}
+        />
+      </View>
+    </ScreenFrame>
+  );
 }
 
 /**
@@ -1071,6 +1174,11 @@ interface DetailPagesProps {
    * members can't be tapped.
    */
   onOpenPicker?: (kind: PickerKind, anchor: View) => void;
+  /**
+   * Opens the description's page; unset, the Description heading has no
+   * Edit button.
+   */
+  onEditDescription?: () => void;
   /** Changes on their way to Trello (`item:<id>`, `label:<id>`…). */
   pending: ReadonlySet<string>;
   /** Field to write a comment; unset, comments are only read. */
@@ -1088,6 +1196,7 @@ function DetailPages({
   footer,
   onToggleCheckItem,
   onOpenPicker,
+  onEditDescription,
   pending,
   composer,
 }: DetailPagesProps): React.JSX.Element {
@@ -1148,6 +1257,7 @@ function DetailPages({
       footer={footer}
       onToggleCheckItem={onToggleCheckItem}
       onOpenPicker={onOpenPicker}
+      onEditDescription={onEditDescription}
       pending={pending}
       composer={measured ? measuredComposer : composer}
     />
@@ -1211,6 +1321,7 @@ interface BlockProps {
   footer: React.ReactNode;
   onToggleCheckItem?: (itemId: string, complete: boolean) => void;
   onOpenPicker?: (kind: PickerKind, anchor: View) => void;
+  onEditDescription?: () => void;
   pending: ReadonlySet<string>;
   composer?: CommentComposerProps;
 }
@@ -1222,6 +1333,7 @@ function Block({
   footer,
   onToggleCheckItem,
   onOpenPicker,
+  onEditDescription,
   pending,
   composer,
 }: BlockProps): React.JSX.Element | null {
@@ -1244,6 +1356,16 @@ function Block({
           </Text>
           {block.count !== undefined && (
             <Text style={styles.headingCount}>{block.count}</Text>
+          )}
+          {block.section === 'description' && onEditDescription && (
+            // Kept within the band's own height.
+            <View style={styles.headingButton}>
+              <SmallButton
+                label={t('cardDetail.editDescription')}
+                accessibilityLabel={t('cardDetail.editDescriptionHint')}
+                onPress={onEditDescription}
+              />
+            </View>
           )}
         </View>
       );
@@ -1896,6 +2018,32 @@ const styles = StyleSheet.create({
     color: colors.listHeaderText,
     fontSize: typography.body,
     fontWeight: '600',
+  },
+  headingButton: {
+    marginVertical: -spacing.xs,
+  },
+  editorOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.background,
+  },
+  editor: {
+    flex: 1,
+    gap: spacing.md,
+  },
+  editorCardName: {
+    color: colors.foreground,
+    fontSize: typography.heading,
+    fontWeight: '700',
+  },
+  editorInput: {
+    flex: 1,
+    color: colors.foreground,
+    fontSize: typography.body,
+    lineHeight: 30,
+    borderColor: colors.foreground,
+    borderWidth: borders.width,
+    borderRadius: borders.radius,
+    padding: spacing.md,
   },
   paragraph: {
     color: colors.foreground,

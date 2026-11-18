@@ -323,6 +323,10 @@ export default function App(): React.JSX.Element {
               setLinkedCard(null);
             }}
             onTokenRejected={session.retry}
+            onOpenCardElsewhere={(board, cardId) => {
+              setOpenBoard(board);
+              setLinkedCard({requestId: Date.now(), cardId, openDetail: false});
+            }}
           />
         </PendingBindingBanner>
       );

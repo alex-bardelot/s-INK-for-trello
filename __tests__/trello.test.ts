@@ -263,6 +263,7 @@ describe('TrelloClient', () => {
     await client.moveCard('c1', 'list2');
     await client.setCardComplete('c1', true);
     await client.setCardComplete('c1', false);
+    await client.setCardDescription('c1', 'New **text**');
     await client.archiveCard('c1');
     const calls = fetchImpl.mock.calls.map(([url, init]) => [
       init.method,
@@ -285,6 +286,7 @@ describe('TrelloClient', () => {
       ],
       ['PUT', 'https://api.trello.com/1/cards/c1', {dueComplete: true}],
       ['PUT', 'https://api.trello.com/1/cards/c1', {dueComplete: false}],
+      ['PUT', 'https://api.trello.com/1/cards/c1', {desc: 'New **text**'}],
       ['PUT', 'https://api.trello.com/1/cards/c1', {closed: true}],
     ]);
   });

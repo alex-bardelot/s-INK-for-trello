@@ -60,12 +60,14 @@ import {
   TrelloBoard,
   TrelloBoardCard,
   TrelloBoardMember,
+  TrelloCard,
   TrelloCardDetail,
   TrelloClient,
   TrelloList,
 } from '../trello';
 import {borders, colors, spacing, typography} from '../theme';
 import {CardDetailScreen} from './CardDetailScreen';
+import {CreateCardScreen, NewCardPlace} from './CreateCardScreen';
 import {
   ArchiveCardPopup,
   ArchiveState,
@@ -165,6 +167,11 @@ export interface BoardScreenProps {
   onBack: () => void;
   /** Called when Trello rejects the token while loading. */
   onTokenRejected: () => void;
+  /**
+   * A card added from the board went to another board, chosen on the card
+   * creation page: that board opens where the card is.
+   */
+  onOpenCardElsewhere?: (board: TrelloBoard, cardId: string) => void;
 }
 
 /**
@@ -181,6 +188,7 @@ export function BoardScreen({
   openInitialCard = true,
   onBack,
   onTokenRejected,
+  onOpenCardElsewhere,
 }: BoardScreenProps): React.JSX.Element {
   const {t} = useTranslation();
   const {width, height} = useWindowDimensions();
@@ -377,6 +385,38 @@ export function BoardScreen({
   // Commenting has its own rule: observers may comment, editors may not.
   const commentAllowed = !!memberId && canComment(board, memberId);
 
+  // The "Add a card" button of a list opens card creation over the board,
+  // that board and list already chosen. Once the card is created, the board
+  // is read again, quietly, and the list pages to the new card.
+  const [newCardPlace, setNewCardPlace] = useState<NewCardPlace | null>(null);
+  const [revealCardId, setRevealCardId] = useState(initialCardId);
+  const addCard = useCallback(
+    (list: TrelloList) => setNewCardPlace({board, list}),
+    [board],
+  );
+  const showCreatedCard = useCallback(
+    async (target: TrelloBoard, card: TrelloCard) => {
+      setNewCardPlace(null);
+      if (target.id !== board.id && onOpenCardElsewhere) {
+        onOpenCardElsewhere(target, card.id);
+        return;
+      }
+      // Another list may have been chosen: it comes on the page of lists.
+      const known = state.status === 'loaded' ? state.lists : [];
+      const index = card.idList
+        ? known.findIndex(list => list.id === card.idList)
+        : -1;
+      if (index >= 0 && (index < start || index >= start + columns)) {
+        setFirstList(index);
+      }
+      await fetchBoard(true);
+      setRevealCardId(card.id);
+    },
+    [board.id, columns, fetchBoard, onOpenCardElsewhere, start, state],
+  );
+  // Supernote's roadmap only takes cards from Supernote.
+  const cardsAddable = canEdit && !isSupernoteRoadmap(board);
+
   // A long press on a card opens its menu beside it.
   const screenRef = useRef<View>(null);
   const [screenSize, setScreenSize] = useState({width: 0, height: 0});
@@ -537,6 +577,20 @@ export function BoardScreen({
     </View>
   );
 
+  const newCard = newCardPlace && (
+    <View style={styles.overlay}>
+      <CreateCardScreen
+        place={newCardPlace}
+        client={client}
+        store={store}
+        memberId={memberId}
+        onTokenRejected={onTokenRejected}
+        onCreated={showCreatedCard}
+        onCancel={() => setNewCardPlace(null)}
+      />
+    </View>
+  );
+
   // A card to open over the board: the "opening" message shown while the
   // link was read stays until the card shows, drawn over the board in the
   // same frame. Showing the board first made it flash on E Ink.
@@ -638,10 +692,11 @@ export function BoardScreen({
                   list={list}
                   cards={state.cardsByList.get(list.id) ?? []}
                   members={state.members}
-                  revealCardId={initialCardId}
+                  revealCardId={revealCardId}
                   onTurnLists={turnListPage}
                   onOpenCard={showCard}
                   onLongPressCard={openMenu}
+                  onAddCard={cardsAddable ? addCard : undefined}
                 />
               ))}
               {Array.from({length: columns - visibleLists.length}, (_, i) => (
@@ -676,6 +731,7 @@ export function BoardScreen({
         )}
       </ScreenFrame>
       {detail}
+      {newCard}
       {menuOverlay}
       {archivePopup}
       {completeFailedPopup}
@@ -687,11 +743,16 @@ interface BoardColumnProps {
   list: TrelloList;
   cards: readonly TrelloBoardCard[];
   members: MembersById;
-  /** Card to show the page of, once, when the list holds it. */
+  /**
+   * Card to show the page of, once per card, when the list holds it: the
+   * card the board opened at, then each card added from the board.
+   */
   revealCardId?: string;
   onTurnLists: (delta: number) => void;
   onOpenCard: OpenCard;
   onLongPressCard: PressCardLong;
+  /** Opens card creation in this list; unset, no "Add a card" button. */
+  onAddCard?: (list: TrelloList) => void;
 }
 
 /**
@@ -707,6 +768,7 @@ function BoardColumn({
   onTurnLists,
   onOpenCard,
   onLongPressCard,
+  onAddCard,
 }: BoardColumnProps): React.JSX.Element {
   const {t, locale} = useTranslation();
   const [bodyHeight, setBodyHeight] = useState(0);
@@ -723,13 +785,13 @@ function BoardColumn({
   }, [bodyHeight, cards, heights]);
 
   // Once its cards are measured, the list opens at the page of the card
-  // the board was opened at, if it holds it.
-  const [revealed, setRevealed] = useState(false);
+  // the board was opened at, or of a card just added, if it holds it.
+  const [revealedId, setRevealedId] = useState<string | undefined>();
   useEffect(() => {
-    if (!revealCardId || revealed || !pages) {
+    if (!revealCardId || revealedId === revealCardId || !pages) {
       return;
     }
-    setRevealed(true);
+    setRevealedId(revealCardId);
     const at = pageOfItem(
       pages,
       cards.findIndex(card => card.id === revealCardId),
@@ -737,7 +799,7 @@ function BoardColumn({
     if (at !== null) {
       setPage(at);
     }
-  }, [cards, pages, revealCardId, revealed]);
+  }, [cards, pages, revealCardId, revealedId]);
 
   const pageIndex = pages ? Math.min(page, pages.length - 1) : 0;
   const visibleCards = pages
@@ -794,6 +856,26 @@ function BoardColumn({
           />
         ))}
       </View>
+
+      {onAddCard && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('board.addCardHint', {list: list.name})}
+          hitSlop={{top: spacing.xs, bottom: spacing.xs}}
+          onPress={() => onAddCard(list)}
+          style={({pressed}) => [
+            styles.addCard,
+            pressed && styles.addCardPressed,
+          ]}>
+          {({pressed}) => (
+            <Text
+              numberOfLines={1}
+              style={[styles.addCardText, pressed && styles.addCardTextPressed]}>
+              {`+ ${t('board.addCard')}`}
+            </Text>
+          )}
+        </Pressable>
+      )}
 
       {/* Always present, so that every column body has the same height. */}
       <View style={styles.columnFooter}>
@@ -1269,6 +1351,25 @@ const styles = StyleSheet.create({
   avatarSpace: {
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
+  },
+  // Under the list's cards, as on Trello: words on the board, inverted
+  // while pressed.
+  addCard: {
+    marginTop: CARD_GAP,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderRadius: borders.radius,
+  },
+  addCardPressed: {
+    backgroundColor: colors.foreground,
+  },
+  addCardText: {
+    color: colors.foreground,
+    fontSize: typography.body,
+    fontWeight: '600',
+  },
+  addCardTextPressed: {
+    color: colors.background,
   },
   columnFooter: {
     height: 56,

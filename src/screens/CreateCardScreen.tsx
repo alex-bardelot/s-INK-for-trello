@@ -146,9 +146,23 @@ const AVATAR_SIZE = 28;
 /** The "+" that opens the full list: a short pill, easy to hit. */
 const PICKER_BUTTON_WIDTH = 64;
 
+/** Board and list a card is added to from the board, chosen beforehand. */
+export interface NewCardPlace {
+  board: TrelloBoard;
+  list: TrelloList;
+}
+
 export interface CreateCardScreenProps {
-  /** Text of the lasso selection, read when the button was pressed. */
-  lasso: Promise<LassoTextResult>;
+  /**
+   * Text of the lasso selection, read when the button was pressed. Unset,
+   * the card is written from scratch and nothing is linked to it.
+   */
+  lasso?: Promise<LassoTextResult>;
+  /**
+   * Board and list the card goes to, filled in instead of the last ones
+   * used (the "Add a card" button of a list). They can still be changed.
+   */
+  place?: NewCardPlace;
   client: TrelloClient;
   store: KeyValueStore;
   /** Id of the connected member, to tell which boards accept new cards. */
@@ -157,26 +171,36 @@ export interface CreateCardScreenProps {
   onTokenRejected: () => void;
   /** Called once the card is created, to open its board where it is. */
   onCreated: (board: TrelloBoard, card: TrelloCard) => void;
+  /**
+   * Cancel goes back to the page the creation was opened from; unset,
+   * it closes the plugin, as there is no page to go back to.
+   */
+  onCancel?: () => void;
 }
 
 /**
- * Turns the lasso selection into a Trello card. Once the handwriting is
- * recognized, a single page shows the card: board and list (filled in with
- * the last ones used, or the only ones offered), labels, members, title,
- * description and checklist, all editable before the card is created.
- * A popup over the page shows the creation going on; the card's board
- * then opens where the card is.
+ * Turns the lasso selection into a Trello card, or creates one from the
+ * board. Once the handwriting is recognized, a single page shows the card:
+ * board and list (the ones it was opened from, else the last ones used, or
+ * the only ones offered), labels, members, title, description and
+ * checklist, all editable before the card is created. A popup over the page
+ * shows the creation going on; the card's board then opens where the card
+ * is.
  */
 export function CreateCardScreen({
   lasso,
+  place,
   client,
   store,
   memberId,
   onTokenRejected,
   onCreated,
+  onCancel,
 }: CreateCardScreenProps): React.JSX.Element {
   const {t} = useTranslation();
-  const [step, setStep] = useState<Step>({kind: 'recognizing'});
+  const [step, setStep] = useState<Step>({
+    kind: lasso ? 'recognizing' : 'loading',
+  });
   const [boards, setBoards] = useState<TrelloBoard[]>([]);
   const [publicBoards, setPublicBoards] = useState<TrelloBoard[]>([]);
   const [showAllBoards, setShowAllBoards] = useState(false);
@@ -194,6 +218,8 @@ export function CreateCardScreen({
   const settings = useRef<NewCardSettings>(DEFAULT_NEW_CARD_SETTINGS);
   // Where the card was circled, to link it to the card once created.
   const selection = useRef<LassoSelection | undefined>(undefined);
+  // Read once, when the boards are loaded: a later change is not followed.
+  const openedFrom = useRef(place);
   // The form and the + buttons, to place the floating picker under them.
   const formRef = useRef<View>(null);
   const labelsButton = useRef<View>(null);
@@ -222,7 +248,7 @@ export function CreateCardScreen({
   );
 
   const loadBoardDetails = useCallback(
-    async (target: TrelloBoard): Promise<void> => {
+    async (target: TrelloBoard, listId?: string): Promise<void> => {
       detailsBoardId.current = target.id;
       setDetails({status: 'loading'});
       setList(null);
@@ -245,7 +271,7 @@ export function CreateCardScreen({
           labels: labels.filter(label => label.name.trim().length > 0),
           members: membersMeFirst(members, memberId),
         });
-        setList(defaultChoice(lists, lastListId));
+        setList(defaultChoice(lists, listId ?? lastListId));
         if (
           settings.current.assignMe &&
           members.some(member => member.id === memberId)
@@ -268,9 +294,9 @@ export function CreateCardScreen({
   );
 
   const chooseBoard = useCallback(
-    (target: TrelloBoard) => {
+    (target: TrelloBoard, listId?: string) => {
       setBoard(target);
-      loadBoardDetails(target);
+      loadBoardDetails(target, listId);
     },
     [loadBoardDetails],
   );
@@ -297,6 +323,11 @@ export function CreateCardScreen({
           }).length === 0,
         );
         setStep({kind: 'form'});
+        const opened = openedFrom.current;
+        if (opened) {
+          chooseBoard(opened.board, opened.list.id);
+          return;
+        }
         const initial = defaultChoice(
           [...ownBoards, ...writablePublic],
           prefs.lastBoardId,
@@ -315,7 +346,7 @@ export function CreateCardScreen({
   );
 
   const start = useCallback(async () => {
-    setStep({kind: 'recognizing'});
+    setStep({kind: lasso ? 'recognizing' : 'loading'});
     const [lassoText, prefs, loadedSettings] = await Promise.all([
       lasso,
       loadCardPreferences(store),
@@ -323,6 +354,11 @@ export function CreateCardScreen({
     ]);
     preferences.current = prefs;
     settings.current = loadedSettings;
+    // Opened from the board: an empty card, linked to nothing.
+    if (!lassoText) {
+      await loadBoards(prefs);
+      return;
+    }
     if (!lassoText.ok) {
       setStep({
         kind: 'noText',
@@ -438,10 +474,14 @@ export function CreateCardScreen({
   };
 
   const close = useCallback(() => {
+    if (onCancel) {
+      onCancel();
+      return;
+    }
     PluginManager.closePluginView().catch(error =>
       console.warn('[sINK] Failed to close plugin view', error),
     );
-  }, []);
+  }, [onCancel]);
 
   const updateItem = useCallback(
     (key: string, change: Partial<Omit<FormCheckItem, 'key'>>) =>
@@ -500,21 +540,21 @@ export function CreateCardScreen({
       // Popup shown from the opening of the view until the handwriting
       // recognition is done.
       return (
-        <ScreenFrame title={title}>
+        <ScreenFrame title={title} onBack={onCancel}>
           <WaitingBox message={t('card.recognizing')} />
         </ScreenFrame>
       );
 
     case 'loading':
       return (
-        <ScreenFrame title={title}>
+        <ScreenFrame title={title} onBack={onCancel}>
           <WaitingBox message={t('card.loading')} />
         </ScreenFrame>
       );
 
     case 'noText':
       return (
-        <ScreenFrame title={title}>
+        <ScreenFrame title={title} onBack={onCancel}>
           <ScrollView contentContainerStyle={styles.stack}>
             <Text style={styles.message}>{t(LASSO_ERRORS[step.error])}</Text>
             <Text style={styles.message}>{t('card.selectAgain')}</Text>
@@ -540,7 +580,7 @@ export function CreateCardScreen({
 
     case 'failed':
       return (
-        <ScreenFrame title={title}>
+        <ScreenFrame title={title} onBack={onCancel}>
           <View style={styles.stack}>
             <Text accessibilityRole="alert" style={styles.error}>
               {t(SESSION_ERRORS[step.error])}

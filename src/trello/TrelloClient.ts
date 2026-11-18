@@ -410,6 +410,14 @@ export class TrelloClient {
     });
   }
 
+  /** Replaces a card's description (Markdown, as Trello stores it). */
+  async setCardDescription(cardId: string, desc: string): Promise<void> {
+    await this.request<unknown>(`/cards/${encodeURIComponent(cardId)}`, {
+      method: 'PUT',
+      body: {desc: desc.slice(0, CARD_DESC_MAX_LENGTH)},
+    });
+  }
+
   /** Archives a card: it leaves its list, and can be sent back from Trello. */
   async archiveCard(cardId: string): Promise<void> {
     await this.request<unknown>(`/cards/${encodeURIComponent(cardId)}`, {

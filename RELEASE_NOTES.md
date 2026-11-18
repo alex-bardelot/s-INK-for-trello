@@ -3,6 +3,23 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.66.0 — Edit a description, add a card from the board
+
+- On the card page of a board you can edit, the **Description** heading
+  gets an **Edit** button. It opens a page over the card, with Cancel and
+  **Save** in its title bar, the card's name and the description as
+  Trello stores it (Markdown) in a field taking the rest of the page.
+  Save is offered once the text changed; the card page then shows the new
+  description. If Trello refuses it, the page stays with its text and
+  says so.
+- On a board you can edit, in **All cards** mode, every list ends with
+  **+ Add a card**. It opens the New Trello Card page with that board and
+  list already chosen (both can still be changed) and an empty card.
+  There is nothing to link, as no lasso selection is involved. Cancel
+  goes back to the board; once the card is created, the board is read
+  again and the list pages to the new card (or the board it was sent to
+  opens there).
+
 ## 0.65.0 — Focus and Review settings
 
 - In Settings > Board, the **Mode** section gets two sub-sections,
