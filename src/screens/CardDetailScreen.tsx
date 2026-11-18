@@ -650,6 +650,9 @@ export function CardDetailScreen({
     </ScreenFrame>
       {picker && (
         <FloatingPicker
+          title={
+            picker.kind === 'members' ? t('card.members') : t('card.labels')
+          }
           position={picker.position}
           closeLabel={t('common.close')}
           onClose={() => setPicker(null)}

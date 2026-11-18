@@ -3,6 +3,12 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.63.5 — Titled label and member lists
+
+- The floating lists that change labels or members (card page, New Trello
+  Card page, Start work settings) open with their title centered at the
+  top, **Labels** or **Members**, and a close cross on its right.
+
 ## 0.63.4 — Comment field opens on a tap
 
 - On the card page, the comment field is closed at first: one line, as

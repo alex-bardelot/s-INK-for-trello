@@ -2,8 +2,11 @@ import React from 'react';
 import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 
 import {borders, colors, spacing, typography} from '../theme';
+import {CloseIcon} from './CloseIcon';
 
 const PICKER_WIDTH = 440;
+/** Size of the close cross at the right of the title. */
+const CLOSE_ICON_SIZE = 28;
 const PICKER_MIN_HEIGHT = 240;
 /** Tallest the list grows in a long area, such as a scrolled page. */
 const PICKER_MAX_HEIGHT = 520;
@@ -54,11 +57,12 @@ export function measurePickerPosition(
 
 /**
  * A list floating under the button that opened it, such as the labels or
- * members of a board: a tap checks or unchecks a row and leaves the list
- * open; a tap anywhere else closes it. Drawn last in its area, over the
- * rest.
+ * members of a board, under a centered title with a close cross: a tap
+ * checks or unchecks a row and leaves the list open; a tap on the cross or
+ * anywhere outside closes it. Drawn last in its area, over the rest.
  */
 export function FloatingPicker({
+  title,
   position,
   rows,
   closeLabel,
@@ -66,6 +70,8 @@ export function FloatingPicker({
   onClose,
   emptyMessage,
 }: {
+  /** Shown centered at the top, such as "Labels". */
+  title: string;
   position: FloatingPickerPosition;
   rows: readonly PickerRow[];
   closeLabel: string;
@@ -91,6 +97,19 @@ export function FloatingPicker({
             maxHeight: position.maxHeight,
           },
         ]}>
+        <View style={styles.header}>
+          <Text style={styles.title} accessibilityRole="header" numberOfLines={1}>
+            {title}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={closeLabel}
+            hitSlop={spacing.sm}
+            onPress={onClose}
+            style={({pressed}) => [styles.close, pressed && styles.pressed]}>
+            <CloseIcon size={CLOSE_ICON_SIZE} color={colors.foreground} />
+          </Pressable>
+        </View>
         <ScrollView keyboardShouldPersistTaps="handled">
           {rows.length === 0 && emptyMessage && (
             <Text style={styles.empty}>{emptyMessage}</Text>
@@ -124,6 +143,28 @@ const styles = StyleSheet.create({
     borderRadius: borders.radius,
     borderWidth: borders.width * 1.5,
     paddingVertical: spacing.xs,
+  },
+  // The title stays centered on the whole width; the cross sits over its
+  // right end.
+  header: {
+    justifyContent: 'center',
+    minHeight: CLOSE_ICON_SIZE + 2 * spacing.sm,
+    paddingHorizontal: CLOSE_ICON_SIZE + 2 * spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  title: {
+    color: colors.foreground,
+    fontSize: typography.label,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  close: {
+    position: 'absolute',
+    right: spacing.sm,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
   },
   row: {
     flexDirection: 'row',

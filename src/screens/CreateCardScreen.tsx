@@ -891,6 +891,11 @@ export function CreateCardScreen({
               </ScrollView>
               {picker && ready && (
                 <FloatingPicker
+                  title={
+                    picker.kind === 'labels'
+                      ? t('card.labels')
+                      : t('card.members')
+                  }
                   position={picker.position}
                   closeLabel={t('common.close')}
                   onClose={() => setPicker(null)}

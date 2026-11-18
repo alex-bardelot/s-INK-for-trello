@@ -229,6 +229,7 @@ export function StartWorkSettingsPanel({
 
       {picker && (
         <FloatingPicker
+          title={t('card.labels')}
           position={picker.position}
           closeLabel={t('common.close')}
           onClose={() => setPicker(null)}
