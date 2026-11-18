@@ -551,6 +551,7 @@ export function CardDetailScreen({
           }}
           disabled={!editable || pending.has('complete')}
           hitSlop={spacing.sm}
+          style={styles.completeToggle}
           onPress={() => toggleComplete(!detail.dueComplete)}>
           <CompleteMark
             size={COMPLETE_MARK_SIZE}
@@ -1710,6 +1711,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: CONTENT_PADDING,
     paddingVertical: spacing.sm,
     marginBottom: spacing.md,
+  },
+  // As far from the name as from the band's edge.
+  completeToggle: {
+    marginRight: CONTENT_PADDING - spacing.sm,
   },
   cardName: {
     flex: 1,

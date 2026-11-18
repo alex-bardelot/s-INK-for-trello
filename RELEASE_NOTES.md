@@ -3,6 +3,11 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.63.2 — Complete round evenly spaced
+
+- On the card page, the round that marks the card complete stands as far
+  from the card's name as from the left edge of the name's band.
+
 ## Docs — InkHub listing
 
 - New `InkHub/` folder for the InkHub publication: `DESCRIPTION.md`, the
