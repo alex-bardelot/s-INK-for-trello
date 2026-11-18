@@ -392,7 +392,7 @@ export function CardDetailScreen({
       return;
     }
     setStartAsked(true);
-    if (!startWork.started && !startWork.busy) {
+    if (!startWork.started && !startWork.busy && !detail.dueComplete) {
       askStart();
     }
     // askStart reads the current card; it runs once, when Start is ready.
@@ -561,8 +561,11 @@ export function CardDetailScreen({
           {detail.name}
         </Text>
         <View style={styles.cardActions}>
-          {/* Not offered again once the card is started, unless running. */}
-          {canEdit && (startWork.busy || !startWork.started) && (
+          {/* Not offered again once the card is started, unless running,
+              nor on a card already done. */}
+          {canEdit &&
+            (startWork.busy ||
+              (!startWork.started && !detail.dueComplete)) && (
             <SmallButton
               label={t(startWork.busy ? 'startWork.busy' : 'startWork.start')}
               accessibilityLabel={t('startWork.startHint')}

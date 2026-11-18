@@ -3,6 +3,12 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.63.1 — No Start work on a complete card
+
+- A complete card (with its check) no longer offers **Start work**:
+  neither in the menu opened by a long press on it on the board, nor on
+  its card page. Marking it incomplete offers it again.
+
 ## 0.63.0 — Change labels, members and completion, write comments on the card page
 
 - On the card page, a tap on the labels or on the members opens the list

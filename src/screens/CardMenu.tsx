@@ -53,7 +53,7 @@ export interface CardMenuTarget {
  * menu beside the card, on its right or on its left, whichever has room.
  * A tap beside the menu closes it. Start work, Mark complete (or
  * incomplete) and Archive are only offered to members who may edit the
- * board.
+ * board; Start work is not offered on a card already done.
  */
 export function CardMenu({
   target,
@@ -92,12 +92,17 @@ export function CardMenu({
     },
     ...(canEdit
       ? [
-          {
-            label: t('startWork.start'),
-            hint: t('startWork.startHint'),
-            icon: StartIcon,
-            onPress: onStartWork,
-          },
+          // A card already done is not started again.
+          ...(card.dueComplete
+            ? []
+            : [
+                {
+                  label: t('startWork.start'),
+                  hint: t('startWork.startHint'),
+                  icon: StartIcon,
+                  onPress: onStartWork,
+                },
+              ]),
           card.dueComplete
             ? {
                 label: t('board.cardIncomplete'),
