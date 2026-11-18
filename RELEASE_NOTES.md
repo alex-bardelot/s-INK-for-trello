@@ -3,6 +3,14 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## Docs — InkHub listing
+
+- New `InkHub/` folder for the InkHub publication: `DESCRIPTION.md`, the
+  listing text (title, one-line summary, features, requirements,
+  installation, privacy, support, disclaimer), and
+  `screenshots/README.md`, the list of the six screenshots to take on the
+  tablet, with the demo board to prepare first.
+
 ## 0.63.1 — No Start work on a complete card
 
 - A complete card (with its check) no longer offers **Start work**:
