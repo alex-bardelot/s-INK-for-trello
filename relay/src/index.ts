@@ -211,6 +211,17 @@ async function handleSession(
   );
 }
 
+/** Token lifetimes the plugin may ask for (`e=` of the page address). */
+const TOKEN_EXPIRATIONS = ['1day', '30days', 'never'] as const;
+
+/**
+ * The lifetime the plugin asked for, or 30 days: a plugin too old to ask,
+ * or an address typed by hand, gets a token that does not last forever.
+ */
+export function tokenExpiration(asked: string | null): string {
+  return TOKEN_EXPIRATIONS.find(value => value === asked) ?? '30days';
+}
+
 export async function handleRequest(
   request: Request,
   env: Env,
@@ -227,7 +238,7 @@ export async function handleRequest(
         apiKey: env.TRELLO_API_KEY,
         appName: env.TRELLO_APP_NAME || 's-INK for Trello',
         scope: 'read,write',
-        expiration: 'never',
+        expiration: tokenExpiration(url.searchParams.get('e')),
       },
       nonce,
     );

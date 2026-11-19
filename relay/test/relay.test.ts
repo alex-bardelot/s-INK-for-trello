@@ -8,7 +8,12 @@
 /* eslint-disable no-bitwise -- XOR of the reference decryption. */
 import {createHash, createHmac, webcrypto} from 'crypto';
 
-import {Env, handleRequest, SessionNamespace} from '../src/index';
+import {
+  Env,
+  handleRequest,
+  SessionNamespace,
+  tokenExpiration,
+} from '../src/index';
 import {renderConnectPage} from '../src/page';
 import {CRYPTO_JS, PAGE_JS} from '../src/pageScript';
 import {parseRelayMessage, SESSION_TTL_MS} from '../src/protocol';
@@ -331,7 +336,23 @@ describe('connection page', () => {
     const html = await response.text();
     expect(html).toContain(`<script nonce="${nonce}">`);
     expect(html).toContain('"apiKey":"public-key"');
+    expect(html).toContain('"expiration":"30days"');
     expect(response.headers.get('Referrer-Policy')).toBe('no-referrer');
+  });
+
+  it('asks Trello for the token lifetime the plugin chose', async () => {
+    const {env} = makeEnv();
+    const page = async (query: string) =>
+      (
+        await handleRequest(
+          new Request(`https://relay.example/connect?s=${ID}${query}`),
+          env,
+        )
+      ).text();
+    expect(await page('&e=1day')).toContain('"expiration":"1day"');
+    expect(await page('&e=never')).toContain('"expiration":"never"');
+    expect(await page('&e=1hour')).toContain('"expiration":"30days"');
+    expect(tokenExpiration(null)).toBe('30days');
   });
 
   it('embeds valid JavaScript and no raw "<" in its data', () => {

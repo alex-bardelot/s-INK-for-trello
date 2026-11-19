@@ -3,6 +3,27 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.75.0 — Token lifetime, 30 days by default; no token in logs
+
+- When connecting, **Token valid for** sets how long the Trello token
+  works: **1 day**, **30 days** (the default) or **No limit**. Each choice
+  says what it means if the token is copied. Tokens were made with no
+  limit until now; once the token expires, s-INK asks to connect again.
+- The relay's connection page asks Trello for the lifetime chosen (`e=` in
+  its address; 30 days when missing or unknown). Until the relay is
+  deployed again, the QR code still gives a token with no limit; Open
+  Trello's page directly already uses the lifetime chosen.
+- The warning shown before saving the token on the tablet now explains the
+  risk: the tablet offers plugins no safe place for secrets, so any other
+  plugin, or anyone holding a lost or stolen tablet plugged into a
+  computer, can read the token and act as you on Trello until it expires
+  or is revoked; and how to revoke it from another device. Kept in memory
+  only, the advice is to set a lock screen password.
+- Error messages no longer carry the token: a failed revocation wrote
+  `/tokens/{token}` in full in the log. Request paths, Trello's answers and
+  picture errors are masked (`[masked]`), as are `token=`, relay `k=` and
+  `oauth_token` values.
+
 ## 0.74.1 — Experimental settings behind Diagnostics
 
 - The **Experimental** section of **Settings › New card** (**Select new

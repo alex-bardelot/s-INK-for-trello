@@ -4,7 +4,11 @@
  */
 import {randomBytes} from '../platform/random';
 import {utf8Bytes} from '../qr/qrCode';
-import {normalizeToken} from '../trello';
+import {
+  DEFAULT_TOKEN_EXPIRATION,
+  normalizeToken,
+  TokenExpiration,
+} from '../trello';
 import {decodeBase64Url, encodeBase64Url} from './base64url';
 import {concatBytes, equalBytes, hmacSha256, sha256} from './sha256';
 
@@ -25,15 +29,21 @@ export interface RelaySession {
   mailboxUrl: string;
 }
 
-/** Starts a session: 16 random bytes of id and 16 of key. */
-export function createRelaySession(relayUrl: string): RelaySession {
+/**
+ * Starts a session: 16 random bytes of id and 16 of key. The page asks
+ * Trello for a token of the given lifetime (`e=`).
+ */
+export function createRelaySession(
+  relayUrl: string,
+  expiration: TokenExpiration = DEFAULT_TOKEN_EXPIRATION,
+): RelaySession {
   const base = relayUrl.replace(/\/+$/, '');
   const id = encodeBase64Url(randomBytes(16));
   const key = encodeBase64Url(randomBytes(16));
   return {
     id,
     key,
-    pageUrl: `${base}/connect?s=${id}#k=${key}`,
+    pageUrl: `${base}/connect?s=${id}&e=${expiration}#k=${key}`,
     mailboxUrl: `${base}/api/v1/sessions/${id}`,
   };
 }

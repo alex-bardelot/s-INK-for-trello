@@ -5,6 +5,7 @@ import {
   TRELLO_UPLOAD_TIMEOUT_MS,
 } from './config';
 import {TrelloApiError} from './errors';
+import {maskSecrets} from './redact';
 import {
   NewCard,
   TrelloAttachment,
@@ -588,7 +589,7 @@ export class TrelloClient {
     }
     throw new TrelloApiError(
       'http',
-      `Picture not loaded: ${failures.join(', ')}`,
+      this.masked(`Picture not loaded: ${failures.join(', ')}`),
     );
   }
 
@@ -635,7 +636,7 @@ export class TrelloClient {
       this.connectivity.reportNoAnswer();
       throw new TrelloApiError(
         'network',
-        `${method} ${path} failed: ${describe(error)}`,
+        this.masked(`${method} ${path} failed: ${describe(error)}`),
       );
     } finally {
       clearTimeout(timeout);
@@ -652,9 +653,11 @@ export class TrelloClient {
       const detail = await response.text().catch(() => '');
       throw new TrelloApiError(
         kind,
-        `${method} ${path} returned HTTP ${response.status}${
-          detail ? `: ${detail.slice(0, 200)}` : ''
-        }`,
+        this.masked(
+          `${method} ${path} returned HTTP ${response.status}${
+            detail ? `: ${detail.slice(0, 200)}` : ''
+          }`,
+        ),
         response.status,
       );
     }
@@ -664,10 +667,20 @@ export class TrelloClient {
     } catch (error) {
       throw new TrelloApiError(
         'invalidResponse',
-        `${method} ${path} returned invalid JSON: ${describe(error)}`,
+        this.masked(
+          `${method} ${path} returned invalid JSON: ${describe(error)}`,
+        ),
         response.status,
       );
     }
+  }
+
+  /**
+   * An error message without the member's token: paths such as
+   * `/tokens/{token}` and Trello's answers end up in logs.
+   */
+  private masked(message: string): string {
+    return maskSecrets(message, [this.token]);
   }
 }
 

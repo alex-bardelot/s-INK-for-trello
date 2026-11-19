@@ -102,8 +102,11 @@ describe('relay session', () => {
     expect(session.id).toMatch(/^[A-Za-z0-9_-]{22}$/);
     expect(session.key).toMatch(/^[A-Za-z0-9_-]{22}$/);
     expect(session.pageUrl).toBe(
-      `https://relay.example/connect?s=${session.id}#k=${session.key}`,
+      `https://relay.example/connect?s=${session.id}&e=30days#k=${session.key}`,
     );
+    expect(
+      createRelaySession('https://relay.example', 'never').pageUrl,
+    ).toMatch(/\/connect\?s=[A-Za-z0-9_-]{22}&e=never#k=/);
     expect(session.mailboxUrl).toBe(
       `https://relay.example/api/v1/sessions/${session.id}`,
     );

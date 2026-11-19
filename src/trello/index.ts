@@ -1,4 +1,12 @@
-export {buildAuthorizeUrl, normalizeToken} from './authorize';
+export {
+  buildAuthorizeUrl,
+  DEFAULT_TOKEN_EXPIRATION,
+  isTokenExpiration,
+  normalizeToken,
+  TOKEN_EXPIRATIONS,
+} from './authorize';
+export type {TokenExpiration} from './authorize';
+export {maskSecrets} from './redact';
 export {hasApiKey, TRELLO_API_KEY, TRELLO_RELAY_URL} from './config';
 export {isTrelloApiError, TrelloApiError} from './errors';
 export {

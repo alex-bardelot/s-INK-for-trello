@@ -1,5 +1,6 @@
 import {
   buildAuthorizeUrl,
+  maskSecrets,
   normalizeToken,
   TrelloApiError,
   TrelloClient,
@@ -26,8 +27,52 @@ describe('buildAuthorizeUrl', () => {
     const url = buildAuthorizeUrl({apiKey: ' testkey '});
     expect(url).toBe(
       'https://trello.com/1/authorize?key=testkey&name=s-INK%20for%20Trello' +
-        '&scope=read%2Cwrite&expiration=never&response_type=token',
+        '&scope=read%2Cwrite&expiration=30days&response_type=token',
     );
+    expect(buildAuthorizeUrl({apiKey: 'k', expiration: '1day'})).toContain(
+      '&expiration=1day&',
+    );
+  });
+});
+
+describe('maskSecrets', () => {
+  it('masks the given secrets and secret-shaped values', () => {
+    expect(maskSecrets(`DELETE /tokens/${TOKEN} returned HTTP 500`)).toBe(
+      'DELETE /tokens/[masked] returned HTTP 500',
+    );
+    expect(maskSecrets(`error ${TOKEN} here`, [TOKEN])).toBe(
+      'error [masked] here',
+    );
+    expect(maskSecrets('https://r/connect?s=abc&e=1day#k=secretkey', [])).toBe(
+      'https://r/connect?s=abc&e=1day#k=[masked]',
+    );
+    expect(maskSecrets('done#token=abc123&x=1')).toBe(
+      'done#token=[masked]&x=1',
+    );
+    expect(maskSecrets('short', ['short'])).toBe('short');
+  });
+
+  it('keeps the token out of a failed revocation', async () => {
+    const fetchImpl = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      text: () => Promise.resolve(`no such token ${TOKEN}`),
+    });
+    const error = await clientWith(fetchImpl)
+      .revokeToken()
+      .catch((caught: Error) => caught);
+    expect(String(error)).not.toContain(TOKEN);
+    expect(String(error)).toContain('/tokens/[masked]');
+  });
+
+  it('keeps the token out of a network failure', async () => {
+    const fetchImpl = jest
+      .fn()
+      .mockRejectedValue(new Error(`failed /tokens/${TOKEN}`));
+    const error = await clientWith(fetchImpl)
+      .revokeToken()
+      .catch((caught: Error) => caught);
+    expect(String(error)).not.toContain(TOKEN);
   });
 });
 

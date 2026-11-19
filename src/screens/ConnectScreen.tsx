@@ -27,7 +27,9 @@ import {
 } from '../relay/relaySession';
 import {
   buildAuthorizeUrl,
+  DEFAULT_TOKEN_EXPIRATION,
   normalizeToken,
+  TokenExpiration,
   TRELLO_API_KEY,
   TRELLO_RELAY_URL,
 } from '../trello';
@@ -82,10 +84,38 @@ const TRANSIENT_ERRORS: ReadonlySet<SessionErrorCode> = new Set([
   'unknown',
 ]);
 
-/** A new relay session, or `null` when no relay is configured. */
-function newRelaySession(): RelaySession | null {
-  return TRELLO_RELAY_URL ? createRelaySession(TRELLO_RELAY_URL) : null;
+/**
+ * A new relay session asking for a token of this lifetime, or `null` when
+ * no relay is configured.
+ */
+function newRelaySession(expiration: TokenExpiration): RelaySession | null {
+  return TRELLO_RELAY_URL
+    ? createRelaySession(TRELLO_RELAY_URL, expiration)
+    : null;
 }
+
+/** Name and explanation of each token lifetime offered. */
+const LIFETIMES: readonly {
+  value: TokenExpiration;
+  label: TranslationKey;
+  help: TranslationKey;
+}[] = [
+  {
+    value: '1day',
+    label: 'connect.lifetime1day',
+    help: 'connect.lifetime1dayHelp',
+  },
+  {
+    value: '30days',
+    label: 'connect.lifetime30days',
+    help: 'connect.lifetime30daysHelp',
+  },
+  {
+    value: 'never',
+    label: 'connect.lifetimeNever',
+    help: 'connect.lifetimeNeverHelp',
+  },
+];
 
 /**
  * Shown when no Trello account is linked, in two framed steps:
@@ -124,16 +154,21 @@ export function ConnectScreen({
   const [showAddress, setShowAddress] = useState(false);
   const [revealToken, setRevealToken] = useState(false);
   const [pasteError, setPasteError] = useState<TranslationKey | null>(null);
+  // How long the token works: asked of Trello by both pages, so chosen
+  // before opening them.
+  const [expiration, setExpiration] = useState<TokenExpiration>(
+    DEFAULT_TOKEN_EXPIRATION,
+  );
   const authorizeUrl = useMemo(
-    () => buildAuthorizeUrl({apiKey: TRELLO_API_KEY}),
-    [],
+    () => buildAuthorizeUrl({apiKey: TRELLO_API_KEY, expiration}),
+    [expiration],
   );
   const canConnect = error !== 'missingApiKey';
   const [clipboardWatched] = useState(isClipboardAvailable);
 
   // The watcher outlives renders: it reads the latest values through refs.
-  const latest = useRef({busy, remember, onConnect});
-  latest.current = {busy, remember, onConnect};
+  const latest = useRef({busy, remember, onConnect, expiration});
+  latest.current = {busy, remember, onConnect, expiration};
 
   // Connect by itself as soon as a token is copied (typically in the
   // browser), so coming back to the plugin is enough.
@@ -155,7 +190,14 @@ export function ConnectScreen({
   // Copy-free flow: wait for the token the browser deposits on the relay.
   // A session is single-use, so a new one (and a new QR code) replaces it
   // once it delivered a token or expired.
-  const [relaySession, setRelaySession] = useState(newRelaySession);
+  const [relaySession, setRelaySession] = useState(() =>
+    newRelaySession(DEFAULT_TOKEN_EXPIRATION),
+  );
+  // Another lifetime needs another page address: a new session (and QR code).
+  const changeExpiration = useCallback((next: TokenExpiration) => {
+    setExpiration(next);
+    setRelaySession(newRelaySession(next));
+  }, []);
   const networkGranted = network === 'granted';
   useEffect(() => {
     if (!canConnect || !relaySession || !networkGranted) {
@@ -167,10 +209,11 @@ export function ConnectScreen({
       onToken: relayToken => {
         setToken(relayToken);
         setPasteError(null);
-        setRelaySession(newRelaySession());
+        setRelaySession(newRelaySession(latest.current.expiration));
         latest.current.onConnect(relayToken, latest.current.remember);
       },
-      onExpired: () => setRelaySession(newRelaySession()),
+      onExpired: () =>
+        setRelaySession(newRelaySession(latest.current.expiration)),
     });
   }, [canConnect, relaySession, networkGranted]);
 
@@ -288,6 +331,21 @@ export function ConnectScreen({
                 style={[styles.paragraph, remember && styles.warning]}>
                 {t(
                   remember ? 'connect.rememberWarning' : 'connect.sessionOnly',
+                )}
+              </Text>
+              <SegmentedControl<TokenExpiration>
+                label={t('connect.lifetimeLabel')}
+                segments={LIFETIMES.map(lifetime => ({
+                  value: lifetime.value,
+                  label: t(lifetime.label),
+                }))}
+                value={expiration}
+                onChange={changeExpiration}
+              />
+              <Text accessibilityLiveRegion="polite" style={styles.paragraph}>
+                {t(
+                  LIFETIMES.find(lifetime => lifetime.value === expiration)!
+                    .help,
                 )}
               </Text>
             </StepCard>

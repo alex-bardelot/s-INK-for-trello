@@ -1,10 +1,31 @@
 import {TRELLO_APP_NAME, TRELLO_AUTHORIZE_URL, TRELLO_SCOPES} from './config';
 
+/** How long a Trello token keeps working, as Trello names it. */
+export type TokenExpiration = '1day' | '30days' | 'never';
+
+/** The lifetimes offered when connecting, shortest first. */
+export const TOKEN_EXPIRATIONS: readonly TokenExpiration[] = [
+  '1day',
+  '30days',
+  'never',
+];
+
+/**
+ * A copied token stops working after 30 days, while connecting again once
+ * a month stays bearable.
+ */
+export const DEFAULT_TOKEN_EXPIRATION: TokenExpiration = '30days';
+
+/** `true` for one of the lifetimes offered. */
+export function isTokenExpiration(value: unknown): value is TokenExpiration {
+  return TOKEN_EXPIRATIONS.includes(value as TokenExpiration);
+}
+
 export interface AuthorizeUrlOptions {
   apiKey: string;
   appName?: string;
   scopes?: readonly string[];
-  expiration?: '1hour' | '1day' | '30days' | 'never';
+  expiration?: TokenExpiration;
 }
 
 /**
@@ -21,7 +42,7 @@ export function buildAuthorizeUrl({
   apiKey,
   appName = TRELLO_APP_NAME,
   scopes = TRELLO_SCOPES,
-  expiration = 'never',
+  expiration = DEFAULT_TOKEN_EXPIRATION,
 }: AuthorizeUrlOptions): string {
   const params: Array<[string, string]> = [
     ['key', apiKey.trim()],
