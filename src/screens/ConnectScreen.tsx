@@ -122,8 +122,9 @@ const LIFETIMES: readonly {
  *
  * 1. Allow s-INK on Trello. With the relay, the QR code and the browser
  *    button open the relay's page, and the token comes back by itself.
- * 2. Paste the token, as a fallback (or the only way without a relay); the
- *    clipboard is watched too.
+ * 2. Copy the token from Trello's own page, for those who do not want to
+ *    go through the relay or when it fails (the only way without a relay):
+ *    the clipboard is watched, and the token may be typed.
  */
 export function ConnectScreen({
   error,
@@ -153,7 +154,6 @@ export function ConnectScreen({
   const [browserError, setBrowserError] = useState(false);
   const [showAddress, setShowAddress] = useState(false);
   const [revealToken, setRevealToken] = useState(false);
-  const [pasteError, setPasteError] = useState<TranslationKey | null>(null);
   // How long the token works: asked of Trello by both pages, so chosen
   // before opening them.
   const [expiration, setExpiration] = useState<TokenExpiration>(
@@ -181,7 +181,6 @@ export function ConnectScreen({
       isPaused: () => latest.current.busy,
       onToken: text => {
         setToken(text.trim());
-        setPasteError(null);
         latest.current.onConnect(text, latest.current.remember);
       },
     });
@@ -208,7 +207,6 @@ export function ConnectScreen({
       isPaused: () => latest.current.busy,
       onToken: relayToken => {
         setToken(relayToken);
-        setPasteError(null);
         setRelaySession(newRelaySession(latest.current.expiration));
         latest.current.onConnect(relayToken, latest.current.remember);
       },
@@ -264,29 +262,6 @@ export function ConnectScreen({
       onConnect(token, remember);
     }
   }, [onConnect, token, remember, validToken]);
-
-  const changeToken = useCallback((text: string) => {
-    setToken(text);
-    setPasteError(null);
-  }, []);
-
-  // Long-press paste is not offered in the plugin view: read the clipboard
-  // directly and connect at once when it holds something token-shaped.
-  const paste = useCallback(async () => {
-    if (!isClipboardAvailable()) {
-      setPasteError('connect.clipboardUnavailable');
-      return;
-    }
-    const text = await readClipboardText();
-    setPasteError(text ? null : 'connect.clipboardEmpty');
-    if (!text) {
-      return;
-    }
-    setToken(text.trim());
-    if (normalizeToken(text)) {
-      onConnect(text, remember);
-    }
-  }, [onConnect, remember]);
 
   return (
     <ScreenFrame title={t('connect.title')} onBack={onBack}>
@@ -439,7 +414,7 @@ export function ConnectScreen({
                   multiline={revealToken}
                   secureTextEntry={!revealToken}
                   submitBehavior="blurAndSubmit"
-                  onChangeText={changeToken}
+                  onChangeText={setToken}
                   onSubmitEditing={submit}
                   placeholder={t('connect.tokenPlaceholder')}
                   placeholderTextColor={colors.foreground}
@@ -459,15 +434,7 @@ export function ConnectScreen({
                   onPress={() => setRevealToken(shown => !shown)}
                 />
               </View>
-              {pasteError && (
-                <Text style={styles.paragraph}>{t(pasteError)}</Text>
-              )}
               <View style={styles.actions}>
-                <Button
-                  disabled={busy}
-                  label={t('connect.paste')}
-                  onPress={paste}
-                />
                 <Button
                   primary
                   disabled={busy || !validToken}

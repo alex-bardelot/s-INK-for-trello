@@ -124,12 +124,12 @@ boards section for those who only read public boards.
 3. Come back to the plugin: the token travels back through the
    [s-INK relay](relay/README.md), end-to-end encrypted, and the plugin
    connects by itself.
-4. As a fallback (relay unreachable, or no relay configured), open Trello's
-   page directly (under **Show the address**), copy the token it displays
-   and come back: the plugin watches the clipboard while the connection page
-   is open and connects as soon as a token is copied. You can also press
-   **Paste token**, or type it: the plugin says when it looks like a complete
-   token, and only then enables **Connect**.
+4. Without going through the relay (by choice, relay unreachable, or no
+   relay configured), step 3 opens Trello's page directly, copy the token
+   it displays and come back: the plugin watches the clipboard while the
+   connection page is open and connects as soon as a token is copied. You
+   can also type it: the plugin says when it looks like a complete token,
+   and only then enables **Connect**.
 
 How the connection works and why:
 

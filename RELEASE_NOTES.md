@@ -3,6 +3,16 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.75.1 — No Paste token button; step 3 is the way without the relay
+
+- The connection page loses its **Paste token** button: a token copied in
+  the browser is detected by itself when you come back, and it can still
+  be typed.
+- Step 3 is now titled **Or without the relay** and says to use it when
+  you do not want to go through the s-INK relay server, or when the
+  automatic connection does not work. Without a relay, its title reads
+  **Copy the token**.
+
 ## 0.75.0 — Token lifetime, 30 days by default; no token in logs
 
 - When connecting, **Token valid for** sets how long the Trello token
