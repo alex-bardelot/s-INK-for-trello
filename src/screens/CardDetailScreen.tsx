@@ -90,7 +90,10 @@ const AVATAR_SIZE = 40;
 const COMPLETE_MARK_SIZE = 32;
 /** As in the floating list of the New Trello Card page. */
 const PICKER_AVATAR_SIZE = 28;
-/** Tag or head of the dashed buttons, as high as the members' avatars. */
+/**
+ * Tag or head of the dashed buttons, which are as high as the members'
+ * avatars and the card's labels.
+ */
 const DASHED_ICON_SIZE = 26;
 /** Play sign of the Start work popup, which its tree of steps hangs from. */
 const TREE_ICON_SIZE = 48;
@@ -1709,7 +1712,7 @@ function LabelsAndMembers({
         }
         style={styles.labels}>
         {labels.map(label => (
-          <LabelChip key={label.id} label={label} />
+          <LabelChip key={label.id} label={label} height={AVATAR_SIZE} />
         ))}
         {onOpenPicker && (
           <DashedIconButton

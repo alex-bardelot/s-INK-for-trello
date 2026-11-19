@@ -3,6 +3,13 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.69.2 — Taller labels on the card page
+
+- On the card page, the card's labels are now as tall as the dashed tag
+  **+** button that adds one (40 pixels), with their name in body-size
+  text. A label without a name is drawn as a wider bar of that height.
+  Labels on the board's cards are unchanged.
+
 ## 0.69.1 — Smaller boxes in the Labels and Members lists
 
 - In the floating Labels and Members lists of the card page, the

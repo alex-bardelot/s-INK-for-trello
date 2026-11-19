@@ -12,23 +12,32 @@ import {colors, spacing, typography} from '../theme';
 export function LabelChip({
   label,
   large = false,
+  height,
 }: {
   label: Pick<TrelloLabel, 'name' | 'color'>;
   /** Drawn at the size of body text, beside it in a sentence. */
   large?: boolean;
+  /**
+   * Fixed height, named or not, to line up with buttons of that height;
+   * drawn at the large size.
+   */
+  height?: number;
 }): React.JSX.Element {
   const shade = labelShade(label.color);
+  const big = large || height !== undefined;
   return (
     <View
       style={[
         styles.label,
-        large && styles.large,
+        big && styles.large,
         !label.name && styles.unnamed,
+        height !== undefined && {minHeight: height, height},
+        height !== undefined && !label.name && styles.unnamedTall,
         {backgroundColor: shade.background},
       ]}>
       {!!label.name && (
         <Text
-          style={[styles.text, large && styles.largeText, {color: shade.text}]}
+          style={[styles.text, big && styles.largeText, {color: shade.text}]}
           numberOfLines={1}>
           {label.name}
         </Text>
@@ -57,6 +66,10 @@ const styles = StyleSheet.create({
   unnamed: {
     minHeight: 12,
     width: 48,
+  },
+  // A tall unnamed label stays wider than it is high.
+  unnamedTall: {
+    width: 72,
   },
   text: {
     fontSize: 16,
