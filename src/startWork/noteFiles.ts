@@ -98,6 +98,27 @@ export function namedCardNoteFileName(cardName: string, rank = 1): string {
   return `${name}${rank > 1 ? ` (${rank})` : ''}${NOTE_EXTENSION}`;
 }
 
+/** A Trello short link in brackets, ending a note's name. */
+const SHORT_LINK_NAME = / \[([A-Za-z0-9]{8})\]\.note$/;
+
+/**
+ * Short link of the card a note's name carries (`Name [AbC123xy].note`),
+ * or `null` for a note named after its card alone.
+ */
+export function noteNameShortLink(path: string): string | null {
+  return SHORT_LINK_NAME.exec(fileNameOf(path))?.[1] ?? null;
+}
+
+/**
+ * The card's name a note of 0.47.0–0.71.0 was given, without its rank:
+ * `Fix the login (2).note` → `Fix the login`.
+ */
+export function namedNoteCardName(path: string): string {
+  return fileNameOf(path)
+    .replace(/\.note$/i, '')
+    .replace(/ \(\d+\)$/, '');
+}
+
 /** `true` for a note file. */
 export function isNoteFile(path: string): boolean {
   return path.toLowerCase().endsWith(NOTE_EXTENSION);

@@ -21,6 +21,7 @@ import {BoardScreen} from './screens/BoardScreen';
 import {BoardsScreen} from './screens/BoardsScreen';
 import {ConnectScreen} from './screens/ConnectScreen';
 import {CreateCardScreen} from './screens/CreateCardScreen';
+import {MigrationsPopup} from './screens/MigrationsPopup';
 import {OfflineScreen} from './screens/OfflineScreen';
 import {SettingsCategory, SettingsScreen} from './screens/SettingsScreen';
 import {StatusScreen, WaitingScreen} from './screens/StatusScreen';
@@ -100,10 +101,15 @@ export default function App(): React.JSX.Element {
   // the session check, which may itself prompt for network access.
   const sessionChecked = state.status !== 'checking';
   const fileReadRequested = useRef(false);
+  // The migrations of an update are looked for once it was answered, so
+  // that looking never prompts by itself.
+  const [fileReadAnswered, setFileReadAnswered] = useState(false);
   useEffect(() => {
     if (sessionChecked && !fileReadRequested.current) {
       fileReadRequested.current = true;
-      ensureFileReadPermission(t('card.filePermissionRationale'));
+      ensureFileReadPermission(t('card.filePermissionRationale'))
+        .catch(() => false)
+        .then(() => setFileReadAnswered(true));
     }
   }, [sessionChecked, t]);
 
@@ -240,6 +246,11 @@ export default function App(): React.JSX.Element {
           />
         </View>
       )}
+      {/* Over everything: what an update can change on the tablet. */}
+      <MigrationsPopup
+        store={session.settingsStore}
+        enabled={fileReadAnswered}
+      />
     </View>
   );
 

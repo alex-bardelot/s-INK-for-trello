@@ -3,6 +3,25 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.73.0 — Migrations after an update
+
+- After an update, s-INK now looks at what the older version left on the
+  tablet and, if something can be brought up to date, shows a popup that
+  lists each change with a switch, what it does, what to be careful of,
+  and what skipping it risks.
+  - **Apply** runs the changes turned on, then says what each one did. A
+    change turned off is declined and never offered again.
+  - **Later** (or a tap beside the popup) asks again at the next opening.
+    A change that failed is offered again too.
+  - The last version whose changes are all settled is kept, so later
+    openings look at nothing. Nothing shows when there is nothing to
+    change, as on a new installation.
+- First migration: the card notes made before 0.72 (`{card}.note`) are
+  renamed `{card} [{short link}].note`, with the card their s-INK title
+  links to. Notes without such a title, and the note open behind s-INK,
+  are left as they are; the path remembered for the card follows the
+  note. Each rename goes to the `note:` lines of Settings › Diagnostics.
+
 ## 0.72.0 — Card notes named with the card's id
 
 - A new card note is named after the card and its short link:

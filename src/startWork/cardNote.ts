@@ -38,6 +38,8 @@ import {
   matchSystemTemplate,
   MAX_SAME_NAME_NOTES,
   namedCardNoteFileName,
+  namedNoteCardName,
+  noteNameShortLink,
 } from './noteFiles';
 import {NoteTemplateChoice} from './settings';
 
@@ -282,6 +284,118 @@ export async function findBoardCardNotes(
     logInkLink(`note: listing the board's notes failed (${String(error)})`);
   }
   return found;
+}
+
+/**
+ * Card notes named after their card alone (`{board}/{card}.note`, made by
+ * 0.47.0–0.71.0), to be given the card's short link. `null` when the notes
+ * cannot be read without asking. Folders are listed, notes not opened.
+ */
+export async function listNotesWithoutShortLink(): Promise<string[] | null> {
+  if (!(await hasPermission(Permission.FileRead))) {
+    return null;
+  }
+  const notes: string[] = [];
+  for (const folder of await listEntries(cardNotesRoot(await exportPath()))) {
+    if (isNoteFile(folder) || fileNameOf(folder).startsWith('.')) {
+      continue;
+    }
+    for (const path of await listEntries(folder)) {
+      if (isNoteFile(path) && noteNameShortLink(path) === null) {
+        notes.push(path);
+      }
+    }
+  }
+  return notes;
+}
+
+/** What renaming the card notes did. */
+export interface NoteRenameReport {
+  renamed: number;
+  /** Without an s-INK link in their title: their card is not known. */
+  untitled: number;
+  /** Open in the notes app, a namesake already there, or refused. */
+  failed: number;
+}
+
+/**
+ * Gives the notes of 0.47.0–0.71.0 their card's short link:
+ * `{board}/{card} (2).note` becomes `{board}/{card} [{short link}].note`.
+ * The card is the one the s-INK link of the note's title points to; a note
+ * without one is left as it is, and so is the note open in the notes app.
+ * The path remembered for the card follows the note. Each note goes to the
+ * Diagnostics log (`note:` lines).
+ */
+export async function addShortLinksToNoteNames(
+  store: KeyValueStore,
+): Promise<NoteRenameReport> {
+  const report: NoteRenameReport = {renamed: 0, untitled: 0, failed: 0};
+  const notes = (await listNotesWithoutShortLink()) ?? [];
+  if (notes.length === 0) {
+    return report;
+  }
+  if (
+    !(await ensurePermission(
+      Permission.FileWrite,
+      i18n.t('startWork.notePermission'),
+    ))
+  ) {
+    logInkLink('note: rename refused, no write permission');
+    report.failed = notes.length;
+    return report;
+  }
+  let openNote: unknown = null;
+  try {
+    const response = (await PluginCommAPI.getCurrentFilePath()) as {
+      result?: unknown;
+    } | null;
+    openNote = response?.result ?? null;
+  } catch {
+    // No note open: nothing to keep away from.
+  }
+  for (const path of notes) {
+    // Paths may start differently (`/sdcard`, `/storage/emulated/0`): the
+    // board's folder and the note's name are compared.
+    const tail = (value: string) => value.split('/').slice(-2).join('/');
+    if (typeof openNote === 'string' && tail(openNote) === tail(path)) {
+      logInkLink(`note: rename skipped, open in the notes app ${path}`);
+      report.failed++;
+      continue;
+    }
+    const owner = await noteOwner(path);
+    if (!owner) {
+      logInkLink(`note: rename skipped, no s-INK title ${path}`);
+      report.untitled++;
+      continue;
+    }
+    const folder = path.slice(0, path.lastIndexOf('/'));
+    const target = `${folder}/${cardNoteFileName(
+      namedNoteCardName(path),
+      owner,
+    )}`;
+    if ((await fileExists(target)) !== 'false') {
+      logInkLink(`note: rename skipped, ${target} already there`);
+      report.failed++;
+      continue;
+    }
+    let renamed = false;
+    try {
+      renamed =
+        (await FileUtils.renameToFile(path, target)) &&
+        (await fileExists(target)) === 'true';
+    } catch (error) {
+      logInkLink(`note: rename threw (${String(error)})`);
+    }
+    if (renamed) {
+      logInkLink(`note: renamed ${path} to ${target}`);
+      await remember(store, owner, target);
+      report.renamed++;
+    } else {
+      logInkLink(`note: rename failed ${path}`);
+      report.failed++;
+    }
+  }
+  return report;
 }
 
 /**

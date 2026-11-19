@@ -16,6 +16,8 @@ import {
   legacyCardNotesDir,
   matchSystemTemplate,
   namedCardNoteFileName,
+  namedNoteCardName,
+  noteNameShortLink,
   safeFileName,
   systemTemplateLabel,
   templateFileLabel,
@@ -607,6 +609,23 @@ describe('card note files', () => {
     expect(isCardNoteFile(name, 'AbC123')).toBe(false);
     expect(isCardNoteFile(name, '')).toBe(false);
     expect(isCardNoteFile('Old name.note', 'AbC123xy')).toBe(false);
+  });
+
+  it('reads the short link a note name carries', () => {
+    expect(noteNameShortLink('/b/Fix the login [AbC123xy].note')).toBe(
+      'AbC123xy',
+    );
+    expect(noteNameShortLink('/b/Fix the login.note')).toBeNull();
+    expect(noteNameShortLink('/b/Plan [draft].note')).toBeNull();
+    expect(noteNameShortLink('/b/Sprint [2026-Q4].note')).toBeNull();
+  });
+
+  it('reads the card name of a note named after the card alone', () => {
+    expect(namedNoteCardName('/b/Fix the login.note')).toBe('Fix the login');
+    expect(namedNoteCardName('/b/Fix the login (2).note')).toBe(
+      'Fix the login',
+    );
+    expect(namedNoteCardName('/b/Step (two).note')).toBe('Step (two)');
   });
 
   it('still names the notes of 0.47 to 0.71 after the card alone', () => {
