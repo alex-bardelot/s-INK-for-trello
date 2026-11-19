@@ -3,6 +3,16 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.67.0 — Modes switch, label chips for the modes
+
+- The **Mode** section of Settings > Board opens with a switch,
+  **Focus and Review modes**, on by default. Off, the rest of the section
+  is hidden, boards always show all their cards and their toolbar offers
+  no mode; turned on again, boards show all cards until a mode is chosen.
+- The labels of the Focus and Review modes are chosen as on the New
+  Trello Card page: the checked ones show as chips (a tap takes one off)
+  and the "+" opens the board's labels in the floating list.
+
 ## 0.66.0 — Edit a description, add a card from the board
 
 - On the card page of a board you can edit, the **Description** heading

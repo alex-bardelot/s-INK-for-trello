@@ -198,9 +198,35 @@ describe('focus labels', () => {
       '{"mode":"review","labels":["TODO"]}',
     );
     expect(await loadFocusSettings(store)).toEqual({
+      enabled: true,
       mode: 'review',
       focus: filter(['TODO']),
       review: review('complete'),
+    });
+  });
+
+  it('keeps the modes on unless turned off, with no mode once off', async () => {
+    const store = createMemoryStore();
+    await store.setItem(FOCUS_SETTINGS_KEY, '{"mode":"focus"}');
+    expect(await loadFocusSettings(store)).toMatchObject({
+      enabled: true,
+      mode: 'focus',
+    });
+    await store.setItem(FOCUS_SETTINGS_KEY, '{"enabled":true,"mode":null}');
+    expect(await loadFocusSettings(store)).toMatchObject({
+      enabled: true,
+      mode: null,
+    });
+    await store.setItem(FOCUS_SETTINGS_KEY, '{"enabled":false,"mode":"focus"}');
+    expect(await loadFocusSettings(store)).toMatchObject({
+      enabled: false,
+      mode: null,
+    });
+    // Before Review mode, `enabled: false` only meant Focus mode was off.
+    await store.setItem(FOCUS_SETTINGS_KEY, '{"enabled":false,"labels":[]}');
+    expect(await loadFocusSettings(store)).toMatchObject({
+      enabled: true,
+      mode: null,
     });
   });
 
@@ -208,6 +234,7 @@ describe('focus labels', () => {
     const store = createMemoryStore();
     expect(await loadFocusSettings(store)).toEqual(DEFAULT_FOCUS_SETTINGS);
     const saved = {
+      enabled: true,
       mode: 'review' as const,
       focus: filter(['TODO', 'WIP'], []),
       review: review('all', {labels: ['QA'], members: [{id: 'x', name: 'X'}]}),

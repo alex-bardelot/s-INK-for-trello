@@ -317,8 +317,9 @@ export function BoardScreen({
     [focus, updateFocus],
   );
   // Focus and Review are about the user's own cards: they make no sense on
-  // Supernote's roadmap, where the board is always shown in full.
-  const modesAvailable = !isSupernoteRoadmap(board);
+  // Supernote's roadmap, where the board is always shown in full. Turned
+  // off in Settings, no board offers them.
+  const modesAvailable = focus.enabled && !isSupernoteRoadmap(board);
   const mode = modesAvailable && !wholeBoard ? focus.mode : null;
   const modeChoices: Segment<ModeChoice>[] = [
     {value: 'all', label: t('settings.modeAll')},

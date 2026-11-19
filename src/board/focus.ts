@@ -59,6 +59,11 @@ export interface ReviewFilter extends ModeFilter {
 
 /** The board mode that is on, and what each mode keeps. */
 export interface FocusSettings {
+  /**
+   * Whether the modes are offered at all. Off, boards always show all their
+   * cards and offer no mode.
+   */
+  enabled: boolean;
   /** `null`: the whole board is shown. */
   mode: BoardMode | null;
   /** Focus mode keeps open cards (not marked complete) matching this. */
@@ -69,6 +74,7 @@ export interface FocusSettings {
 const SELF_ONLY: readonly ModeMember[] = [{id: SELF_MEMBER, name: ''}];
 
 export const DEFAULT_FOCUS_SETTINGS: FocusSettings = {
+  enabled: true,
   mode: null,
   focus: {labels: [], members: SELF_ONLY},
   review: {labels: [], members: SELF_ONLY, completion: 'complete'},
@@ -331,8 +337,19 @@ export async function loadFocusSettings(
       parsed.review && typeof parsed.review === 'object'
         ? (parsed.review as Record<string, unknown>)
         : {};
+    // Before Review mode, there was no `mode` and `enabled` meant "Focus
+    // mode on"; since, `enabled` says whether the modes are offered.
+    const legacy = !('mode' in parsed);
+    const enabled = legacy || parsed.enabled !== false;
     return {
-      mode: mode ?? (parsed.enabled === true ? 'focus' : null),
+      enabled,
+      mode: !enabled
+        ? null
+        : legacy
+        ? parsed.enabled === true
+          ? 'focus'
+          : null
+        : mode ?? null,
       focus: parseFilter(parsed.focus, parsed.labels),
       review: {
         ...parseFilter(review, []),

@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import {PluginManager} from 'sn-plugin-lib';
 
-import {labelShade} from '../board/labels';
 import {loadBoardsPreferences} from '../boards/preferences';
 import {addCardChecklist} from '../cards/checklist';
 import {
@@ -47,6 +46,7 @@ import {
   rememberCardDestination,
 } from '../cards/preferences';
 import {Button} from '../components/Button';
+import {ChipPickerButton, LabelChipContent} from '../components/ChipPicker';
 import {ChoiceList} from '../components/ChoiceList';
 import {CloseIcon} from '../components/CloseIcon';
 import {BlockIcon, BlockIconKind} from '../components/BlockIcon';
@@ -59,11 +59,7 @@ import {MemberAvatar} from '../components/MemberAvatar';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {SmallButton} from '../components/SmallButton';
 import {WaitingBox} from '../components/WaitingBox';
-import {
-  CHIP_BORDER_WIDTH,
-  CHIP_HEIGHT,
-  ToggleChip,
-} from '../components/ToggleChip';
+import {CHIP_HEIGHT, ToggleChip} from '../components/ToggleChip';
 import {TranslationKey, useTranslation} from '../i18n';
 import {logInkLink} from '../inkLink/diagnostics';
 import {bindSelection} from '../inkLink/lassoBinding';
@@ -143,8 +139,6 @@ const SESSION_ERRORS: Record<SessionErrorCode, TranslationKey> = {
 };
 
 const AVATAR_SIZE = 28;
-/** The "+" that opens the full list: a short pill, easy to hit. */
-const PICKER_BUTTON_WIDTH = 64;
 
 /** Board and list a card is added to from the board, chosen beforehand. */
 export interface NewCardPlace {
@@ -509,17 +503,7 @@ export function CreateCardScreen({
   const backToForm = () => setStep({kind: 'form'});
 
   const labelContent = (label: TrelloLabel) => (
-    <>
-      <View
-        style={[
-          styles.swatch,
-          {backgroundColor: labelShade(label.color).background},
-        ]}
-      />
-      <Text style={styles.chipText} numberOfLines={1}>
-        {label.name}
-      </Text>
-    </>
+    <LabelChipContent name={label.name} color={label.color} />
   );
 
   const memberContent = (member: TrelloBoardMember) => (
@@ -809,7 +793,7 @@ export function CreateCardScreen({
                           </ToggleChip>
                         );
                       })}
-                      <PickerButton
+                      <ChipPickerButton
                         buttonRef={labelsButton}
                         label={t('card.pickLabel')}
                         onPress={() => openPicker('labels', labelsButton)}
@@ -845,7 +829,7 @@ export function CreateCardScreen({
                           </ToggleChip>
                         );
                       })}
-                      <PickerButton
+                      <ChipPickerButton
                         buttonRef={membersButton}
                         label={t('card.pickMember')}
                         onPress={() => openPicker('members', membersButton)}
@@ -1096,44 +1080,6 @@ function Section({
 }
 
 /**
- * The dashed "+" after the suggestions that opens the list of all of them,
- * as high as the chips. `label` is read by accessibility services.
- */
-function PickerButton({
-  buttonRef,
-  label,
-  onPress,
-}: {
-  buttonRef: React.RefObject<View | null>;
-  label: string;
-  onPress: () => void;
-}): React.JSX.Element {
-  return (
-    <View ref={buttonRef} collapsable={false}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={label}
-        hitSlop={spacing.xs}
-        onPress={onPress}
-        style={({pressed}) => [
-          styles.pickerButton,
-          pressed && styles.pickerButtonPressed,
-        ]}>
-        {({pressed}) => (
-          <Text
-            style={[
-              styles.pickerButtonText,
-              pressed && styles.pickerButtonTextPressed,
-            ]}>
-            +
-          </Text>
-        )}
-      </Pressable>
-    </View>
-  );
-}
-
-/**
  * Links the lasso selection the card was made from to the new card, when
  * the setting asks for it, as the Insert Trello Link button does.
  */
@@ -1226,28 +1172,6 @@ const styles = StyleSheet.create({
   formArea: {
     flex: 1,
   },
-  pickerButton: {
-    width: PICKER_BUTTON_WIDTH,
-    height: CHIP_HEIGHT,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderColor: colors.foreground,
-    borderRadius: 999,
-    borderStyle: 'dashed',
-    borderWidth: CHIP_BORDER_WIDTH,
-    backgroundColor: colors.background,
-  },
-  pickerButtonPressed: {
-    backgroundColor: colors.foreground,
-  },
-  pickerButtonText: {
-    color: colors.foreground,
-    fontSize: typography.label,
-    fontWeight: '700',
-  },
-  pickerButtonTextPressed: {
-    color: colors.background,
-  },
   message: {
     color: colors.foreground,
     fontSize: typography.body,
@@ -1314,13 +1238,6 @@ const styles = StyleSheet.create({
     marginLeft: -CONNECTOR_DOT / 2,
     borderRadius: CONNECTOR_DOT / 2,
     backgroundColor: colors.foreground,
-  },
-  swatch: {
-    width: 22,
-    height: 22,
-    borderRadius: 4,
-    borderColor: colors.labelBorder,
-    borderWidth: 1.5,
   },
   inlineError: {
     flexDirection: 'row',

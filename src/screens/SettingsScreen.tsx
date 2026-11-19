@@ -3,6 +3,7 @@ import {Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 
 import pluginConfig from '../../PluginConfig.json';
 import {
+  BoardMode,
   DEFAULT_FOCUS_SETTINGS,
   FocusSettings,
   focusLabelChoices,
@@ -33,6 +34,13 @@ import {BlockIcon} from '../components/BlockIcon';
 import {Button} from '../components/Button';
 import {Checkbox} from '../components/Checkbox';
 import {ChainIcon} from '../components/ChainIcon';
+import {ChipPickerButton, LabelChipContent} from '../components/ChipPicker';
+import {
+  FloatingPicker,
+  FloatingPickerPosition,
+  measurePickerPosition,
+} from '../components/FloatingPicker';
+import {ToggleChip} from '../components/ToggleChip';
 import {GearIcon} from '../components/GearIcon';
 import {MemberAvatar} from '../components/MemberAvatar';
 import {ScreenFrame} from '../components/ScreenFrame';
@@ -77,6 +85,7 @@ import {
   TrelloBoard,
   TrelloBoardMember,
   TrelloClient,
+  TrelloLabel,
   TrelloMember,
 } from '../trello';
 import {NewCardSettingsPanel} from './NewCardSettingsPanel';
@@ -619,7 +628,7 @@ function BoardLayoutSettings({
  */
 type BoardChoicesState =
   | {status: 'noBoard' | 'loading' | 'failed'}
-  | {status: 'loaded'; labels: string[]; members: TrelloBoardMember[]};
+  | {status: 'loaded'; labels: TrelloLabel[]; members: TrelloBoardMember[]};
 
 /**
  * Mode boards open in (all cards, focus or review), shared with the board
@@ -661,6 +670,33 @@ function BoardModeSettings({
     (choice: ModeChoice) => update({mode: choice === 'all' ? null : choice}),
     [update],
   );
+  // Turned off, boards show all their cards; turned on again, they still
+  // do until a mode is chosen.
+  const changeEnabled = useCallback(
+    (enabled: boolean) => {
+      setPicker(null);
+      update(enabled ? {enabled} : {enabled, mode: null});
+    },
+    [update],
+  );
+
+  // The floating list of the board's labels, as on the New Trello Card
+  // page, drawn over the whole section under the "+" pressed.
+  const areaRef = useRef<View>(null);
+  const [picker, setPicker] = useState<{
+    mode: BoardMode;
+    position: FloatingPickerPosition;
+  } | null>(null);
+  const openPicker = (mode: BoardMode, button: View) => {
+    if (areaRef.current) {
+      measurePickerPosition(button, areaRef.current).then(position =>
+        setPicker({mode, position}),
+      );
+    }
+  };
+  const changeFocus = (focus: ModeFilter) => update({focus});
+  const changeReview = (filter: ModeFilter) =>
+    update({review: {...settings.review, ...filter}});
 
   const loadChoices = useCallback(() => {
     if (!board) {
@@ -678,7 +714,8 @@ function BoardModeSettings({
           active &&
           setChoices({
             status: 'loaded',
-            labels: labels.map(label => label.name),
+            // Labels without a name are only a color: not offered.
+            labels: labels.filter(label => labelKey(label.name) !== ''),
             members,
           }),
       )
@@ -716,64 +753,153 @@ function BoardModeSettings({
     {value: 'incomplete', label: t('settings.reviewIncomplete')},
   ];
 
+  const pickerFilter = picker
+    ? picker.mode === 'focus'
+      ? settings.focus
+      : settings.review
+    : null;
+  const pickerRows = pickerFilter
+    ? focusLabelChoices(
+        boardLabels.map(label => label.name),
+        pickerFilter.labels,
+      ).map(name => ({
+        id: labelKey(name),
+        name,
+        selected: pickerFilter.labels.some(
+          label => labelKey(label) === labelKey(name),
+        ),
+        content: (
+          <LabelChipContent name={name} color={labelColor(boardLabels, name)} />
+        ),
+      }))
+    : [];
+  const togglePickedLabel = (id: string) => {
+    if (!picker || !pickerFilter) {
+      return;
+    }
+    const row = pickerRows.find(candidate => candidate.id === id);
+    if (row) {
+      const next = {
+        ...pickerFilter,
+        labels: toggleFocusLabel(pickerFilter.labels, row.name),
+      };
+      (picker.mode === 'focus' ? changeFocus : changeReview)(next);
+    }
+  };
+
   return (
-    <Section title={t('settings.boardMode')}>
-      <SegmentedControl
-        label={t('settings.boardModeDefault')}
-        help={t('settings.boardModeHelp')}
-        segments={modes}
-        value={settings.mode ?? 'all'}
-        onChange={changeMode}
-      />
-
-      {boardNote && <Text style={styles.modeHelp}>{boardNote}</Text>}
-      {choices.status === 'failed' && (
-        <View style={styles.tagsRetry}>
-          <SmallButton
-            label={t('common.retry')}
-            accessibilityLabel={t('common.retry')}
-            onPress={loadChoices}
-          />
-        </View>
-      )}
-
-      <ModeFilterSettings
-        title={t('settings.focusSection')}
-        help={t('settings.focusHelp')}
-        filter={settings.focus}
-        boardLabels={boardLabels}
-        boardMembers={boardMembers}
-        boardLoaded={choices.status === 'loaded'}
-        member={member}
-        onChange={focus => update({focus})}
-      />
-
-      <ModeFilterSettings
-        title={t('settings.reviewSection')}
-        help={t('settings.reviewHelp')}
-        filter={settings.review}
-        boardLabels={boardLabels}
-        boardMembers={boardMembers}
-        boardLoaded={choices.status === 'loaded'}
-        member={member}
-        onChange={filter => update({review: {...settings.review, ...filter}})}>
-        <SegmentedControl
-          label={t('settings.reviewCompletion')}
-          segments={completions}
-          value={settings.review.completion}
-          onChange={completion =>
-            update({review: {...settings.review, completion}})
-          }
+    <View
+      ref={areaRef}
+      collapsable={false}
+      // Tall enough for the floating list opened near its bottom.
+      style={
+        picker && {
+          minHeight: picker.position.top + picker.position.maxHeight,
+        }
+      }>
+      <Section title={t('settings.boardMode')}>
+        <Switch
+          label={t('settings.modesEnabled')}
+          help={t('settings.modesEnabledHelp')}
+          value={settings.enabled}
+          onChange={changeEnabled}
         />
-      </ModeFilterSettings>
-    </Section>
+
+        {settings.enabled && (
+          <>
+            <SegmentedControl
+              label={t('settings.boardModeDefault')}
+              help={t('settings.boardModeHelp')}
+              segments={modes}
+              value={settings.mode ?? 'all'}
+              onChange={changeMode}
+            />
+
+            {boardNote && <Text style={styles.modeHelp}>{boardNote}</Text>}
+            {choices.status === 'failed' && (
+              <View style={styles.tagsRetry}>
+                <SmallButton
+                  label={t('common.retry')}
+                  accessibilityLabel={t('common.retry')}
+                  onPress={loadChoices}
+                />
+              </View>
+            )}
+
+            <ModeFilterSettings
+              title={t('settings.focusSection')}
+              help={t('settings.focusHelp')}
+              filter={settings.focus}
+              boardLabels={boardLabels}
+              boardMembers={boardMembers}
+              member={member}
+              onChange={changeFocus}
+              onPickLabels={
+                board ? button => openPicker('focus', button) : undefined
+              }
+            />
+
+            <ModeFilterSettings
+              title={t('settings.reviewSection')}
+              help={t('settings.reviewHelp')}
+              filter={settings.review}
+              boardLabels={boardLabels}
+              boardMembers={boardMembers}
+              member={member}
+              onChange={changeReview}
+              onPickLabels={
+                board ? button => openPicker('review', button) : undefined
+              }>
+              <SegmentedControl
+                label={t('settings.reviewCompletion')}
+                segments={completions}
+                value={settings.review.completion}
+                onChange={completion =>
+                  update({review: {...settings.review, completion}})
+                }
+              />
+            </ModeFilterSettings>
+          </>
+        )}
+      </Section>
+
+      {picker && (
+        <FloatingPicker
+          title={t('card.labels')}
+          position={picker.position}
+          closeLabel={t('common.close')}
+          onClose={() => setPicker(null)}
+          emptyMessage={
+            choices.status === 'loaded'
+              ? t('settings.modeLabelsNone')
+              : choices.status === 'failed'
+              ? t('settings.modeChoicesFailed')
+              : t('settings.modeChoicesLoading')
+          }
+          rows={pickerRows}
+          onToggle={togglePickedLabel}
+        />
+      )}
+    </View>
+  );
+}
+
+/** Color of the board label of that name; `null` when not on the board. */
+function labelColor(
+  labels: readonly TrelloLabel[],
+  name: string,
+): string | null {
+  return (
+    labels.find(label => labelKey(label.name) === labelKey(name))?.color ??
+    null
   );
 }
 
 /**
  * Sub-section of the Mode section for one mode: its help, any control of
- * its own (`children`), then the labels and the members it keeps, as
- * checkboxes.
+ * its own (`children`), then the labels it keeps, as chips with a "+"
+ * opening the board's labels (as on the New Trello Card page), and the
+ * members it keeps, as checkboxes.
  */
 function ModeFilterSettings({
   title,
@@ -781,25 +907,24 @@ function ModeFilterSettings({
   filter,
   boardLabels,
   boardMembers,
-  boardLoaded,
   member,
   onChange,
+  onPickLabels,
   children,
 }: {
   title: string;
   help: string;
   filter: ModeFilter;
-  boardLabels: readonly string[];
+  boardLabels: readonly TrelloLabel[];
   boardMembers: readonly TrelloBoardMember[];
-  /** Whether the board's labels were read: "no label" is said only then. */
-  boardLoaded: boolean;
   member: TrelloMember | null;
   onChange: (filter: ModeFilter) => void;
+  /** Opens the board's labels under the "+"; unset without a board. */
+  onPickLabels?: (button: View) => void;
   children?: React.ReactNode;
 }): React.JSX.Element {
   const {t} = useTranslation();
-  const labels = focusLabelChoices(boardLabels, filter.labels);
-  const checkedLabels = new Set(filter.labels.map(labelKey));
+  const pickerButton = useRef<View>(null);
   const members = modeMemberChoices(
     boardMembers,
     filter.members,
@@ -819,28 +944,34 @@ function ModeFilterSettings({
       {children}
 
       <Text style={styles.modeGroupTitle}>{t('settings.modeLabels')}</Text>
-      {labels.length > 0 ? (
-        <View style={styles.tagGrid}>
-          {labels.map(name => (
-            <View key={labelKey(name)} style={styles.tagCell}>
-              <Checkbox
-                label={name}
-                checked={checkedLabels.has(labelKey(name))}
-                onChange={() =>
-                  onChange({
-                    ...filter,
-                    labels: toggleFocusLabel(filter.labels, name),
-                  })
-                }
-              />
-            </View>
-          ))}
-        </View>
-      ) : (
-        boardLoaded && (
-          <Text style={styles.modeHelp}>{t('settings.modeLabelsNone')}</Text>
-        )
-      )}
+      <View style={styles.labelChips}>
+        {filter.labels.map(name => (
+          <ToggleChip
+            key={labelKey(name)}
+            selected
+            accessibilityLabel={t('card.remove', {name})}
+            onPress={() =>
+              onChange({
+                ...filter,
+                labels: toggleFocusLabel(filter.labels, name),
+              })
+            }>
+            <LabelChipContent name={name} color={labelColor(boardLabels, name)} />
+          </ToggleChip>
+        ))}
+        {onPickLabels && (
+          <ChipPickerButton
+            buttonRef={pickerButton}
+            label={t('card.pickLabel')}
+            onPress={() =>
+              pickerButton.current && onPickLabels(pickerButton.current)
+            }
+          />
+        )}
+        {filter.labels.length === 0 && !onPickLabels && (
+          <Text style={styles.modeHelp}>{t('settings.modeLabelsAny')}</Text>
+        )}
+      </View>
 
       <Text style={styles.modeGroupTitle}>{t('settings.modeMembers')}</Text>
       <View style={styles.tagGrid}>
@@ -1195,6 +1326,13 @@ const styles = StyleSheet.create({
   modeHelp: {
     color: colors.foreground,
     fontSize: typography.small,
+  },
+  labelChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingTop: spacing.xs,
   },
   tagGrid: {
     flexDirection: 'row',
