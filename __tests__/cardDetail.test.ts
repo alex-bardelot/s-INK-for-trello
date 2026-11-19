@@ -136,6 +136,15 @@ describe('buildDetailBlocks', () => {
     expect(keys(false)).toEqual(['e-attachments', 'h-comments', 'e-comments']);
   });
 
+  it('builds the summary alone until the card is loaded', () => {
+    const blocks = buildDetailBlocks(card({desc: 'Notes'}), {
+      canComment: true,
+      canAttach: true,
+      sections: false,
+    });
+    expect(blocks.map(block => block.key)).toEqual(['summary']);
+  });
+
   it('drops the empty line of the attachments when one can be added', () => {
     const keys = (canAttach: boolean) =>
       buildDetailBlocks(card(), {canAttach})

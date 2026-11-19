@@ -816,6 +816,7 @@ export function CardDetailScreen({
           onAddAttachment={editable ? addAttachment : undefined}
           onOpenAttachment={setOpened}
           loadImageUri={loadImageUri}
+          loaded={state.status === 'loaded'}
           composer={composer}
           pending={pending}
           footer={
@@ -1306,6 +1307,8 @@ interface DetailPagesProps {
   onOpenAttachment?: (attachment: OpenedAttachment) => void;
   /** Loads an image of an attachment; unset, nothing is loaded. */
   loadImageUri?: ImageUriLoader;
+  /** The card's detail came from Trello: its sections are shown. */
+  loaded: boolean;
   /** Changes on their way to Trello (`item:<id>`, `label:<id>`…). */
   pending: ReadonlySet<string>;
   /** Field to write a comment; unset, comments are only read. */
@@ -1329,13 +1332,16 @@ function DetailPages({
   loadImageUri,
   pending,
   composer,
+  loaded,
 }: DetailPagesProps): React.JSX.Element {
   const {t} = useTranslation();
   const canComment = !!composer;
   const canAttach = !!onAddAttachment;
+  // Until the card is loaded, its summary alone shows, over the loading
+  // message: its sections would show empty first.
   const blocks = useMemo(
-    () => buildDetailBlocks(card, {canComment, canAttach}),
-    [card, canComment, canAttach],
+    () => buildDetailBlocks(card, {canComment, canAttach, sections: loaded}),
+    [card, canComment, canAttach, loaded],
   );
   const [areaHeight, setAreaHeight] = useState(0);
   const [heights, setHeights] = useState<Readonly<Record<string, number>>>({});

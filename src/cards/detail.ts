@@ -103,16 +103,23 @@ const MAX_PARAGRAPH_LINES = 8;
  * line saying there are none when the card has none; checklists only show
  * when the card has some. With `canComment`, a field to write a comment
  * opens the comments, as on Trello; with `canAttach`, a line to add an
- * attachment opens the attachments.
+ * attachment opens the attachments. Without `sections` (the card is not
+ * loaded yet), only the summary is built: what the board knows of the
+ * card has no description, attachments nor comments, and its sections
+ * would show empty, then be drawn again once loaded (a flash on E Ink).
  */
 export function buildDetailBlocks(
   card: TrelloCardDetail,
   {
     canComment = false,
     canAttach = false,
-  }: {canComment?: boolean; canAttach?: boolean} = {},
+    sections = true,
+  }: {canComment?: boolean; canAttach?: boolean; sections?: boolean} = {},
 ): DetailBlock[] {
   const blocks: DetailBlock[] = [{kind: 'summary', key: 'summary'}];
+  if (!sections) {
+    return blocks;
+  }
   const empty = (section: DetailSection) =>
     blocks.push({kind: 'empty', key: `e-${section}`, section});
 

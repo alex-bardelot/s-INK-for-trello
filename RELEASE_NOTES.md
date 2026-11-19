@@ -3,6 +3,14 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.73.2 — No empty sections while a card loads
+
+- Opening a card no longer flashes its Description, Attachments and
+  Comments sections empty ("No description"…) before drawing them again
+  with their content. While the card loads, its page shows what the board
+  already knows (name, labels, members, dates) above the loading message;
+  the sections appear once, with their content.
+
 ## 0.73.1 — Attachment previews load from Trello
 
 - The previews of attachments stored on Trello (uploaded from another
