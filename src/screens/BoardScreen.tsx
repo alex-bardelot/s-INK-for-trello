@@ -851,7 +851,9 @@ function BoardColumn({
           locale={locale}
           onMeasure={measureCard}
         />
-        {cards.length === 0 && (
+        {/* An empty list says so only when no "Add a card" button stands in
+            its place. */}
+        {cards.length === 0 && !onAddCard && (
           <Text style={styles.message}>{t('board.noCards')}</Text>
         )}
         {visibleCards.map(card => (

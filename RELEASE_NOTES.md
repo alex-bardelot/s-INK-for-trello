@@ -3,6 +3,12 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.68.2 — No "No cards" above "Add a card"
+
+- An empty list of a board you can edit shows only **+ Add a card**,
+  without the "No cards" line above it. On a board you cannot edit, an
+  empty list still says "No cards".
+
 ## 0.68.1 — Dashed "Add a card" right under the last card
 
 - On a board, **+ Add a card** now follows the last card shown in the
