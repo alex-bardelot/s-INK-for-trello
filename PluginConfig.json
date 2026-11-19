@@ -3,10 +3,10 @@
   "pluginKey": "sINK",
   "name": "s-INK for Trello",
   "desc": "Trello boards on your Supernote.",
-  "author": "AlexandreB",
+  "author": "Alexandre Bardelot",
   "iconPath": "assets/icon.png",
-  "versionCode": "205",
-  "versionName": "0.75.3",
+  "versionCode": "206",
+  "versionName": "0.75.4",
   "jsMainPath": "index",
   "uses-permissions": [
     "plugin.permission.INTERNET",

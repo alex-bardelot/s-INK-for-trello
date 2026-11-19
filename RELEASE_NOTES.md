@@ -3,6 +3,13 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.75.4 — Author and copyright holder: Alexandre Bardelot
+
+- The author shown in the plugin list is now **Alexandre Bardelot**
+  (was "AlexandreB").
+- The MIT LICENSE names Alexandre Bardelot as the copyright holder instead
+  of "s-INK for Trello contributors". The license itself is unchanged.
+
 ## 0.75.3 — The app is always named s-INK for Trello
 
 - Texts that named the app just "s-INK" now say **s-INK for Trello**: the
