@@ -17,11 +17,69 @@ const PICKER_MAX_HEIGHT = 520;
 const BOX_SIZE = 22;
 const BOX_MARK_SIZE = 16;
 
-/** Where the floating list stands in its area, under its button. */
+/**
+ * Where the floating list stands in its area: under its button (`top`), or
+ * above it (`bottom`) when there is more room there.
+ */
 export interface FloatingPickerPosition {
   left: number;
-  top: number;
+  /** Its top in the area, when it opens under its button. */
+  top?: number;
+  /** Its distance from the area's bottom, when it opens above its button. */
+  bottom?: number;
   maxHeight: number;
+}
+
+/** A rectangle measured in the window. */
+interface WindowRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Where the floating list opens, kept inside its area: under the button, or
+ * above it when the room under it is short of a full list and smaller than
+ * the room above, so that every row can be reached. With `canGrow` (an area
+ * that grows to hold the list, in a scrolled page), it always opens under
+ * the button, at least {@link PICKER_MIN_HEIGHT} tall.
+ */
+export function pickerPosition(
+  button: WindowRect,
+  area: WindowRect,
+  {canGrow = false}: {canGrow?: boolean} = {},
+): FloatingPickerPosition {
+  const left = Math.max(
+    0,
+    Math.min(button.x - area.x, area.width - PICKER_WIDTH),
+  );
+  const buttonTop = button.y - area.y;
+  const top = buttonTop + button.height + spacing.xs;
+  const roomBelow = area.height - top - spacing.md;
+  const roomAbove = buttonTop - spacing.xs - spacing.md;
+  if (canGrow) {
+    return {
+      left,
+      top,
+      maxHeight: Math.min(
+        PICKER_MAX_HEIGHT,
+        Math.max(PICKER_MIN_HEIGHT, roomBelow),
+      ),
+    };
+  }
+  if (roomBelow >= PICKER_MAX_HEIGHT || roomBelow >= roomAbove) {
+    return {
+      left,
+      top,
+      maxHeight: Math.min(PICKER_MAX_HEIGHT, Math.max(0, roomBelow)),
+    };
+  }
+  return {
+    left,
+    bottom: area.height - buttonTop + spacing.xs,
+    maxHeight: Math.min(PICKER_MAX_HEIGHT, roomAbove),
+  };
 }
 
 /** One choice of the floating list. */
@@ -35,32 +93,32 @@ export interface PickerRow {
 }
 
 /**
- * Works out where the floating list opens: under `button`, kept inside
- * `area`, the view the list is drawn in (it must be positioned).
+ * Works out where the floating list opens next to `button`, kept inside
+ * `area`, the view the list is drawn in (it must be positioned): see
+ * {@link pickerPosition}.
  */
 export function measurePickerPosition(
   button: View,
   area: View,
+  options?: {canGrow?: boolean},
 ): Promise<FloatingPickerPosition> {
   return new Promise(resolve =>
-    button.measureInWindow((bx, by, _bw, bh) =>
-      area.measureInWindow((ax, ay, aw, ah) => {
-        const top = by - ay + bh + spacing.xs;
-        resolve({
-          left: Math.max(0, Math.min(bx - ax, aw - PICKER_WIDTH)),
-          top,
-          maxHeight: Math.min(
-            PICKER_MAX_HEIGHT,
-            Math.max(PICKER_MIN_HEIGHT, ah - top - spacing.md),
+    button.measureInWindow((bx, by, bw, bh) =>
+      area.measureInWindow((ax, ay, aw, ah) =>
+        resolve(
+          pickerPosition(
+            {x: bx, y: by, width: bw, height: bh},
+            {x: ax, y: ay, width: aw, height: ah},
+            options,
           ),
-        });
-      }),
+        ),
+      ),
     ),
   );
 }
 
 /**
- * A list floating under the button that opened it, such as the labels or
+ * A list floating under (or above) the button that opened it, such as the labels or
  * members of a board, under a centered title with a close cross: a tap
  * checks or unchecks a row and leaves the list open; a tap on the cross or
  * anywhere outside closes it. Drawn last in its area, over the rest.
@@ -98,11 +156,15 @@ export function FloatingPicker({
           {
             left: position.left,
             top: position.top,
+            bottom: position.bottom,
             maxHeight: position.maxHeight,
           },
         ]}>
         <View style={styles.header}>
-          <Text style={styles.title} accessibilityRole="header" numberOfLines={1}>
+          <Text
+            style={styles.title}
+            accessibilityRole="header"
+            numberOfLines={1}>
             {title}
           </Text>
           <Pressable

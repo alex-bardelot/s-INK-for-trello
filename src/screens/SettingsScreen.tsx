@@ -698,8 +698,9 @@ function BoardModeSettings({
   } | null>(null);
   const openPicker = (mode: BoardMode, kind: ModePickerKind, button: View) => {
     if (areaRef.current) {
-      measurePickerPosition(button, areaRef.current).then(position =>
-        setPicker({mode, kind, position}),
+      // The area grows to hold the list (see its minHeight).
+      measurePickerPosition(button, areaRef.current, {canGrow: true}).then(
+        position => setPicker({mode, kind, position}),
       );
     }
   };
@@ -833,7 +834,7 @@ function BoardModeSettings({
       // Tall enough for the floating list opened near its bottom.
       style={
         picker && {
-          minHeight: picker.position.top + picker.position.maxHeight,
+          minHeight: (picker.position.top ?? 0) + picker.position.maxHeight,
         }
       }>
       <Section title={t('settings.boardMode')}>

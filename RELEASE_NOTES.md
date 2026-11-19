@@ -3,6 +3,15 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.75.2 — Labels and members lists opened near the bottom show every row
+
+- The floating list of labels or members (card page, New Trello Card,
+  Settings › Start work) opened near the bottom of the screen ran past it:
+  its last rows were cut off and could not be scrolled to. It now opens
+  above its button when there is more room there, and never reaches past
+  the page; a long list scrolls within it. Settings › Board, whose page
+  grows to hold the list, keeps opening it under its button.
+
 ## 0.75.1 — No Paste token button; step 3 is the way without the relay
 
 - The connection page loses its **Paste token** button: a token copied in
