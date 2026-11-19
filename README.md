@@ -223,6 +223,12 @@ Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md).
 
 [MIT](LICENSE)
 
+## Support
+
+Free free to support my work, I also would like to get my hands on a Nomad to ensure that the developpment the plugin is well optimised for this size also. I only have a Supernote Manta.
+
+https://ko-fi.com/alexandrebardelot/goal?g=0
+
 ## Disclaimer
 
 s-INK for Trello® is an independent community project. It is not affiliated,
