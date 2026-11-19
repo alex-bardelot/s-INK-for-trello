@@ -3,6 +3,8 @@ export interface ReleaseItem {
   text: string;
   /** 0 for a top-level bullet, 1 for a bullet nested under it, etc. */
   level: number;
+  /** A paragraph outside any bullet, drawn without a bullet. */
+  paragraph?: true;
 }
 
 /** One entry of RELEASE_NOTES.md: a `## version — title` heading. */
@@ -59,7 +61,7 @@ export function parseReleaseNotes(markdown: string): ReleaseNote[] {
       item.text = `${item.text} ${line.trim()}`;
     } else {
       // A paragraph outside any bullet.
-      item = {text: line.trim(), level: 0};
+      item = {text: line.trim(), level: 0, paragraph: true};
       note.items.push(item);
     }
   }

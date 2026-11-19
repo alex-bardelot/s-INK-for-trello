@@ -30,7 +30,7 @@ export function ReleaseNoteView({
         <View
           key={index}
           style={[styles.item, {marginLeft: item.level * spacing.lg}]}>
-          <View style={styles.bullet} />
+          {!item.paragraph && <View style={styles.bullet} />}
           <Text style={styles.text}>
             {parseInline(item.text).map((segment, part) => (
               <Text
