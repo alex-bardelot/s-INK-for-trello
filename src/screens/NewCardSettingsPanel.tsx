@@ -16,12 +16,16 @@ import {KeyValueStore} from '../storage/keyValueStore';
 
 /**
  * "New card" category of Settings: what the New Trello Card page offers
- * and does by itself.
+ * and does by itself. Its Experimental section only shows while
+ * Diagnostics is unlocked.
  */
 export function NewCardSettingsPanel({
   store,
+  showExperimental,
 }: {
   store: KeyValueStore;
+  /** Diagnostics is unlocked: the experimental settings are offered. */
+  showExperimental: boolean;
 }): React.JSX.Element {
   const {t} = useTranslation();
   const [settings, setSettings] = useState<NewCardSettings>(
@@ -75,14 +79,16 @@ export function NewCardSettingsPanel({
           onChange={linkSelection => update({linkSelection})}
         />
       </SettingsSection>
-      <SettingsSection title={t('settings.experimental')}>
-        <Switch
-          label={t('newCard.selectNewLinks')}
-          help={t('newCard.selectNewLinksHelp')}
-          value={settings.selectNewLinks}
-          onChange={selectNewLinks => update({selectNewLinks})}
-        />
-      </SettingsSection>
+      {showExperimental ? (
+        <SettingsSection title={t('settings.experimental')}>
+          <Switch
+            label={t('newCard.selectNewLinks')}
+            help={t('newCard.selectNewLinksHelp')}
+            value={settings.selectNewLinks}
+            onChange={selectNewLinks => update({selectNewLinks})}
+          />
+        </SettingsSection>
+      ) : null}
     </>
   );
 }

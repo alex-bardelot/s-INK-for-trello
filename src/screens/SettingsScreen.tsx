@@ -313,7 +313,10 @@ export function SettingsScreen({
                 member={member}
               />
             ) : category === 'newCard' ? (
-              <NewCardSettingsPanel store={store} />
+              <NewCardSettingsPanel
+                store={store}
+                showExperimental={showDiagnostics}
+              />
             ) : category === 'startWork' ? (
               <StartWorkSettingsPanel
                 store={store}

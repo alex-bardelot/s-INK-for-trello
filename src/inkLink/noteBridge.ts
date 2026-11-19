@@ -10,6 +10,7 @@ import {
 
 import {loadNewCardSettings} from '../cards/newCardSettings';
 import {FALLBACK_PAGE_SIZE} from '../plugin/lassoText';
+import {diagnosticsUnlocked} from '../settings/rapidTaps';
 import {openInkLinkIntent} from '../plugin/launchIntent';
 import {ensurePermission, Permission} from '../plugin/permissions';
 import {cardNotesRoot} from '../startWork/noteFiles';
@@ -370,9 +371,13 @@ export interface PlacedLink {
 
 /**
  * Whether new links are selected with the lasso: an experimental setting
- * of Settings › New card, off by default.
+ * of Settings › New card, off by default, offered and applied only while
+ * Diagnostics is unlocked.
  */
 async function selectNewLinksEnabled(): Promise<boolean> {
+  if (!diagnosticsUnlocked()) {
+    return false;
+  }
   try {
     return (await loadNewCardSettings(getDeviceStore())).selectNewLinks;
   } catch {

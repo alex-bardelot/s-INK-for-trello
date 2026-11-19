@@ -3,6 +3,14 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.74.1 — Experimental settings behind Diagnostics
+
+- The **Experimental** section of **Settings › New card** (**Select new
+  links with the lasso**) only shows once Diagnostics is unlocked (About
+  pressed 7 times quickly), until the plugin restarts.
+- The setting only applies while it shows: turned on, then hidden again,
+  new links are not selected.
+
 ## 0.74.0 — Lasso on new links made experimental, off by default
 
 - **Start work** no longer selects the title of the note it made, and
