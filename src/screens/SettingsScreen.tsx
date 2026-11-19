@@ -11,9 +11,11 @@ import {
   loadFocusSettings,
   ModeChoice,
   ModeFilter,
+  ModeMember,
   modeMemberChoices,
   ReviewCompletion,
   saveFocusSettings,
+  SELF_MEMBER,
   toggleFocusLabel,
   toggleModeMember,
 } from '../board/focus';
@@ -32,9 +34,12 @@ import {
 import {StartIcon} from '../components/ActionIcons';
 import {BlockIcon} from '../components/BlockIcon';
 import {Button} from '../components/Button';
-import {Checkbox} from '../components/Checkbox';
 import {ChainIcon} from '../components/ChainIcon';
-import {ChipPickerButton, LabelChipContent} from '../components/ChipPicker';
+import {
+  ChipPickerButton,
+  LabelChipContent,
+  MemberChipContent,
+} from '../components/ChipPicker';
 import {
   FloatingPicker,
   FloatingPickerPosition,
@@ -680,17 +685,18 @@ function BoardModeSettings({
     [update],
   );
 
-  // The floating list of the board's labels, as on the New Trello Card
-  // page, drawn over the whole section under the "+" pressed.
+  // The floating list of the board's labels or members, as on the New
+  // Trello Card page, drawn over the whole section under the "+" pressed.
   const areaRef = useRef<View>(null);
   const [picker, setPicker] = useState<{
     mode: BoardMode;
+    kind: ModePickerKind;
     position: FloatingPickerPosition;
   } | null>(null);
-  const openPicker = (mode: BoardMode, button: View) => {
+  const openPicker = (mode: BoardMode, kind: ModePickerKind, button: View) => {
     if (areaRef.current) {
       measurePickerPosition(button, areaRef.current).then(position =>
-        setPicker({mode, position}),
+        setPicker({mode, kind, position}),
       );
     }
   };
@@ -758,31 +764,61 @@ function BoardModeSettings({
       ? settings.focus
       : settings.review
     : null;
-  const pickerRows = pickerFilter
-    ? focusLabelChoices(
-        boardLabels.map(label => label.name),
-        pickerFilter.labels,
-      ).map(name => ({
-        id: labelKey(name),
-        name,
-        selected: pickerFilter.labels.some(
-          label => labelKey(label) === labelKey(name),
-        ),
-        content: (
-          <LabelChipContent name={name} color={labelColor(boardLabels, name)} />
-        ),
-      }))
-    : [];
-  const togglePickedLabel = (id: string) => {
+  const labelRows = (filter: ModeFilter) =>
+    focusLabelChoices(
+      boardLabels.map(label => label.name),
+      filter.labels,
+    ).map(name => ({
+      id: labelKey(name),
+      name,
+      selected: filter.labels.some(label => labelKey(label) === labelKey(name)),
+      content: (
+        <LabelChipContent name={name} color={labelColor(boardLabels, name)} />
+      ),
+    }));
+  const memberChoices = (filter: ModeFilter) =>
+    modeMemberChoices(boardMembers, filter.members, member?.id ?? null);
+  const memberRows = (filter: ModeFilter) =>
+    memberChoices(filter).map(choice => {
+      const shown = shownMember(choice, boardMembers, member, t);
+      return {
+        id: choice.id,
+        name: shown.name,
+        selected: filter.members.some(m => m.id === choice.id),
+        content: <MemberChipContent {...shown} />,
+      };
+    });
+  const pickerRows =
+    picker && pickerFilter
+      ? picker.kind === 'labels'
+        ? labelRows(pickerFilter)
+        : memberRows(pickerFilter)
+      : [];
+  const togglePicked = (id: string) => {
     if (!picker || !pickerFilter) {
       return;
     }
-    const row = pickerRows.find(candidate => candidate.id === id);
-    if (row) {
-      const next = {
-        ...pickerFilter,
-        labels: toggleFocusLabel(pickerFilter.labels, row.name),
-      };
+    let next: ModeFilter | null = null;
+    if (picker.kind === 'labels') {
+      const row = pickerRows.find(candidate => candidate.id === id);
+      if (row) {
+        next = {
+          ...pickerFilter,
+          labels: toggleFocusLabel(pickerFilter.labels, row.name),
+        };
+      }
+    } else {
+      const choice = memberChoices(pickerFilter).find(
+        candidate => candidate.id === id,
+      );
+      if (choice) {
+        next = {
+          ...pickerFilter,
+          members: toggleModeMember(pickerFilter.members, choice),
+        };
+      }
+    }
+    if (next) {
       (picker.mode === 'focus' ? changeFocus : changeReview)(next);
     }
   };
@@ -833,10 +869,9 @@ function BoardModeSettings({
               boardLabels={boardLabels}
               boardMembers={boardMembers}
               member={member}
+              boardOpen={!!board}
               onChange={changeFocus}
-              onPickLabels={
-                board ? button => openPicker('focus', button) : undefined
-              }
+              onPick={(kind, button) => openPicker('focus', kind, button)}
             />
 
             <ModeFilterSettings
@@ -846,10 +881,9 @@ function BoardModeSettings({
               boardLabels={boardLabels}
               boardMembers={boardMembers}
               member={member}
+              boardOpen={!!board}
               onChange={changeReview}
-              onPickLabels={
-                board ? button => openPicker('review', button) : undefined
-              }>
+              onPick={(kind, button) => openPicker('review', kind, button)}>
               <SegmentedControl
                 label={t('settings.reviewCompletion')}
                 segments={completions}
@@ -865,7 +899,7 @@ function BoardModeSettings({
 
       {picker && (
         <FloatingPicker
-          title={t('card.labels')}
+          title={t(picker.kind === 'labels' ? 'card.labels' : 'card.members')}
           position={picker.position}
           closeLabel={t('common.close')}
           onClose={() => setPicker(null)}
@@ -877,11 +911,43 @@ function BoardModeSettings({
               : t('settings.modeChoicesLoading')
           }
           rows={pickerRows}
-          onToggle={togglePickedLabel}
+          onToggle={togglePicked}
         />
       )}
     </View>
   );
+}
+
+/** What a "+" of the mode settings opens. */
+type ModePickerKind = 'labels' | 'members';
+
+/**
+ * Name and avatar a mode member shows: the tablet's account as "Name (this
+ * tablet)" with its avatar, others with their avatar when on the board.
+ */
+function shownMember(
+  choice: ModeMember,
+  boardMembers: readonly TrelloBoardMember[],
+  member: TrelloMember | null,
+  t: ReturnType<typeof useTranslation>['t'],
+): {name: string; initials?: string; avatarUrl?: string | null} {
+  if (choice.id === SELF_MEMBER) {
+    return member
+      ? {
+          name: t('settings.modeSelf', {name: member.fullName}),
+          initials: member.initials,
+          avatarUrl: member.avatarUrl,
+        }
+      : {name: t('settings.modeSelfSignedOut'), initials: '?'};
+  }
+  const onBoard = boardMembers.find(candidate => candidate.id === choice.id);
+  return onBoard
+    ? {
+        name: onBoard.fullName,
+        initials: onBoard.initials,
+        avatarUrl: onBoard.avatarUrl,
+      }
+    : {name: choice.name};
 }
 
 /** Color of the board label of that name; `null` when not on the board. */
@@ -897,9 +963,10 @@ function labelColor(
 
 /**
  * Sub-section of the Mode section for one mode: its help, any control of
- * its own (`children`), then the labels it keeps, as chips with a "+"
- * opening the board's labels (as on the New Trello Card page), and the
- * members it keeps, as checkboxes.
+ * its own (`children`), then the labels and the members it keeps, as on
+ * the New Trello Card page: chips (a tap takes one off) and a "+" opening
+ * the floating list. Labels need a board; the tablet's account can always
+ * be added.
  */
 function ModeFilterSettings({
   title,
@@ -908,8 +975,9 @@ function ModeFilterSettings({
   boardLabels,
   boardMembers,
   member,
+  boardOpen,
   onChange,
-  onPickLabels,
+  onPick,
   children,
 }: {
   title: string;
@@ -918,22 +986,18 @@ function ModeFilterSettings({
   boardLabels: readonly TrelloLabel[];
   boardMembers: readonly TrelloBoardMember[];
   member: TrelloMember | null;
+  /** Whether Settings was opened from a board, whose labels "+" lists. */
+  boardOpen: boolean;
   onChange: (filter: ModeFilter) => void;
-  /** Opens the board's labels under the "+"; unset without a board. */
-  onPickLabels?: (button: View) => void;
+  /** Opens the labels or members under the "+" pressed. */
+  onPick: (kind: ModePickerKind, button: View) => void;
   children?: React.ReactNode;
 }): React.JSX.Element {
   const {t} = useTranslation();
-  const pickerButton = useRef<View>(null);
-  const members = modeMemberChoices(
-    boardMembers,
-    filter.members,
-    member?.id ?? null,
-  );
-  const checkedMembers = new Set(filter.members.map(m => m.id));
-  const selfName = member
-    ? t('settings.modeSelf', {name: member.fullName})
-    : t('settings.modeSelfSignedOut');
+  const labelsButton = useRef<View>(null);
+  const membersButton = useRef<View>(null);
+  const pick = (kind: ModePickerKind, button: React.RefObject<View | null>) =>
+    button.current && onPick(kind, button.current);
 
   return (
     <View style={styles.modeFilter}>
@@ -959,36 +1023,45 @@ function ModeFilterSettings({
             <LabelChipContent name={name} color={labelColor(boardLabels, name)} />
           </ToggleChip>
         ))}
-        {onPickLabels && (
+        {boardOpen && (
           <ChipPickerButton
-            buttonRef={pickerButton}
+            buttonRef={labelsButton}
             label={t('card.pickLabel')}
-            onPress={() =>
-              pickerButton.current && onPickLabels(pickerButton.current)
-            }
+            onPress={() => pick('labels', labelsButton)}
           />
         )}
-        {filter.labels.length === 0 && !onPickLabels && (
+        {filter.labels.length === 0 && !boardOpen && (
           <Text style={styles.modeHelp}>{t('settings.modeLabelsAny')}</Text>
         )}
       </View>
 
       <Text style={styles.modeGroupTitle}>{t('settings.modeMembers')}</Text>
-      <View style={styles.tagGrid}>
-        {members.map(choice => (
-          <View key={choice.id} style={styles.tagCell}>
-            <Checkbox
-              label={choice.self ? selfName : choice.name}
-              checked={checkedMembers.has(choice.id)}
-              onChange={() =>
+      <View style={styles.labelChips}>
+        {filter.members.map(choice => {
+          const shown = shownMember(choice, boardMembers, member, t);
+          return (
+            <ToggleChip
+              key={choice.id}
+              selected
+              accessibilityLabel={t('card.remove', {name: shown.name})}
+              onPress={() =>
                 onChange({
                   ...filter,
                   members: toggleModeMember(filter.members, choice),
                 })
-              }
-            />
-          </View>
-        ))}
+              }>
+              <MemberChipContent {...shown} />
+            </ToggleChip>
+          );
+        })}
+        <ChipPickerButton
+          buttonRef={membersButton}
+          label={t('card.pickMember')}
+          onPress={() => pick('members', membersButton)}
+        />
+        {filter.members.length === 0 && (
+          <Text style={styles.modeHelp}>{t('settings.modeMembersAny')}</Text>
+        )}
       </View>
     </View>
   );
@@ -1333,15 +1406,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     paddingTop: spacing.xs,
-  },
-  tagGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingTop: spacing.sm,
-  },
-  tagCell: {
-    width: '50%',
-    paddingRight: spacing.md,
   },
   tagsRetry: {
     alignItems: 'flex-start',

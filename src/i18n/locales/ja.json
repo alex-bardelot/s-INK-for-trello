@@ -103,6 +103,7 @@
   "settings.modeMembers": "メンバー",
   "settings.modeSelf": "{name}（このタブレット）",
   "settings.modeSelfSignedOut": "このタブレットのアカウント",
+  "settings.modeMembersAny": "全員のカード。",
   "settings.modesEnabled": "集中モードとレビューモード",
   "settings.modesEnabledHelp": "オフにすると、ボードは常にすべてのカードを表示し、モードを提供しません。",
   "settings.modeLabelsAny": "すべてのラベル。ボードのラベルから選ぶには、ボードから設定を開いてください。",

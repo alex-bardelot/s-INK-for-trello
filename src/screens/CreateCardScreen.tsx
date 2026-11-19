@@ -46,7 +46,11 @@ import {
   rememberCardDestination,
 } from '../cards/preferences';
 import {Button} from '../components/Button';
-import {ChipPickerButton, LabelChipContent} from '../components/ChipPicker';
+import {
+  ChipPickerButton,
+  LabelChipContent,
+  MemberChipContent,
+} from '../components/ChipPicker';
 import {ChoiceList} from '../components/ChoiceList';
 import {CloseIcon} from '../components/CloseIcon';
 import {BlockIcon, BlockIconKind} from '../components/BlockIcon';
@@ -55,7 +59,6 @@ import {
   FloatingPickerPosition,
   measurePickerPosition,
 } from '../components/FloatingPicker';
-import {MemberAvatar} from '../components/MemberAvatar';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {SmallButton} from '../components/SmallButton';
 import {WaitingBox} from '../components/WaitingBox';
@@ -137,8 +140,6 @@ const SESSION_ERRORS: Record<SessionErrorCode, TranslationKey> = {
   rateLimited: 'error.rateLimited',
   unknown: 'error.unknown',
 };
-
-const AVATAR_SIZE = 28;
 
 /** Board and list a card is added to from the board, chosen beforehand. */
 export interface NewCardPlace {
@@ -507,16 +508,11 @@ export function CreateCardScreen({
   );
 
   const memberContent = (member: TrelloBoardMember) => (
-    <>
-      <MemberAvatar
-        initials={member.initials}
-        avatarUrl={member.avatarUrl}
-        size={AVATAR_SIZE}
-      />
-      <Text style={styles.chipText} numberOfLines={1}>
-        {member.fullName}
-      </Text>
-    </>
+    <MemberChipContent
+      name={member.fullName}
+      initials={member.initials}
+      avatarUrl={member.avatarUrl}
+    />
   );
 
   switch (step.kind) {
@@ -1279,11 +1275,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
-  },
-  chipText: {
-    flexShrink: 1,
-    color: colors.foreground,
-    fontSize: typography.body,
   },
   input: {
     color: colors.foreground,

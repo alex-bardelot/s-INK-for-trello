@@ -3,6 +3,7 @@ import {Pressable, StyleSheet, Text, View} from 'react-native';
 
 import {labelShade} from '../board/labels';
 import {colors, spacing, typography} from '../theme';
+import {MemberAvatar} from './MemberAvatar';
 import {CHIP_BORDER_WIDTH, CHIP_HEIGHT} from './ToggleChip';
 
 /** The "+" that opens the full list: a short pill, easy to hit. */
@@ -68,6 +69,48 @@ export function LabelChipContent({
       </Text>
     </>
   );
+}
+
+/** Avatar of a member chip, as on the New Trello Card page. */
+const AVATAR_SIZE = 28;
+
+/**
+ * What a member shows in a chip or a row of the floating list: their
+ * avatar, then their name. Without known initials, they are taken from
+ * the name.
+ */
+export function MemberChipContent({
+  name,
+  initials,
+  avatarUrl,
+}: {
+  name: string;
+  initials?: string;
+  avatarUrl?: string | null;
+}): React.JSX.Element {
+  return (
+    <>
+      <MemberAvatar
+        initials={initials ?? initialsOf(name)}
+        avatarUrl={avatarUrl}
+        size={AVATAR_SIZE}
+      />
+      <Text style={styles.chipText} numberOfLines={1}>
+        {name}
+      </Text>
+    </>
+  );
+}
+
+/** First letters of the first two words of a name, upper case. */
+export function initialsOf(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map(word => word.charAt(0))
+    .join('')
+    .toLocaleUpperCase();
 }
 
 const styles = StyleSheet.create({

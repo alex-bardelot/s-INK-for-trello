@@ -104,6 +104,7 @@
   "settings.modeMembers": "Members",
   "settings.modeSelf": "{name} (this tablet)",
   "settings.modeSelfSignedOut": "This tablet's account",
+  "settings.modeMembersAny": "Anyone's cards.",
   "settings.modesEnabled": "Focus and Review modes",
   "settings.modesEnabledHelp": "Off, boards always show all their cards and offer no mode.",
   "settings.modeLabelsAny": "Any label. Open Settings from a board to choose among its labels.",

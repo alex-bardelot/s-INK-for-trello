@@ -3,6 +3,14 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.67.1 — Member chips for the modes
+
+- The members of the Focus and Review modes are chosen like their labels,
+  as on the New Trello Card page: the chosen ones show as chips with
+  their avatar (a tap takes one off), and the "+" opens the floating list
+  of members, the tablet's account first. The "+" is there even when
+  Settings was not opened from a board, to add the tablet's account back.
+
 ## 0.67.0 — Modes switch, label chips for the modes
 
 - The **Mode** section of Settings > Board opens with a switch,

@@ -16,6 +16,7 @@ import {
   toggleFocusLabel,
   toggleModeMember,
 } from '../src/board/focus';
+import {initialsOf} from '../src/components/ChipPicker';
 import {createMemoryStore} from '../src/storage/keyValueStore';
 import {TrelloBoardCard, TrelloList} from '../src/trello';
 
@@ -270,6 +271,12 @@ describe('mode members', () => {
       {id: 'gone', name: 'Bob', self: false},
       {id: 'z', name: 'Zoé', self: false},
     ]);
+  });
+
+  it('takes initials from a name when none are known', () => {
+    expect(initialsOf(' alice  van dyke ')).toBe('AV');
+    expect(initialsOf('Zoé')).toBe('Z');
+    expect(initialsOf('')).toBe('');
   });
 
   it('toggles a member', () => {

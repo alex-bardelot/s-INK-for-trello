@@ -104,6 +104,7 @@
   "settings.modeMembers": "Membres",
   "settings.modeSelf": "{name} (cette tablette)",
   "settings.modeSelfSignedOut": "Compte de cette tablette",
+  "settings.modeMembersAny": "Les cartes de tout le monde.",
   "settings.modesEnabled": "Modes Focus et Review",
   "settings.modesEnabledHelp": "Désactivés, les tableaux affichent toujours toutes leurs cartes et ne proposent aucun mode.",
   "settings.modeLabelsAny": "Toutes les étiquettes. Ouvrez les réglages depuis un tableau pour choisir parmi ses étiquettes.",
