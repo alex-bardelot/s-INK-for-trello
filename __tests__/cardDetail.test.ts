@@ -1,4 +1,5 @@
 import {
+  attachmentPreview,
   buildDetailBlocks,
   cardMembers,
   descriptionParagraphs,
@@ -6,6 +7,7 @@ import {
   labelChoices,
   paginateBlocks,
   plainMarkdown,
+  THUMBNAIL_MIN_WIDTH,
   webUrl,
   withCardLabel,
   withCardMember,
@@ -156,7 +158,78 @@ describe('buildDetailBlocks', () => {
       key: 'a-f',
       name: 'Report',
       url: null,
+      preview: null,
     });
+  });
+
+  it('gives an attachment the images Trello made of it', () => {
+    const blocks = buildDetailBlocks(
+      card({
+        attachments: [
+          {
+            id: 'img',
+            name: 'Photo.png',
+            url: 'https://trello.com/1/cards/c/attachments/img/download/Photo.png',
+            date: '',
+            previews: [
+              {url: 'https://trello.com/p/150', width: 150, height: 100},
+              {url: 'https://trello.com/p/600', width: 600, height: 400},
+            ],
+          },
+        ],
+      }),
+    );
+    const block = blocks.find(b => b.kind === 'attachment');
+    expect(block).toMatchObject({
+      preview: {
+        thumbnail: {url: 'https://trello.com/p/600'},
+        full: {url: 'https://trello.com/p/600'},
+      },
+    });
+  });
+});
+
+describe('attachmentPreview', () => {
+  const image = (width: number, url = `https://trello.com/p/${width}`) => ({
+    url,
+    width,
+    height: width / 2,
+  });
+
+  it('is null without previews', () => {
+    expect(attachmentPreview({})).toBeNull();
+    expect(attachmentPreview({previews: []})).toBeNull();
+  });
+
+  it('takes the smallest sharp enough image as thumbnail, the largest as full', () => {
+    const preview = attachmentPreview({
+      previews: [image(1200), image(70), image(300), image(600)],
+    });
+    expect(preview?.thumbnail.width).toBe(THUMBNAIL_MIN_WIDTH);
+    expect(preview?.full.width).toBe(1200);
+  });
+
+  it('takes the largest image as thumbnail when all are small', () => {
+    const preview = attachmentPreview({previews: [image(50), image(150)]});
+    expect(preview?.thumbnail.width).toBe(150);
+    expect(preview?.full.width).toBe(150);
+  });
+
+  it('leaves out previews without a size or a web address', () => {
+    const preview = attachmentPreview({
+      previews: [
+        {url: 'https://trello.com/p/0', width: 0, height: 10},
+        {url: 'file:///sdcard/x.png', width: 900, height: 900},
+        {url: 'intent://x', width: 800, height: 800},
+        image(400),
+      ],
+    });
+    expect(preview).toEqual({thumbnail: image(400), full: image(400)});
+    expect(
+      attachmentPreview({
+        previews: [{url: 'https://x.test/p', width: NaN, height: 5}],
+      }),
+    ).toBeNull();
   });
 });
 
@@ -454,12 +527,39 @@ describe('TrelloClient.getCardDetail', () => {
     for (const part of [
       'checklists=all',
       'attachments=true',
+      'attachment_fields=name%2Curl%2Cdate%2CmimeType%2CisUpload%2Cpreviews',
       'actions=commentCard',
       'members=true',
       'list=true',
     ]) {
       expect(url).toContain(part);
     }
+  });
+
+  it('sends the credentials with an image only to Trello itself', () => {
+    const client = new TrelloClient({apiKey: 'k', token: 't'});
+    const authorization = 'OAuth oauth_consumer_key="k", oauth_token="t"';
+    for (const url of [
+      'https://trello.com/1/cards/c/attachments/a/previews/p/download/x.png',
+      'https://api.trello.com/1/x.png',
+    ]) {
+      expect(client.imageSource(url)).toEqual({
+        uri: url,
+        headers: {Authorization: authorization},
+      });
+    }
+    for (const url of [
+      'http://trello.com/1/x.png',
+      'https://trello.com.example.net/x.png',
+      'https://trello.com@example.net/x.png',
+      'https://example.net/trello.com/x.png',
+      'https://trello-attachments.s3.amazonaws.com/x.png',
+    ]) {
+      expect(client.imageSource(url)).toEqual({uri: url});
+    }
+    expect(
+      new TrelloClient({apiKey: 'k'}).imageSource('https://trello.com/1/x'),
+    ).toEqual({uri: 'https://trello.com/1/x'});
   });
 
   it('rejects a response that is not a card', async () => {

@@ -3,6 +3,19 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.70.0 — Attachment previews
+
+- On the card page, an attachment Trello made a preview of (an image, the
+  first page of some documents) now shows it under its name. The page is
+  laid out before the image loads, so turning pages stays as fast.
+- A tap on such an attachment opens its image in a page of its own, as
+  large as the screen allows; **Open in browser** still opens the
+  attachment itself, and Back returns to the card.
+- Files stored on Trello are loaded with the member's credentials, which
+  are only ever sent to Trello's own `https` addresses. A preview that
+  cannot be loaded says so, and the reason goes to the `attach:` lines of
+  Settings › Diagnostics.
+
 ## 0.69.6 — File manager always in front when attaching
 
 - **+ Add attachment** now hides the plugin while the tablet's file

@@ -1,5 +1,6 @@
 import type {Locale} from '../i18n';
 import type {
+  TrelloAttachment,
   TrelloBoardMember,
   TrelloCardDetail,
   TrelloCheckItem,
@@ -47,6 +48,8 @@ export type DetailBlock =
       name: string;
       /** Web address to open, or `null` if it is not a web address. */
       url: string | null;
+      /** Images Trello made of it, or `null` when it has none. */
+      preview: AttachmentPreview | null;
     }
   | {
       kind: 'comment';
@@ -55,6 +58,28 @@ export type DetailBlock =
       date: string;
       text: string;
     };
+
+/** An image of an attachment, with its size in pixels. */
+export interface PreviewImage {
+  url: string;
+  width: number;
+  height: number;
+}
+
+/**
+ * Images of an attachment: a small one shown on the card page, a large
+ * one shown when it is opened.
+ */
+export interface AttachmentPreview {
+  thumbnail: PreviewImage;
+  full: PreviewImage;
+}
+
+/**
+ * The thumbnail is the smallest preview at least this wide, so that it
+ * stays sharp on the tablet's screen without loading more than needed.
+ */
+export const THUMBNAIL_MIN_WIDTH = 300;
 
 export type DetailSection =
   | 'description'
@@ -139,6 +164,7 @@ export function buildDetailBlocks(
       key: `a-${attachment.id}`,
       name: attachment.name || attachment.url,
       url: webUrl(attachment.url),
+      preview: attachmentPreview(attachment),
     });
   }
 
@@ -185,6 +211,37 @@ export function webUrl(url: string | null | undefined): string | null {
     return null;
   }
   return WEB_URL_PATTERN.test(trimmed) ? trimmed : null;
+}
+
+/**
+ * The images to show for an attachment, from the previews Trello made of
+ * it: the smallest one at least {@link THUMBNAIL_MIN_WIDTH} wide (else the
+ * largest) on the card page, the largest when it is opened. Previews
+ * without a size or a web address are left out; `null` if none is left.
+ */
+export function attachmentPreview(
+  attachment: Pick<TrelloAttachment, 'previews'>,
+): AttachmentPreview | null {
+  const images: PreviewImage[] = [];
+  for (const preview of attachment.previews ?? []) {
+    const url = webUrl(preview?.url);
+    const {width, height} = preview ?? {};
+    if (url && isPositive(width) && isPositive(height)) {
+      images.push({url, width, height});
+    }
+  }
+  if (images.length === 0) {
+    return null;
+  }
+  const bySize = images.sort((a, b) => a.width - b.width);
+  const full = bySize[bySize.length - 1];
+  const thumbnail =
+    bySize.find(image => image.width >= THUMBNAIL_MIN_WIDTH) ?? full;
+  return {thumbnail, full};
+}
+
+function isPositive(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
 }
 
 /**

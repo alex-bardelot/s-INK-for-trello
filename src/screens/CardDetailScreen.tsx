@@ -1,6 +1,7 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   GestureResponderEvent,
+  ImageURISource,
   Keyboard,
   LayoutChangeEvent,
   Linking,
@@ -24,12 +25,14 @@ import {
   formatCardDate,
   labelChoices,
   paginateBlocks,
+  PreviewImage,
   withCardLabel,
   withCardMember,
   withCheckItemState,
   withComment,
 } from '../cards/detail';
 import {membersMeFirst} from '../cards/newCardForm';
+import {AttachmentImage} from '../components/AttachmentImage';
 import {BlockIcon, BlockIconKind} from '../components/BlockIcon';
 import {Button} from '../components/Button';
 import {CompleteMark} from '../components/CompleteMark';
@@ -83,8 +86,16 @@ import {
   TrelloLabel,
 } from '../trello/types';
 import {borders, colors, spacing, typography} from '../theme';
+import {AttachmentViewer} from './AttachmentViewer';
 
 const BLOCK_GAP = spacing.sm;
+/**
+ * Room of an attachment's image on the card page: this high, as wide as
+ * the image's proportions ask, within these bounds.
+ */
+const THUMBNAIL_HEIGHT = 160;
+const THUMBNAIL_MIN_WIDTH = 80;
+const THUMBNAIL_MAX_WIDTH = 480;
 const AVATAR_SIZE = 40;
 /** The round before the card's name that marks it complete. */
 const COMPLETE_MARK_SIZE = 32;
@@ -133,6 +144,13 @@ type DetailState =
   | {status: 'loading'}
   | {status: 'loaded'; card: TrelloCardDetail}
   | {status: 'failed'};
+
+/** An attachment opened in its own page, through its preview. */
+interface OpenedAttachment {
+  name: string;
+  url: string | null;
+  image: PreviewImage;
+}
 
 type BoardLabelsState =
   | {status: 'idle' | 'loading' | 'failed'}
@@ -424,6 +442,15 @@ export function CardDetailScreen({
       setAttaching(false);
     }
   };
+
+  // An attachment with a preview opens in its own page, over the card,
+  // with the largest image Trello made of it; files stored on Trello are
+  // loaded with the member's credentials.
+  const [opened, setOpened] = useState<OpenedAttachment | null>(null);
+  const imageSource = useCallback(
+    (url: string) => client.imageSource(url),
+    [client],
+  );
 
   // The round before the card's name marks it complete, or not; the board
   // is told once Trello took it.
@@ -789,6 +816,8 @@ export function CardDetailScreen({
             editable ? () => setEditingDescription(true) : undefined
           }
           onAddAttachment={editable ? addAttachment : undefined}
+          onOpenAttachment={setOpened}
+          imageSource={imageSource}
           composer={composer}
           pending={pending}
           footer={
@@ -835,6 +864,16 @@ export function CardDetailScreen({
             initial={state.card.desc ?? ''}
             onCancel={() => setEditingDescription(false)}
             onSave={saveDescription}
+          />
+        </View>
+      )}
+      {opened && (
+        <View style={styles.editorOverlay}>
+          <AttachmentViewer
+            name={opened.name}
+            source={imageSource(opened.image.url)}
+            url={opened.url}
+            onClose={() => setOpened(null)}
           />
         </View>
       )}
@@ -1264,6 +1303,10 @@ interface DetailPagesProps {
    * line to add one.
    */
   onAddAttachment?: () => void;
+  /** Opens an attachment that has a preview in its own page. */
+  onOpenAttachment?: (attachment: OpenedAttachment) => void;
+  /** What an image of an attachment loads; unset, nothing is loaded. */
+  imageSource?: (url: string) => ImageURISource;
   /** Changes on their way to Trello (`item:<id>`, `label:<id>`…). */
   pending: ReadonlySet<string>;
   /** Field to write a comment; unset, comments are only read. */
@@ -1283,6 +1326,8 @@ function DetailPages({
   onOpenPicker,
   onEditDescription,
   onAddAttachment,
+  onOpenAttachment,
+  imageSource,
   pending,
   composer,
 }: DetailPagesProps): React.JSX.Element {
@@ -1334,7 +1379,8 @@ function DetailPages({
     turnPage(direction === 'left' || direction === 'up' ? 1 : -1),
   );
 
-  // The measured copy of the comment field is not the one the page acts on.
+  // The measured copy of the comment field is not the one the page acts on,
+  // and the measured copy of an image only keeps its room: it loads nothing.
   const measuredComposer = composer && {...composer, controlRef: undefined};
   const renderBlock = (block: DetailBlock, measured = false) => (
     <Block
@@ -1346,6 +1392,8 @@ function DetailPages({
       onOpenPicker={onOpenPicker}
       onEditDescription={onEditDescription}
       onAddAttachment={onAddAttachment}
+      onOpenAttachment={onOpenAttachment}
+      imageSource={measured ? undefined : imageSource}
       pending={pending}
       composer={measured ? measuredComposer : composer}
     />
@@ -1411,6 +1459,8 @@ interface BlockProps {
   onOpenPicker?: (kind: PickerKind, anchor: View) => void;
   onEditDescription?: () => void;
   onAddAttachment?: () => void;
+  onOpenAttachment?: (attachment: OpenedAttachment) => void;
+  imageSource?: (url: string) => ImageURISource;
   pending: ReadonlySet<string>;
   composer?: CommentComposerProps;
 }
@@ -1424,6 +1474,8 @@ function Block({
   onOpenPicker,
   onEditDescription,
   onAddAttachment,
+  onOpenAttachment,
+  imageSource,
   pending,
   composer,
 }: BlockProps): React.JSX.Element | null {
@@ -1482,6 +1534,8 @@ function Block({
           <SectionContent
             block={block}
             onToggleCheckItem={onToggleCheckItem}
+            onOpenAttachment={onOpenAttachment}
+            imageSource={imageSource}
             pending={pending}
             composer={composer}
           />
@@ -1490,15 +1544,35 @@ function Block({
   }
 }
 
+/**
+ * Room of an attachment's thumbnail: {@link THUMBNAIL_HEIGHT} high, as
+ * wide as the image's proportions ask within the bounds. It only depends
+ * on the size Trello gives, so the page is laid out before the image loads.
+ */
+function thumbnailRoom(image: PreviewImage): ViewStyle {
+  const width = Math.round((THUMBNAIL_HEIGHT * image.width) / image.height);
+  return {
+    width: Math.min(Math.max(width, THUMBNAIL_MIN_WIDTH), THUMBNAIL_MAX_WIDTH),
+    height: THUMBNAIL_HEIGHT,
+  };
+}
+
 /** A block under a section's heading. */
 function SectionContent({
   block,
   onToggleCheckItem,
+  onOpenAttachment,
+  imageSource,
   pending,
   composer,
 }: Pick<
   BlockProps,
-  'block' | 'onToggleCheckItem' | 'pending' | 'composer'
+  | 'block'
+  | 'onToggleCheckItem'
+  | 'onOpenAttachment'
+  | 'imageSource'
+  | 'pending'
+  | 'composer'
 >): React.JSX.Element | null {
   const {t, locale} = useTranslation();
   switch (block.kind) {
@@ -1555,32 +1629,52 @@ function SectionContent({
       );
     }
     case 'attachment': {
-      const url = block.url;
-      if (url === null) {
+      const {name, url, preview} = block;
+      // An image Trello made of the attachment shows under its name.
+      const thumbnail = preview && (
+        <AttachmentImage
+          source={imageSource?.(preview.thumbnail.url)}
+          style={[styles.thumbnail, thumbnailRoom(preview.thumbnail)]}
+        />
+      );
+      // With a preview, a tap opens it in its own page; else a web address
+      // opens in the browser.
+      const open =
+        preview && onOpenAttachment
+          ? () => onOpenAttachment({name, url, image: preview.full})
+          : url !== null
+          ? () =>
+              Linking.openURL(url).catch(error =>
+                console.warn('[sINK] Failed to open an attachment', error),
+              )
+          : null;
+      if (!open) {
         // Not a web address: shown, never opened.
         return (
           <View style={styles.attachment}>
             <Text style={styles.attachmentText} numberOfLines={2}>
-              {block.name}
+              {name}
             </Text>
+            {thumbnail}
           </View>
         );
       }
       return (
         <Pressable
-          accessibilityRole="link"
-          onPress={() =>
-            Linking.openURL(url).catch(error =>
-              console.warn('[sINK] Failed to open an attachment', error),
-            )
-          }
+          accessibilityRole={preview ? 'imagebutton' : 'link'}
+          accessibilityLabel={name}
+          accessibilityHint={preview ? t('cardDetail.previewHint') : undefined}
+          onPress={open}
           style={({pressed}) => [styles.attachment, pressed && styles.pressed]}>
           {({pressed}) => (
-            <Text
-              style={[styles.attachmentText, pressed && styles.pressedText]}
-              numberOfLines={2}>
-              {block.name}
-            </Text>
+            <>
+              <Text
+                style={[styles.attachmentText, pressed && styles.pressedText]}
+                numberOfLines={2}>
+                {name}
+              </Text>
+              {thumbnail}
+            </>
           )}
         </Pressable>
       );
@@ -2263,11 +2357,16 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
   },
   attachment: {
+    gap: spacing.sm,
     borderWidth: borders.width,
     borderColor: colors.foreground,
     borderRadius: borders.radius,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+  },
+  thumbnail: {
+    maxWidth: '100%',
+    backgroundColor: colors.background,
   },
   attachmentText: {
     color: colors.foreground,

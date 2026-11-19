@@ -70,6 +70,12 @@ const CARD_DETAIL_FIELDS =
   'name,desc,idBoard,idList,url,shortUrl,shortLink,start,due,dueComplete,dateLastActivity,labels,idMembers';
 /** Labels read from a board (Trello's maximum). */
 const BOARD_LABELS_LIMIT = 1000;
+/**
+ * Addresses Trello serves the files of cards from, with the member's
+ * credentials: `https`, the host itself, then a path. A look-alike such as
+ * `trello.com.example.net` or `user@trello.com` does not match.
+ */
+const TRELLO_FILE_HOST = /^https:\/\/(?:api\.)?trello\.com\//i;
 /** Comments shown on the card detail page, newest first. */
 export const CARD_COMMENTS_LIMIT = 20;
 const ORGANIZATION_FIELDS = 'displayName,name,logoUrl,logoHash';
@@ -229,7 +235,7 @@ export class TrelloClient {
           checklists: 'all',
           checklist_fields: 'name,pos',
           attachments: true,
-          attachment_fields: 'name,url,date',
+          attachment_fields: 'name,url,date,mimeType,isUpload,previews',
           actions: 'commentCard',
           actions_limit: CARD_COMMENTS_LIMIT,
           action_fields: 'data,date',
@@ -488,6 +494,31 @@ export class TrelloClient {
     });
   }
 
+  /**
+   * What an `Image` loads for a picture stored on Trello, such as an
+   * attachment's preview. Since 2021, Trello serves uploaded files only
+   * with the member's credentials in the `Authorization` header. Any
+   * member of a board can set an attachment's address, so the credentials
+   * go only to Trello's own `https` hosts, never anywhere else.
+   */
+  imageSource(url: string): {uri: string; headers?: Record<string, string>} {
+    const authorization = TRELLO_FILE_HOST.test(url)
+      ? this.authorization()
+      : {};
+    return Object.keys(authorization).length > 0
+      ? {uri: url, headers: authorization}
+      : {uri: url};
+  }
+
+  /** The member's credentials, as a header; none for anonymous requests. */
+  private authorization(): Record<string, string> {
+    return this.token
+      ? {
+          Authorization: `OAuth oauth_consumer_key="${this.apiKey}", oauth_token="${this.token}"`,
+        }
+      : {};
+  }
+
   private async request<T>(
     path: string,
     {
@@ -514,11 +545,7 @@ export class TrelloClient {
         headers: {
           Accept: 'application/json',
           ...(body && !form ? {'Content-Type': 'application/json'} : {}),
-          ...(this.token
-            ? {
-                Authorization: `OAuth oauth_consumer_key="${this.apiKey}", oauth_token="${this.token}"`,
-              }
-            : {}),
+          ...this.authorization(),
         },
         signal: controller.signal,
       });

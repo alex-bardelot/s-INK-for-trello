@@ -153,6 +153,17 @@ export interface TrelloChecklist {
   checkItems: TrelloCheckItem[];
 }
 
+/**
+ * A smaller image Trello made of an attachment: of an image, or of the
+ * first page of some documents.
+ */
+export interface TrelloAttachmentPreview {
+  id?: string;
+  url: string;
+  width: number;
+  height: number;
+}
+
 /** A file or link attached to a card. */
 export interface TrelloAttachment {
   id: string;
@@ -160,6 +171,12 @@ export interface TrelloAttachment {
   url: string;
   /** ISO date the attachment was added. */
   date: string;
+  /** Type of an uploaded file, such as `image/png`. */
+  mimeType?: string | null;
+  /** The attachment is a file stored on Trello, not a link. */
+  isUpload?: boolean;
+  /** Smaller images of the attachment, in no set order; often none. */
+  previews?: TrelloAttachmentPreview[];
 }
 
 /** A comment on a card (a `commentCard` action). */
