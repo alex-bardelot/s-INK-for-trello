@@ -10,9 +10,9 @@ newest first.
   says what it means if the token is copied. Tokens were made with no
   limit until now; once the token expires, s-INK asks to connect again.
 - The relay's connection page asks Trello for the lifetime chosen (`e=` in
-  its address; 30 days when missing or unknown). Until the relay is
-  deployed again, the QR code still gives a token with no limit; Open
-  Trello's page directly already uses the lifetime chosen.
+  its address; 30 days when missing or unknown), deployed on 2026-11-19:
+  the QR code and Open Trello's page directly both use the lifetime
+  chosen.
 - The warning shown before saving the token on the tablet now explains the
   risk: the tablet offers plugins no safe place for secrets, so any other
   plugin, or anyone holding a lost or stolen tablet plugged into a
