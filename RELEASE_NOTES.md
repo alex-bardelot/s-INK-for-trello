@@ -3,6 +3,15 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.69.6 — File manager always in front when attaching
+
+- **+ Add attachment** now hides the plugin while the tablet's file
+  manager is open, and shows it again as soon as a file is chosen (or the
+  file manager is left). The file manager no longer opens behind the
+  plugin from time to time.
+- The `attach:` lines of Settings › Diagnostics are now pinned with the
+  button lines, so they stay in the log.
+
 ## 0.69.5 — Card name in line without the complete mark
 
 - On the card page, the card's name now starts at the same place whether

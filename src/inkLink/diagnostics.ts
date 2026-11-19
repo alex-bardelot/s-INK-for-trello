@@ -25,7 +25,7 @@ const PINNED: PinnedGroup[] = [
   // Button presses and what they led to: they tell why a button did
   // nothing.
   {
-    prefixes: ['button ', 'card:', 'bind:'],
+    prefixes: ['button ', 'card:', 'bind:', 'attach:'],
     max: 30,
     clearable: true,
     lines: [],
