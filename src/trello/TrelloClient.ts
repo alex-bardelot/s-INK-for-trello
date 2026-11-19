@@ -1,8 +1,13 @@
 import {connectivity, ConnectivityMonitor} from '../network/connectivity';
-import {TRELLO_API_BASE_URL, TRELLO_REQUEST_TIMEOUT_MS} from './config';
+import {
+  TRELLO_API_BASE_URL,
+  TRELLO_REQUEST_TIMEOUT_MS,
+  TRELLO_UPLOAD_TIMEOUT_MS,
+} from './config';
 import {TrelloApiError} from './errors';
 import {
   NewCard,
+  TrelloAttachment,
   TrelloBoard,
   TrelloBoardCard,
   TrelloBoardMember,
@@ -39,6 +44,19 @@ interface RequestOptions {
   query?: Readonly<Record<string, QueryValue>>;
   /** Sent as JSON. Used for user content, which may exceed URL limits. */
   body?: Readonly<Record<string, unknown>>;
+  /** Sent as `multipart/form-data` instead of `body`, for file uploads. */
+  form?: FormData;
+  /** Overrides the client's timeout for this request. */
+  timeoutMs?: number;
+}
+
+/** A file of the tablet to attach to a card. */
+export interface AttachmentFile {
+  /** `file://` address of the file. */
+  uri: string;
+  /** Name the attachment gets on Trello. */
+  name: string;
+  mimeType: string;
 }
 
 const MEMBER_FIELDS = 'username,fullName,initials,url,avatarUrl';
@@ -332,6 +350,40 @@ export class TrelloClient {
     return comment;
   }
 
+  /**
+   * Uploads a file of the tablet to the card as an attachment and returns
+   * it as Trello stored it. React Native's networking reads the file from
+   * its `file://` address and streams it: its content never goes through
+   * JavaScript. Trello refuses a file over the board's size limit.
+   */
+  async addCardAttachment(
+    cardId: string,
+    file: AttachmentFile,
+  ): Promise<TrelloAttachment> {
+    const form = new FormData();
+    form.append('name', file.name);
+    form.append('mimeType', file.mimeType);
+    form.append('setCover', 'false');
+    // React Native's FormData takes a file as {uri, name, type}.
+    form.append('file', {
+      uri: file.uri,
+      name: file.name,
+      type: file.mimeType,
+    } as unknown as Blob);
+    const attachment = await this.request<TrelloAttachment>(
+      `/cards/${encodeURIComponent(cardId)}/attachments`,
+      {method: 'POST', form, timeoutMs: TRELLO_UPLOAD_TIMEOUT_MS},
+    );
+    if (
+      !attachment ||
+      typeof attachment.id !== 'string' ||
+      typeof attachment.url !== 'string'
+    ) {
+      throw new TrelloApiError('invalidResponse', 'Expected an attachment');
+    }
+    return attachment;
+  }
+
   /** Returns the labels of a board, named or not. */
   async getBoardLabels(boardId: string): Promise<TrelloLabel[]> {
     const labels = await this.request<TrelloLabel[]>(
@@ -438,23 +490,30 @@ export class TrelloClient {
 
   private async request<T>(
     path: string,
-    {method = 'GET', query = {}, body}: RequestOptions = {},
+    {
+      method = 'GET',
+      query = {},
+      body,
+      form,
+      timeoutMs = this.timeoutMs,
+    }: RequestOptions = {},
   ): Promise<T> {
     // Anonymous requests carry no credentials at all: Trello rejects a key
     // without a token with HTTP 401 "missing scopes", while public boards
     // are readable with no key.
     const url = this.baseUrl + path + buildQueryString(query);
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     let response: Response;
     try {
       response = await this.fetchImpl(url, {
         method,
-        body: body ? JSON.stringify(body) : undefined,
+        // A form sets its own Content-Type, with the multipart boundary.
+        body: form ?? (body ? JSON.stringify(body) : undefined),
         headers: {
           Accept: 'application/json',
-          ...(body ? {'Content-Type': 'application/json'} : {}),
+          ...(body && !form ? {'Content-Type': 'application/json'} : {}),
           ...(this.token
             ? {
                 Authorization: `OAuth oauth_consumer_key="${this.apiKey}", oauth_token="${this.token}"`,

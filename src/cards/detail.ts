@@ -37,6 +37,8 @@ export type DetailBlock =
   | {kind: 'empty'; key: string; section: DetailSection}
   /** Field to write a new comment, at the top of the comments. */
   | {kind: 'commentComposer'; key: string}
+  /** Line to attach a file of the tablet, at the top of the attachments. */
+  | {kind: 'addAttachment'; key: string}
   | {
       kind: 'attachment';
       key: string;
@@ -66,11 +68,15 @@ const MAX_PARAGRAPH_LINES = 8;
  * description, attachments and comments always have their heading, with a
  * line saying there are none when the card has none; checklists only show
  * when the card has some. With `canComment`, a field to write a comment
- * opens the comments, as on Trello.
+ * opens the comments, as on Trello; with `canAttach`, a line to add an
+ * attachment opens the attachments.
  */
 export function buildDetailBlocks(
   card: TrelloCardDetail,
-  {canComment = false}: {canComment?: boolean} = {},
+  {
+    canComment = false,
+    canAttach = false,
+  }: {canComment?: boolean; canAttach?: boolean} = {},
 ): DetailBlock[] {
   const blocks: DetailBlock[] = [{kind: 'summary', key: 'summary'}];
   const empty = (section: DetailSection) =>
@@ -121,6 +127,9 @@ export function buildDetailBlocks(
     section: 'attachments',
     ...(attachments.length > 0 && {count: String(attachments.length)}),
   });
+  if (canAttach) {
+    blocks.push({kind: 'addAttachment', key: 'add-attachment'});
+  }
   if (attachments.length === 0) {
     empty('attachments');
   }

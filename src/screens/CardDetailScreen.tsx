@@ -15,6 +15,7 @@ import {
 
 import {SwipeDirection} from '../board/layout';
 import {useTwoFingerSwipe} from '../board/useTwoFingerSwipe';
+import {attachmentFile, withAttachment} from '../cards/attachment';
 import {
   buildDetailBlocks,
   cardMembers,
@@ -57,8 +58,12 @@ import {
 } from '../components/ScreenFrame';
 import {SmallButton} from '../components/SmallButton';
 import {SwitchTrack} from '../components/Switch';
+import {WaitingBox} from '../components/WaitingBox';
 import {NoteIcon, StartIcon} from '../components/ActionIcons';
 import {TranslationKey, useTranslation} from '../i18n';
+import {logInkLink} from '../inkLink/diagnostics';
+import {pickFile} from '../platform/fileSelector';
+import {ensureFileReadPermission} from '../plugin/permissions';
 import {toSessionError} from '../session/trelloSession';
 import {settingsForRun, StartWorkPreviewStep} from '../startWork/plan';
 import {StartWorkStep} from '../startWork/startWork';
@@ -69,6 +74,7 @@ import {
   useStartWork,
 } from '../startWork/useStartWork';
 import {KeyValueStore} from '../storage/keyValueStore';
+import {isTrelloApiError} from '../trello/errors';
 import {TrelloClient} from '../trello/TrelloClient';
 import {
   TrelloBoardCard,
@@ -348,6 +354,61 @@ export function CardDetailScreen({
     updateShown(shown => ({...shown, desc: text}));
     setEditingDescription(false);
     return true;
+  };
+
+  // A file is chosen in the tablet's own file manager, then uploaded while
+  // the waiting box covers the page; it shows in the list once Trello
+  // stored it. Leaving the file manager without a choice changes nothing.
+  const [attaching, setAttaching] = useState(false);
+  const addAttachment = async () => {
+    if (attaching) {
+      return;
+    }
+    setEditFailure(null);
+    if (!(await ensureFileReadPermission(t('cardDetail.attachPermission')))) {
+      setEditFailure('cardDetail.attachPermissionDenied');
+      return;
+    }
+    let path: string | null;
+    try {
+      logInkLink('attach: file manager opened');
+      path = await pickFile({
+        title: t('cardDetail.attachPickerTitle'),
+        confirmLabel: t('cardDetail.attachPickerConfirm'),
+      });
+    } catch (error) {
+      console.warn('[sINK] Failed to open the file manager', error);
+      logInkLink(`attach: file manager failed (${String(error)})`);
+      setEditFailure('cardDetail.attachPickFailed');
+      return;
+    }
+    if (!path) {
+      logInkLink('attach: no file chosen');
+      return;
+    }
+    const file = attachmentFile(path);
+    logInkLink(`attach: uploading ${file.name} (${file.mimeType})`);
+    setAttaching(true);
+    try {
+      const attachment = await client.addCardAttachment(card.id, file);
+      logInkLink(`attach: uploaded ${attachment.id}`);
+      updateShown(shown => withAttachment(shown, attachment));
+    } catch (error) {
+      console.warn('[sINK] Failed to attach a file', error);
+      logInkLink(`attach: upload failed (${String(error)})`);
+      if (toSessionError(error) === 'invalidToken') {
+        onTokenRejected();
+        return;
+      }
+      setEditFailure(
+        isTrelloApiError(error) &&
+          (error.status === 413 || /too large/i.test(error.message))
+          ? 'cardDetail.attachTooLarge'
+          : 'cardDetail.attachFailed',
+      );
+    } finally {
+      setAttaching(false);
+    }
   };
 
   // The round before the card's name marks it complete, or not; the board
@@ -712,6 +773,7 @@ export function CardDetailScreen({
           onEditDescription={
             editable ? () => setEditingDescription(true) : undefined
           }
+          onAddAttachment={editable ? addAttachment : undefined}
           composer={composer}
           pending={pending}
           footer={
@@ -787,6 +849,7 @@ export function CardDetailScreen({
           </Text>
         </Popup>
       )}
+      {attaching && <WaitingBox overlay message={t('cardDetail.attaching')} />}
     </View>
   );
 }
@@ -849,7 +912,9 @@ function DescriptionEditor({
         cancelLabel: t('common.cancel'),
         onCancel,
         confirmLabel: t(
-          saving ? 'cardDetail.savingDescription' : 'cardDetail.saveDescription',
+          saving
+            ? 'cardDetail.savingDescription'
+            : 'cardDetail.saveDescription',
         ),
         onConfirm: save,
         confirmDisabled: saving || cleaned === initial.replace(/\s+$/, ''),
@@ -1179,6 +1244,11 @@ interface DetailPagesProps {
    * Edit button.
    */
   onEditDescription?: () => void;
+  /**
+   * Chooses a file to attach to the card; unset, the attachments have no
+   * line to add one.
+   */
+  onAddAttachment?: () => void;
   /** Changes on their way to Trello (`item:<id>`, `label:<id>`…). */
   pending: ReadonlySet<string>;
   /** Field to write a comment; unset, comments are only read. */
@@ -1197,14 +1267,16 @@ function DetailPages({
   onToggleCheckItem,
   onOpenPicker,
   onEditDescription,
+  onAddAttachment,
   pending,
   composer,
 }: DetailPagesProps): React.JSX.Element {
   const {t} = useTranslation();
   const canComment = !!composer;
+  const canAttach = !!onAddAttachment;
   const blocks = useMemo(
-    () => buildDetailBlocks(card, {canComment}),
-    [card, canComment],
+    () => buildDetailBlocks(card, {canComment, canAttach}),
+    [card, canComment, canAttach],
   );
   const [areaHeight, setAreaHeight] = useState(0);
   const [heights, setHeights] = useState<Readonly<Record<string, number>>>({});
@@ -1258,6 +1330,7 @@ function DetailPages({
       onToggleCheckItem={onToggleCheckItem}
       onOpenPicker={onOpenPicker}
       onEditDescription={onEditDescription}
+      onAddAttachment={onAddAttachment}
       pending={pending}
       composer={measured ? measuredComposer : composer}
     />
@@ -1322,6 +1395,7 @@ interface BlockProps {
   onToggleCheckItem?: (itemId: string, complete: boolean) => void;
   onOpenPicker?: (kind: PickerKind, anchor: View) => void;
   onEditDescription?: () => void;
+  onAddAttachment?: () => void;
   pending: ReadonlySet<string>;
   composer?: CommentComposerProps;
 }
@@ -1334,6 +1408,7 @@ function Block({
   onToggleCheckItem,
   onOpenPicker,
   onEditDescription,
+  onAddAttachment,
   pending,
   composer,
 }: BlockProps): React.JSX.Element | null {
@@ -1418,6 +1493,28 @@ function Block({
         </Pressable>
       );
     }
+    case 'addAttachment':
+      // As "+ Add a card" under a board's list: words on the page,
+      // inverted while pressed.
+      return (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('cardDetail.addAttachmentHint')}
+          disabled={!onAddAttachment}
+          onPress={onAddAttachment}
+          style={({pressed}) => [
+            styles.addAttachment,
+            pressed && styles.pressed,
+          ]}>
+          {({pressed}) => (
+            <Text
+              numberOfLines={1}
+              style={[styles.addAttachmentText, pressed && styles.pressedText]}>
+              {`+ ${t('cardDetail.addAttachment')}`}
+            </Text>
+          )}
+        </Pressable>
+      );
     case 'attachment': {
       const url = block.url;
       if (url === null) {
@@ -2116,6 +2213,16 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     fontSize: typography.body,
     textDecorationLine: 'underline',
+  },
+  addAttachment: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borders.radius,
+  },
+  addAttachmentText: {
+    color: colors.foreground,
+    fontSize: typography.body,
+    fontWeight: '600',
   },
   pressed: {
     backgroundColor: colors.foreground,

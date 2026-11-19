@@ -3,6 +3,20 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.68.0 — Attach a file to a card
+
+- On the card page of a board you can edit, the **Attachments** section
+  opens with **+ Add an attachment**. It opens the tablet's own file
+  manager (from the plugin SDK) to choose one file, of any type. Leaving
+  it without a choice changes nothing.
+- The chosen file is uploaded to the card on Trello while the waiting
+  box covers the page; it then shows at the end of the attachments. The
+  file is streamed from the tablet's storage, never loaded into the
+  plugin's memory. If Trello refuses it, the page says so, with its own
+  message for a file over Trello's size limit.
+- The file manager and the upload write their steps to the Diagnostics
+  log (Settings > About), to follow them on the tablet.
+
 ## 0.67.1 — Member chips for the modes
 
 - The members of the Focus and Review modes are chosen like their labels,

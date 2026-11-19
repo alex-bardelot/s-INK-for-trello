@@ -339,4 +339,62 @@ describe('TrelloClient', () => {
       kind: 'invalidResponse',
     });
   });
+
+  it('uploads an attachment as a multipart form', async () => {
+    // Jest runs Node's FormData, which turns React Native's {uri, name,
+    // type} file into text: a fake keeps what is appended.
+    class FakeFormData {
+      readonly parts: Array<[string, unknown]> = [];
+      append(name: string, value: unknown) {
+        this.parts.push([name, value]);
+      }
+    }
+    const scope = global as unknown as {FormData: unknown};
+    const nodeFormData = scope.FormData;
+    scope.FormData = FakeFormData;
+    try {
+      const created = {
+        id: 'a1',
+        name: 'report.pdf',
+        url: 'https://x',
+        date: '',
+      };
+      const fetchImpl = jest.fn().mockResolvedValue(jsonResponse(created));
+      const file = {
+        uri: 'file:///storage/report.pdf',
+        name: 'report.pdf',
+        mimeType: 'application/pdf',
+      };
+      await expect(
+        clientWith(fetchImpl).addCardAttachment('c/1', file),
+      ).resolves.toEqual(created);
+      const [url, init] = fetchImpl.mock.calls[0];
+      expect(url).toBe('https://api.trello.com/1/cards/c%2F1/attachments');
+      expect(init.method).toBe('POST');
+      // The form sets its own Content-Type, with the multipart boundary.
+      expect(init.headers['Content-Type']).toBeUndefined();
+      expect(init.headers.Authorization).toContain(TOKEN);
+      expect(Object.fromEntries((init.body as FakeFormData).parts)).toEqual({
+        name: 'report.pdf',
+        mimeType: 'application/pdf',
+        setCover: 'false',
+        file: {uri: file.uri, name: 'report.pdf', type: 'application/pdf'},
+      });
+    } finally {
+      scope.FormData = nodeFormData;
+    }
+  });
+
+  it('reports a file Trello finds too large with its status', async () => {
+    const fetchImpl = jest
+      .fn()
+      .mockResolvedValue(jsonResponse({message: 'too large'}, 413));
+    await expect(
+      clientWith(fetchImpl).addCardAttachment('c1', {
+        uri: 'file:///big.zip',
+        name: 'big.zip',
+        mimeType: 'application/zip',
+      }),
+    ).rejects.toMatchObject({kind: 'http', status: 413});
+  });
 });

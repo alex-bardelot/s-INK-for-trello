@@ -37,6 +37,12 @@ export const TRELLO_AUTHORIZE_URL = 'https://trello.com/1/authorize';
 /** Maximum duration of a single API request, in milliseconds. */
 export const TRELLO_REQUEST_TIMEOUT_MS = 15_000;
 
+/**
+ * Maximum duration of a file upload, in milliseconds: a file of several
+ * megabytes takes far longer than a JSON request on the tablet's Wi-Fi.
+ */
+export const TRELLO_UPLOAD_TIMEOUT_MS = 180_000;
+
 /** Returns `true` when an API key has been configured for this build. */
 export function hasApiKey(apiKey: string = TRELLO_API_KEY): boolean {
   return apiKey.trim().length > 0;

@@ -124,8 +124,25 @@ describe('buildDetailBlocks', () => {
       buildDetailBlocks(card(), {canComment})
         .map(block => block.key)
         .slice(-3);
-    expect(keys(true)).toEqual(['h-comments', 'comment-composer', 'e-comments']);
+    expect(keys(true)).toEqual([
+      'h-comments',
+      'comment-composer',
+      'e-comments',
+    ]);
     expect(keys(false)).toEqual(['e-attachments', 'h-comments', 'e-comments']);
+  });
+
+  it('opens the attachments with a line to add one, when allowed', () => {
+    const keys = (canAttach: boolean) =>
+      buildDetailBlocks(card(), {canAttach})
+        .map(block => block.key)
+        .filter(key => key.includes('attachment'));
+    expect(keys(true)).toEqual([
+      'h-attachments',
+      'add-attachment',
+      'e-attachments',
+    ]);
+    expect(keys(false)).toEqual(['h-attachments', 'e-attachments']);
   });
 
   it('keeps an attachment that is not a web page, without its address', () => {
@@ -293,8 +310,9 @@ describe('TrelloClient.removeCardMember', () => {
 
 describe('webUrl', () => {
   it('keeps web addresses', () => {
-    expect(webUrl('https://trello.com/1/cards/c/attachments/a/download/x.pdf'))
-      .toBe('https://trello.com/1/cards/c/attachments/a/download/x.pdf');
+    expect(
+      webUrl('https://trello.com/1/cards/c/attachments/a/download/x.pdf'),
+    ).toBe('https://trello.com/1/cards/c/attachments/a/download/x.pdf');
     expect(webUrl('HTTP://example.test')).toBe('HTTP://example.test');
     expect(webUrl('  https://x.test/a?b=c#d  ')).toBe('https://x.test/a?b=c#d');
   });
