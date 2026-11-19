@@ -297,6 +297,7 @@
   "cardDetail.attachPickFailed": "タブレットのファイルマネージャーを開けませんでした。",
   "cardDetail.attachFailed": "ファイルを Trello のカードに添付できませんでした。",
   "cardDetail.attachTooLarge": "Trello がファイルを拒否しました。ファイルが大きすぎます（無料のワークスペースでは 1 ファイルあたり最大 10 MB）。",
+  "cardDetail.attachmentAdded": "{date} に追加",
   "cardDetail.previewHint": "添付ファイルを大きく表示します。",
   "cardDetail.previewLoading": "プレビューを読み込み中…",
   "cardDetail.previewFailed": "プレビューを表示できません",

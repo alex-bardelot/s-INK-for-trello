@@ -48,6 +48,13 @@ export type DetailBlock =
       name: string;
       /** Web address to open, or `null` if it is not a web address. */
       url: string | null;
+      /** ISO date it was added, empty if unknown. */
+      date: string;
+      /**
+       * Short type of the file (`PDF`, `DOCX`…), shown in place of an
+       * image; empty when the name has none.
+       */
+      extension: string;
       /** Images Trello made of it, or `null` when it has none. */
       preview: AttachmentPreview | null;
     }
@@ -164,6 +171,8 @@ export function buildDetailBlocks(
       key: `a-${attachment.id}`,
       name: attachment.name || attachment.url,
       url: webUrl(attachment.url),
+      date: attachment.date ?? '',
+      extension: fileExtension(attachment.name ?? ''),
       preview: attachmentPreview(attachment),
     });
   }
@@ -238,6 +247,19 @@ export function attachmentPreview(
   const thumbnail =
     bySize.find(image => image.width >= THUMBNAIL_MIN_WIDTH) ?? full;
   return {thumbnail, full};
+}
+
+/**
+ * Upper-case extension of a file's name (`report.pdf` → `PDF`), empty
+ * without one, when it is too long to be a file type, or for a link named
+ * after its address (`https://example.com` is no `COM` file).
+ */
+export function fileExtension(name: string): string {
+  if (name.includes('/')) {
+    return '';
+  }
+  const match = /\.([a-z0-9]{1,5})$/i.exec(name.trim());
+  return match ? match[1].toUpperCase() : '';
 }
 
 function isPositive(value: unknown): value is number {

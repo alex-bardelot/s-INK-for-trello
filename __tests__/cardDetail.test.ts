@@ -3,6 +3,7 @@ import {
   buildDetailBlocks,
   cardMembers,
   descriptionParagraphs,
+  fileExtension,
   formatCardDate,
   labelChoices,
   paginateBlocks,
@@ -158,7 +159,28 @@ describe('buildDetailBlocks', () => {
       key: 'a-f',
       name: 'Report',
       url: null,
+      date: '',
+      extension: '',
       preview: null,
+    });
+  });
+
+  it('gives an attachment its date and file type', () => {
+    const blocks = buildDetailBlocks(
+      card({
+        attachments: [
+          {
+            id: 'p',
+            name: 'Plan v2.pdf',
+            url: 'https://x.test/p',
+            date: '2026-11-19T10:00:00.000Z',
+          },
+        ],
+      }),
+    );
+    expect(blocks.find(block => block.kind === 'attachment')).toMatchObject({
+      date: '2026-11-19T10:00:00.000Z',
+      extension: 'PDF',
     });
   });
 
@@ -186,6 +208,21 @@ describe('buildDetailBlocks', () => {
         full: {url: 'https://trello.com/p/600'},
       },
     });
+  });
+});
+
+describe('fileExtension', () => {
+  it('is the upper-case extension of a name', () => {
+    expect(fileExtension('photo.png')).toBe('PNG');
+    expect(fileExtension('Plan v2.docx')).toBe('DOCX');
+  });
+
+  it('is empty without a file type', () => {
+    expect(fileExtension('Report')).toBe('');
+    expect(fileExtension('notes.')).toBe('');
+    expect(fileExtension('https://example.com/a-page')).toBe('');
+    expect(fileExtension('https://example.com')).toBe('');
+    expect(fileExtension('archive.verylong')).toBe('');
   });
 });
 

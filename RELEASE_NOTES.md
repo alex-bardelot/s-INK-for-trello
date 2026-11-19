@@ -3,6 +3,14 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.70.1 — Compact attachments
+
+- On the card page, each attachment now takes a single compact row, as
+  on Trello: a small image before its name (cropped to fit), the name in
+  bold, and the date it was added underneath. An attachment without a
+  preview shows its file type (`PDF`, `DOCX`…) in the image's place.
+- The outlined box around each attachment is gone.
+
 ## 0.70.0 — Attachment previews
 
 - On the card page, an attachment Trello made a preview of (an image, the

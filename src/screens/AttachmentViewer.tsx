@@ -42,11 +42,7 @@ export function AttachmentViewer({
         )
       }>
       <View style={styles.page}>
-        <AttachmentImage
-          source={source}
-          style={styles.image}
-          loadingText={t('cardDetail.previewLoading')}
-        />
+        <AttachmentImage messages source={source} style={styles.image} />
       </View>
     </ScreenFrame>
   );

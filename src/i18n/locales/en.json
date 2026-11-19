@@ -297,6 +297,7 @@
   "cardDetail.attachPickFailed": "The tablet's file manager could not be opened.",
   "cardDetail.attachFailed": "The file could not be attached to the card on Trello.",
   "cardDetail.attachTooLarge": "Trello refused the file: it is too large (10 MB at most per file on a free workspace).",
+  "cardDetail.attachmentAdded": "Added {date}",
   "cardDetail.previewHint": "Shows the attachment in a larger size.",
   "cardDetail.previewLoading": "Loading the preview…",
   "cardDetail.previewFailed": "Preview unavailable",

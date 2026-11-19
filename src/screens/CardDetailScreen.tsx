@@ -90,12 +90,11 @@ import {AttachmentViewer} from './AttachmentViewer';
 
 const BLOCK_GAP = spacing.sm;
 /**
- * Room of an attachment's image on the card page: this high, as wide as
- * the image's proportions ask, within these bounds.
+ * Room of an attachment's image before its name on the card page, in
+ * Trello's 4:3 proportions, a little over two lines of text high.
  */
-const THUMBNAIL_HEIGHT = 160;
-const THUMBNAIL_MIN_WIDTH = 80;
-const THUMBNAIL_MAX_WIDTH = 480;
+const THUMBNAIL_WIDTH = 88;
+const THUMBNAIL_HEIGHT = 66;
 const AVATAR_SIZE = 40;
 /** The round before the card's name that marks it complete. */
 const COMPLETE_MARK_SIZE = 32;
@@ -1544,19 +1543,6 @@ function Block({
   }
 }
 
-/**
- * Room of an attachment's thumbnail: {@link THUMBNAIL_HEIGHT} high, as
- * wide as the image's proportions ask within the bounds. It only depends
- * on the size Trello gives, so the page is laid out before the image loads.
- */
-function thumbnailRoom(image: PreviewImage): ViewStyle {
-  const width = Math.round((THUMBNAIL_HEIGHT * image.width) / image.height);
-  return {
-    width: Math.min(Math.max(width, THUMBNAIL_MIN_WIDTH), THUMBNAIL_MAX_WIDTH),
-    height: THUMBNAIL_HEIGHT,
-  };
-}
-
 /** A block under a section's heading. */
 function SectionContent({
   block,
@@ -1630,12 +1616,48 @@ function SectionContent({
     }
     case 'attachment': {
       const {name, url, preview} = block;
-      // An image Trello made of the attachment shows under its name.
-      const thumbnail = preview && (
+      // As on Trello: a small image before the name, cropped to its room,
+      // or the file's type when Trello made no image of it.
+      const extension = block.extension ? (
+        <Text style={styles.thumbnailType} numberOfLines={1}>
+          {block.extension}
+        </Text>
+      ) : null;
+      const thumbnail = preview ? (
         <AttachmentImage
+          fit="cover"
           source={imageSource?.(preview.thumbnail.url)}
-          style={[styles.thumbnail, thumbnailRoom(preview.thumbnail)]}
+          style={styles.thumbnail}
+          placeholder={extension}
         />
+      ) : (
+        <View style={[styles.thumbnail, styles.thumbnailEmpty]}>
+          {extension}
+        </View>
+      );
+      const added = block.date
+        ? t('cardDetail.attachmentAdded', {
+            date: formatCardDate(block.date, locale, true),
+          })
+        : '';
+      const content = (pressed: boolean) => (
+        <>
+          {thumbnail}
+          <View style={styles.attachmentBody}>
+            <Text
+              style={[styles.attachmentText, pressed && styles.pressedText]}
+              numberOfLines={2}>
+              {name}
+            </Text>
+            {added !== '' && (
+              <Text
+                style={[styles.attachmentDate, pressed && styles.pressedText]}
+                numberOfLines={1}>
+                {added}
+              </Text>
+            )}
+          </View>
+        </>
       );
       // With a preview, a tap opens it in its own page; else a web address
       // opens in the browser.
@@ -1650,14 +1672,7 @@ function SectionContent({
           : null;
       if (!open) {
         // Not a web address: shown, never opened.
-        return (
-          <View style={styles.attachment}>
-            <Text style={styles.attachmentText} numberOfLines={2}>
-              {name}
-            </Text>
-            {thumbnail}
-          </View>
-        );
+        return <View style={styles.attachment}>{content(false)}</View>;
       }
       return (
         <Pressable
@@ -1666,16 +1681,7 @@ function SectionContent({
           accessibilityHint={preview ? t('cardDetail.previewHint') : undefined}
           onPress={open}
           style={({pressed}) => [styles.attachment, pressed && styles.pressed]}>
-          {({pressed}) => (
-            <>
-              <Text
-                style={[styles.attachmentText, pressed && styles.pressedText]}
-                numberOfLines={2}>
-                {name}
-              </Text>
-              {thumbnail}
-            </>
-          )}
+          {({pressed}) => content(pressed)}
         </Pressable>
       );
     }
@@ -2357,21 +2363,41 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
   },
   attachment: {
-    gap: spacing.sm,
-    borderWidth: borders.width,
-    borderColor: colors.foreground,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
     borderRadius: borders.radius,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   thumbnail: {
-    maxWidth: '100%',
+    width: THUMBNAIL_WIDTH,
+    height: THUMBNAIL_HEIGHT,
+    borderWidth: 1,
+    borderColor: colors.labelBorder,
+    borderRadius: 4,
     backgroundColor: colors.background,
+  },
+  thumbnailEmpty: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  thumbnailType: {
+    color: colors.foreground,
+    fontSize: typography.small,
+    fontWeight: '700',
+  },
+  attachmentBody: {
+    flex: 1,
+    gap: 2,
   },
   attachmentText: {
     color: colors.foreground,
     fontSize: typography.body,
-    textDecorationLine: 'underline',
+    fontWeight: '700',
+  },
+  attachmentDate: {
+    color: colors.foreground,
+    fontSize: typography.small,
   },
   pressed: {
     backgroundColor: colors.foreground,
