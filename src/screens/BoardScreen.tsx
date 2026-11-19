@@ -776,14 +776,22 @@ function BoardColumn({
   const cardIds = useMemo(() => cards.map(card => card.id), [cards]);
   const [heights, measureCard] = useMeasuredHeights(cardIds);
   const [page, setPage] = useState(0);
+  // The "Add a card" button follows the last card of the page, so its room
+  // (and the gap above it) is kept out of what the cards may fill.
+  const [addCardHeight, setAddCardHeight] = useState(0);
+  const addCardRoom = onAddCard ? addCardHeight + CARD_GAP : 0;
 
   const pages = useMemo(() => {
     const measured = cards.map(card => heights[card.id]);
-    if (bodyHeight <= 0 || measured.some(h => h === undefined)) {
+    if (
+      bodyHeight <= 0 ||
+      (onAddCard && addCardHeight <= 0) ||
+      measured.some(h => h === undefined)
+    ) {
       return null;
     }
-    return paginate(measured as number[], bodyHeight, CARD_GAP);
-  }, [bodyHeight, cards, heights]);
+    return paginate(measured as number[], bodyHeight - addCardRoom, CARD_GAP);
+  }, [addCardHeight, addCardRoom, bodyHeight, cards, heights, onAddCard]);
 
   // Once its cards are measured, the list opens at the page of the card
   // the board was opened at, or of a card just added, if it holds it.
@@ -856,27 +864,32 @@ function BoardColumn({
             onLongPress={onLongPressCard}
           />
         ))}
+        {onAddCard && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('board.addCardHint', {list: list.name})}
+            hitSlop={{top: spacing.xs, bottom: spacing.xs}}
+            onPress={() => onAddCard(list)}
+            onLayout={event =>
+              setAddCardHeight(event.nativeEvent.layout.height)
+            }
+            style={({pressed}) => [
+              styles.addCard,
+              pressed && styles.addCardPressed,
+            ]}>
+            {({pressed}) => (
+              <Text
+                numberOfLines={1}
+                style={[
+                  styles.addCardText,
+                  pressed && styles.addCardTextPressed,
+                ]}>
+                {`+ ${t('board.addCard')}`}
+              </Text>
+            )}
+          </Pressable>
+        )}
       </View>
-
-      {onAddCard && (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('board.addCardHint', {list: list.name})}
-          hitSlop={{top: spacing.xs, bottom: spacing.xs}}
-          onPress={() => onAddCard(list)}
-          style={({pressed}) => [
-            styles.addCard,
-            pressed && styles.addCardPressed,
-          ]}>
-          {({pressed}) => (
-            <Text
-              numberOfLines={1}
-              style={[styles.addCardText, pressed && styles.addCardTextPressed]}>
-              {`+ ${t('board.addCard')}`}
-            </Text>
-          )}
-        </Pressable>
-      )}
 
       {/* Always present, so that every column body has the same height. */}
       <View style={styles.columnFooter}>
@@ -1353,13 +1366,18 @@ const styles = StyleSheet.create({
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
   },
-  // Under the list's cards, as on Trello: words on the board, inverted
-  // while pressed.
+  // Right under the list's last card, as on Trello, in the dashed frame of
+  // the main page's "+" tile; inverted while pressed. The column body's gap
+  // spaces it from the card.
   addCard: {
-    marginTop: CARD_GAP,
+    alignSelf: 'stretch',
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
-    borderRadius: borders.radius,
+    borderColor: colors.foreground,
+    borderRadius: borders.radius + 2,
+    borderStyle: 'dashed',
+    borderWidth: borders.width,
+    backgroundColor: colors.background,
   },
   addCardPressed: {
     backgroundColor: colors.foreground,

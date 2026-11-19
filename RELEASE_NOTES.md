@@ -3,6 +3,15 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.68.1 — Dashed "Add a card" right under the last card
+
+- On a board, **+ Add a card** now follows the last card shown in the
+  list, instead of sitting at the bottom of the column. In a list that
+  spans several pages, it follows the last card of each page; the pages
+  keep room for it so it never covers a card.
+- The button is framed with a dashed outline, like the **+** tile of the
+  main page that adds a public board.
+
 ## 0.68.0 — Attach a file to a card
 
 - On the card page of a board you can edit, the **Attachments** section
