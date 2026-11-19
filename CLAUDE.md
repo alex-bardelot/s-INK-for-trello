@@ -1,5 +1,16 @@
 # Project instructions
 
+## Commits
+
+- Every commit is authored and committed as
+  `Alexandre Bardelot <7009756+alex-bardelot@users.noreply.github.com>`.
+  This repository's `.git/config` sets it; never commit with another
+  e-mail (in particular not the global one) and never override it with
+  `--author`, `-c user.email=…` or `GIT_AUTHOR_*` / `GIT_COMMITTER_*`.
+- Before committing, if `git config user.email` does not print that
+  address, set it with `git config user.email` (repository scope, not
+  `--global`) instead of committing.
+
 ## Build and deploy
 
 - At the end of every development task (once tests pass and the change is
