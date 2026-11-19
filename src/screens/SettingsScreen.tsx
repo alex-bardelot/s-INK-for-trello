@@ -371,8 +371,31 @@ export type SettingsCategory =
   | 'diagnostics';
 
 /**
+ * Permissions declared in PluginConfig.json, each with the translation
+ * keys of its name and of why s-INK asks for it.
+ */
+const ABOUT_PERMISSIONS = [
+  {
+    name: 'settings.permissionInternet',
+    reason: 'settings.permissionInternetReason',
+  },
+  {
+    name: 'settings.permissionFileRead',
+    reason: 'settings.permissionFileReadReason',
+  },
+  {
+    name: 'settings.permissionFileWrite',
+    reason: 'settings.permissionFileWriteReason',
+  },
+  {
+    name: 'settings.permissionFileDelete',
+    reason: 'settings.permissionFileDeleteReason',
+  },
+] as const;
+
+/**
  * Name, version and description of the plugin, the non-affiliation
- * notice, then where its source code is.
+ * notice, why each permission is asked for, then where its source code is.
  */
 function AboutSettings({
   onOpenReleaseNotes,
@@ -390,6 +413,16 @@ function AboutSettings({
         </Text>
         <Text style={styles.text}>{t('settings.aboutDescription')}</Text>
         <Text style={styles.disclaimer}>{t('settings.disclaimer')}</Text>
+      </Section>
+
+      <Section title={t('settings.permissions')}>
+        <Text style={styles.text}>{t('settings.permissionsText')}</Text>
+        {ABOUT_PERMISSIONS.map(permission => (
+          <Text key={permission.name} style={styles.text}>
+            <Text style={styles.bold}>{t(permission.name)}</Text>
+            {` — ${t(permission.reason)}`}
+          </Text>
+        ))}
       </Section>
 
       <Section title={t('settings.sourceCode')}>

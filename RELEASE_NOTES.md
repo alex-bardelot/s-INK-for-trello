@@ -34,3 +34,5 @@ for the Manta) and links them to your handwritten notes.
   date.
 - **Open source**: the code is on GitHub, under the MIT license, linked
   from Settings › About.
+- **Permissions explained**: Settings › About tells why s-INK asks for
+  internet access and for reading, writing and deleting files.
