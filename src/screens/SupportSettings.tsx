@@ -139,7 +139,7 @@ function useFundingTotal(
  * button opening it in the tablet's browser. Without an address yet, a
  * "coming soon" line.
  */
-function LinkBlock({
+export function LinkBlock({
   url,
   label,
 }: {

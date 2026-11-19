@@ -32,3 +32,5 @@ for the Manta) and links them to your handwritten notes.
   when the card is renamed.
 - **Migrations**: after an update, s-INK offers to bring older data up to
   date.
+- **Open source**: the code is on GitHub, under the MIT license, linked
+  from Settings › About.

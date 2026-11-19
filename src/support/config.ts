@@ -9,6 +9,9 @@ import {TRELLO_RELAY_URL} from '../trello/config';
 /** s-INK's page on InkHub, where bugs, ideas and ratings go for now. */
 export const INKHUB_URL = '';
 
+/** s-INK's source code, offered in Settings > About. */
+export const SOURCE_CODE_URL = 'https://github.com/alex-bardelot/s-INK-for-trello';
+
 /** Donation page (Ko-fi). */
 export const DONATION_URL = 'https://ko-fi.com/alexandrebardelot';
 

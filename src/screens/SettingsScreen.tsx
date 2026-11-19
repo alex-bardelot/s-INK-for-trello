@@ -95,7 +95,8 @@ import {
 } from '../trello';
 import {NewCardSettingsPanel} from './NewCardSettingsPanel';
 import {PublicBoardsSettings} from './PublicBoardsSettings';
-import {SupportSettings} from './SupportSettings';
+import {LinkBlock, SupportSettings} from './SupportSettings';
+import {SOURCE_CODE_URL} from '../support/config';
 import {
   NoteTemplateScreen,
   StartWorkSettingsPanel,
@@ -369,7 +370,10 @@ export type SettingsCategory =
   | 'about'
   | 'diagnostics';
 
-/** Name, version and description of the plugin, then the non-affiliation notice. */
+/**
+ * Name, version and description of the plugin, the non-affiliation
+ * notice, then where its source code is.
+ */
 function AboutSettings({
   onOpenReleaseNotes,
 }: {
@@ -386,6 +390,11 @@ function AboutSettings({
         </Text>
         <Text style={styles.text}>{t('settings.aboutDescription')}</Text>
         <Text style={styles.disclaimer}>{t('settings.disclaimer')}</Text>
+      </Section>
+
+      <Section title={t('settings.sourceCode')}>
+        <Text style={styles.text}>{t('settings.sourceCodeText')}</Text>
+        <LinkBlock url={SOURCE_CODE_URL} label={t('settings.sourceCodeQr')} />
       </Section>
 
       {/* The latest release only; the others are one tap away. */}
