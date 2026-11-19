@@ -1,8 +1,7 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   Image,
   ImageErrorEventData,
-  ImageURISource,
   NativeSyntheticEvent,
   StyleProp,
   StyleSheet,
@@ -15,12 +14,19 @@ import {useTranslation} from '../i18n';
 import {logInkLink} from '../inkLink/diagnostics';
 import {colors, spacing, typography} from '../theme';
 
+/** The address an `Image` can show a picture from, such as a `data:` one. */
+export type ImageUriLoader = (url: string) => Promise<string>;
+
 export interface AttachmentImageProps {
+  /** Web address of the picture. */
+  url: string;
   /**
-   * What to load; unset, only the image's room is drawn (the invisible
-   * copy that measures the card page loads nothing).
+   * Turns the address into one an `Image` can show (a picture stored on
+   * Trello is loaded with the member's credentials); unset, only the
+   * image's room is drawn: the invisible copy that measures the card page
+   * loads nothing.
    */
-  source?: ImageURISource;
+  loadUri?: ImageUriLoader;
   /** Size and place of the image's room, set before the image loads. */
   style: StyleProp<ViewStyle>;
   /**
@@ -37,6 +43,11 @@ export interface AttachmentImageProps {
   placeholder?: React.ReactNode;
 }
 
+/** The host of an address, for the log: never its path or query. */
+function hostOf(url: string): string {
+  return url.replace(/^[a-z]+:\/\/([^/?#]+).*$/i, '$1');
+}
+
 /**
  * Image of an attachment in a room of a set size, so that the page around
  * it is laid out before it loads. It appears at once, without fading in
@@ -44,19 +55,46 @@ export interface AttachmentImageProps {
  * `attach:` lines of Diagnostics tell why.
  */
 export function AttachmentImage({
-  source,
+  url,
+  loadUri,
   style,
   fit = 'contain',
   messages = false,
   placeholder,
 }: AttachmentImageProps): React.JSX.Element {
   const {t} = useTranslation();
+  const [uri, setUri] = useState<string | null>(null);
   const [status, setStatus] = useState<'loading' | 'loaded' | 'failed'>(
     'loading',
   );
+  useEffect(() => {
+    if (!loadUri) {
+      return;
+    }
+    let active = true;
+    setUri(null);
+    setStatus('loading');
+    loadUri(url)
+      .then(loaded => active && setUri(loaded))
+      .catch(error => {
+        logInkLink(
+          `attach: preview not loaded (${String(error).slice(0, 160)})`,
+        );
+        if (active) {
+          setStatus('failed');
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [loadUri, url]);
   const onError = (event: NativeSyntheticEvent<ImageErrorEventData>) => {
     const reason = String(event.nativeEvent?.error ?? 'unknown error');
-    logInkLink(`attach: preview failed (${reason.slice(0, 120)})`);
+    logInkLink(
+      `attach: preview not drawn from ${
+        uri?.startsWith('data:') ? 'data' : hostOf(url)
+      } (${reason.slice(0, 120)})`,
+    );
     setStatus('failed');
   };
   const message = !messages
@@ -73,9 +111,9 @@ export function AttachmentImage({
       ) : (
         status !== 'loaded' && placeholder
       )}
-      {source && status !== 'failed' && (
+      {uri && status !== 'failed' && (
         <Image
-          source={source}
+          source={{uri}}
           resizeMode={fit}
           fadeDuration={0}
           style={styles.image}

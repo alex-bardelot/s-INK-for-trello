@@ -3,6 +3,20 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.73.1 — Attachment previews load from Trello
+
+- The previews of attachments stored on Trello (uploaded from another
+  device) did not show on the tablet: the thumbnail kept its file type and
+  the large view said "Preview unavailable". s-INK now loads each preview
+  itself, from Trello's API host with the member's credentials (then from
+  the address Trello gave, if refused), and hands it to the image as a
+  `data:` address. The credentials still go to Trello's own `https`
+  addresses only.
+- The last pictures loaded are kept while s-INK is open, so turning the
+  card's pages does not load them again.
+- A preview that does not load writes the hosts tried and Trello's HTTP
+  answer to the `attach:` lines of Settings › Diagnostics.
+
 ## 0.73.0 — Migrations after an update
 
 - After an update, s-INK now looks at what the older version left on the

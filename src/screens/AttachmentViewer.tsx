@@ -1,7 +1,7 @@
 import React from 'react';
-import {ImageURISource, StyleSheet, View} from 'react-native';
+import {StyleSheet, View} from 'react-native';
 
-import {AttachmentImage} from '../components/AttachmentImage';
+import {AttachmentImage, ImageUriLoader} from '../components/AttachmentImage';
 import {ScreenFrame} from '../components/ScreenFrame';
 import {SmallButton} from '../components/SmallButton';
 import {useTranslation} from '../i18n';
@@ -10,7 +10,9 @@ import {openInBrowser} from '../platform/browser';
 export interface AttachmentViewerProps {
   name: string;
   /** The largest image Trello made of the attachment. */
-  source: ImageURISource;
+  imageUrl: string;
+  /** Loads it, with the member's credentials for Trello. */
+  loadUri: ImageUriLoader;
   /** Web address of the attachment itself, offered in the browser if set. */
   url: string | null;
   onClose: () => void;
@@ -23,7 +25,8 @@ export interface AttachmentViewerProps {
  */
 export function AttachmentViewer({
   name,
-  source,
+  imageUrl,
+  loadUri,
   url,
   onClose,
 }: AttachmentViewerProps): React.JSX.Element {
@@ -42,7 +45,12 @@ export function AttachmentViewer({
         )
       }>
       <View style={styles.page}>
-        <AttachmentImage messages source={source} style={styles.image} />
+        <AttachmentImage
+          messages
+          url={imageUrl}
+          loadUri={loadUri}
+          style={styles.image}
+        />
       </View>
     </ScreenFrame>
   );

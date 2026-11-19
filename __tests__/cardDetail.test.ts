@@ -15,7 +15,7 @@ import {
   withCheckItemState,
   withComment,
 } from '../src/cards/detail';
-import {TrelloClient} from '../src/trello/TrelloClient';
+import {TrelloClient, trelloFileUrls} from '../src/trello/TrelloClient';
 import {TrelloBoardMember, TrelloCardDetail} from '../src/trello/types';
 
 function card(overrides: Partial<TrelloCardDetail> = {}): TrelloCardDetail {
@@ -573,30 +573,94 @@ describe('TrelloClient.getCardDetail', () => {
     }
   });
 
-  it('sends the credentials with an image only to Trello itself', () => {
-    const client = new TrelloClient({apiKey: 'k', token: 't'});
+  describe('imageUri', () => {
     const authorization = 'OAuth oauth_consumer_key="k", oauth_token="t"';
-    for (const url of [
-      'https://trello.com/1/cards/c/attachments/a/previews/p/download/x.png',
-      'https://api.trello.com/1/x.png',
-    ]) {
-      expect(client.imageSource(url)).toEqual({
-        uri: url,
-        headers: {Authorization: authorization},
+    const picture = (status: number) =>
+      ({
+        ok: status === 200,
+        status,
+        blob: async () => ({size: 3} as unknown as Blob),
+        text: async () => '',
+      } as Response);
+    const clientWith = (fetchImpl: jest.Mock) =>
+      new TrelloClient({
+        apiKey: 'k',
+        token: 't',
+        fetchImpl,
+        dataUrlOf: async () => 'data:image/png;base64,AAA',
       });
-    }
-    for (const url of [
-      'http://trello.com/1/x.png',
-      'https://trello.com.example.net/x.png',
-      'https://trello.com@example.net/x.png',
-      'https://example.net/trello.com/x.png',
-      'https://trello-attachments.s3.amazonaws.com/x.png',
-    ]) {
-      expect(client.imageSource(url)).toEqual({uri: url});
-    }
-    expect(
-      new TrelloClient({apiKey: 'k'}).imageSource('https://trello.com/1/x'),
-    ).toEqual({uri: 'https://trello.com/1/x'});
+    const preview =
+      'https://trello.com/1/cards/c/attachments/a/previews/p/download/x.png';
+
+    it('loads a picture stored on Trello from the API host, with the credentials', async () => {
+      const fetchImpl = jest.fn().mockResolvedValue(picture(200));
+      await expect(clientWith(fetchImpl).imageUri(preview)).resolves.toBe(
+        'data:image/png;base64,AAA',
+      );
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+      const [url, init] = fetchImpl.mock.calls[0];
+      expect(url).toBe(
+        'https://api.trello.com/1/cards/c/attachments/a/previews/p/download/x.png',
+      );
+      expect(init.headers).toEqual({Authorization: authorization});
+    });
+
+    it('falls back on the given address, then says what Trello answered', async () => {
+      const fetchImpl = jest
+        .fn()
+        .mockResolvedValueOnce(picture(401))
+        .mockResolvedValueOnce(picture(200));
+      await expect(clientWith(fetchImpl).imageUri(preview)).resolves.toBe(
+        'data:image/png;base64,AAA',
+      );
+      expect(fetchImpl.mock.calls[1][0]).toBe(preview);
+
+      const refused = jest.fn().mockResolvedValue(picture(401));
+      await expect(clientWith(refused).imageUri(preview)).rejects.toThrow(
+        'api.trello.com HTTP 401, trello.com HTTP 401',
+      );
+    });
+
+    it('keeps the pictures it loaded, not the failures', async () => {
+      const fetchImpl = jest
+        .fn()
+        .mockResolvedValueOnce(picture(500))
+        .mockResolvedValueOnce(picture(500))
+        .mockResolvedValue(picture(200));
+      const client = clientWith(fetchImpl);
+      await expect(client.imageUri(preview)).rejects.toThrow();
+      await client.imageUri(preview);
+      await client.imageUri(preview);
+      expect(fetchImpl).toHaveBeenCalledTimes(3);
+    });
+
+    it('never sends the credentials anywhere else', async () => {
+      const fetchImpl = jest.fn();
+      const client = clientWith(fetchImpl);
+      for (const url of [
+        'http://trello.com/1/x.png',
+        'https://trello.com.example.net/x.png',
+        'https://trello.com@example.net/x.png',
+        'https://example.net/trello.com/x.png',
+        'https://trello-attachments.s3.amazonaws.com/x.png',
+      ]) {
+        await expect(client.imageUri(url)).resolves.toBe(url);
+      }
+      await expect(
+        new TrelloClient({apiKey: 'k', fetchImpl}).imageUri(preview),
+      ).resolves.toBe(preview);
+      expect(fetchImpl).not.toHaveBeenCalled();
+    });
+  });
+
+  it('asks the API host for a file Trello gives on its website', () => {
+    expect(trelloFileUrls('https://trello.com/1/cards/c/x.png')).toEqual([
+      'https://api.trello.com/1/cards/c/x.png',
+      'https://trello.com/1/cards/c/x.png',
+    ]);
+    expect(trelloFileUrls('https://api.trello.com/1/x.png')).toEqual([
+      'https://api.trello.com/1/x.png',
+    ]);
   });
 
   it('rejects a response that is not a card', async () => {

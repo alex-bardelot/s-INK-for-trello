@@ -1,7 +1,6 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {
   GestureResponderEvent,
-  ImageURISource,
   Keyboard,
   LayoutChangeEvent,
   Linking,
@@ -32,7 +31,7 @@ import {
   withComment,
 } from '../cards/detail';
 import {membersMeFirst} from '../cards/newCardForm';
-import {AttachmentImage} from '../components/AttachmentImage';
+import {AttachmentImage, ImageUriLoader} from '../components/AttachmentImage';
 import {BlockIcon, BlockIconKind} from '../components/BlockIcon';
 import {Button} from '../components/Button';
 import {CompleteMark} from '../components/CompleteMark';
@@ -446,8 +445,8 @@ export function CardDetailScreen({
   // with the largest image Trello made of it; files stored on Trello are
   // loaded with the member's credentials.
   const [opened, setOpened] = useState<OpenedAttachment | null>(null);
-  const imageSource = useCallback(
-    (url: string) => client.imageSource(url),
+  const loadImageUri = useCallback(
+    (url: string) => client.imageUri(url),
     [client],
   );
 
@@ -816,7 +815,7 @@ export function CardDetailScreen({
           }
           onAddAttachment={editable ? addAttachment : undefined}
           onOpenAttachment={setOpened}
-          imageSource={imageSource}
+          loadImageUri={loadImageUri}
           composer={composer}
           pending={pending}
           footer={
@@ -870,7 +869,8 @@ export function CardDetailScreen({
         <View style={styles.editorOverlay}>
           <AttachmentViewer
             name={opened.name}
-            source={imageSource(opened.image.url)}
+            imageUrl={opened.image.url}
+            loadUri={loadImageUri}
             url={opened.url}
             onClose={() => setOpened(null)}
           />
@@ -1304,8 +1304,8 @@ interface DetailPagesProps {
   onAddAttachment?: () => void;
   /** Opens an attachment that has a preview in its own page. */
   onOpenAttachment?: (attachment: OpenedAttachment) => void;
-  /** What an image of an attachment loads; unset, nothing is loaded. */
-  imageSource?: (url: string) => ImageURISource;
+  /** Loads an image of an attachment; unset, nothing is loaded. */
+  loadImageUri?: ImageUriLoader;
   /** Changes on their way to Trello (`item:<id>`, `label:<id>`…). */
   pending: ReadonlySet<string>;
   /** Field to write a comment; unset, comments are only read. */
@@ -1326,7 +1326,7 @@ function DetailPages({
   onEditDescription,
   onAddAttachment,
   onOpenAttachment,
-  imageSource,
+  loadImageUri,
   pending,
   composer,
 }: DetailPagesProps): React.JSX.Element {
@@ -1392,7 +1392,7 @@ function DetailPages({
       onEditDescription={onEditDescription}
       onAddAttachment={onAddAttachment}
       onOpenAttachment={onOpenAttachment}
-      imageSource={measured ? undefined : imageSource}
+      loadImageUri={measured ? undefined : loadImageUri}
       pending={pending}
       composer={measured ? measuredComposer : composer}
     />
@@ -1459,7 +1459,7 @@ interface BlockProps {
   onEditDescription?: () => void;
   onAddAttachment?: () => void;
   onOpenAttachment?: (attachment: OpenedAttachment) => void;
-  imageSource?: (url: string) => ImageURISource;
+  loadImageUri?: ImageUriLoader;
   pending: ReadonlySet<string>;
   composer?: CommentComposerProps;
 }
@@ -1474,7 +1474,7 @@ function Block({
   onEditDescription,
   onAddAttachment,
   onOpenAttachment,
-  imageSource,
+  loadImageUri,
   pending,
   composer,
 }: BlockProps): React.JSX.Element | null {
@@ -1534,7 +1534,7 @@ function Block({
             block={block}
             onToggleCheckItem={onToggleCheckItem}
             onOpenAttachment={onOpenAttachment}
-            imageSource={imageSource}
+            loadImageUri={loadImageUri}
             pending={pending}
             composer={composer}
           />
@@ -1548,7 +1548,7 @@ function SectionContent({
   block,
   onToggleCheckItem,
   onOpenAttachment,
-  imageSource,
+  loadImageUri,
   pending,
   composer,
 }: Pick<
@@ -1556,7 +1556,7 @@ function SectionContent({
   | 'block'
   | 'onToggleCheckItem'
   | 'onOpenAttachment'
-  | 'imageSource'
+  | 'loadImageUri'
   | 'pending'
   | 'composer'
 >): React.JSX.Element | null {
@@ -1626,7 +1626,8 @@ function SectionContent({
       const thumbnail = preview ? (
         <AttachmentImage
           fit="cover"
-          source={imageSource?.(preview.thumbnail.url)}
+          url={preview.thumbnail.url}
+          loadUri={loadImageUri}
           style={styles.thumbnail}
           placeholder={extension}
         />

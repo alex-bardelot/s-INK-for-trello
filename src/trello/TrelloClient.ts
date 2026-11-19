@@ -37,6 +37,21 @@ export interface TrelloClientOptions {
   timeoutMs?: number;
   /** Told whether each request got an answer; defaults to the plugin's. */
   connectivity?: Pick<ConnectivityMonitor, 'reportOnline' | 'reportNoAnswer'>;
+  /** Turns a loaded picture into a `data:` address; injected for tests. */
+  dataUrlOf?: (blob: Blob) => Promise<string>;
+}
+
+/** A picture's `data:` address, read by React Native's `FileReader`. */
+function readAsDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () =>
+      typeof reader.result === 'string'
+        ? resolve(reader.result)
+        : reject(new Error('The picture could not be read'));
+    reader.onerror = () => reject(new Error('The picture could not be read'));
+    reader.readAsDataURL(blob);
+  });
 }
 
 interface RequestOptions {
@@ -76,6 +91,22 @@ const BOARD_LABELS_LIMIT = 1000;
  * `trello.com.example.net` or `user@trello.com` does not match.
  */
 const TRELLO_FILE_HOST = /^https:\/\/(?:api\.)?trello\.com\//i;
+/** Pictures kept loaded, so that turning pages does not load them again. */
+const IMAGE_CACHE_SIZE = 24;
+
+/**
+ * Where to ask for a file of a card stored on Trello, in turn. Trello gives
+ * its address on `trello.com`, which expects the website's session; the
+ * REST API serves the same path on `api.trello.com` with the credentials
+ * of the `Authorization` header. The given address is tried last.
+ */
+export function trelloFileUrls(url: string): string[] {
+  const api = url.replace(
+    /^https:\/\/trello\.com\/1\//i,
+    'https://api.trello.com/1/',
+  );
+  return api === url ? [url] : [api, url];
+}
 /** Comments shown on the card detail page, newest first. */
 export const CARD_COMMENTS_LIMIT = 20;
 const ORGANIZATION_FIELDS = 'displayName,name,logoUrl,logoHash';
@@ -126,6 +157,9 @@ export class TrelloClient {
   private readonly connectivity: NonNullable<
     TrelloClientOptions['connectivity']
   >;
+  private readonly dataUrlOf: (blob: Blob) => Promise<string>;
+  /** Pictures loaded lately, by address, most recent last. */
+  private readonly images = new Map<string, Promise<string>>();
 
   constructor({
     apiKey,
@@ -134,6 +168,7 @@ export class TrelloClient {
     baseUrl = TRELLO_API_BASE_URL,
     timeoutMs = TRELLO_REQUEST_TIMEOUT_MS,
     connectivity: monitor = connectivity,
+    dataUrlOf = readAsDataUrl,
   }: TrelloClientOptions) {
     this.apiKey = apiKey;
     this.token = token;
@@ -141,6 +176,7 @@ export class TrelloClient {
     this.baseUrl = baseUrl;
     this.timeoutMs = timeoutMs;
     this.connectivity = monitor;
+    this.dataUrlOf = dataUrlOf;
   }
 
   /** Returns the member who owns the token. Fails with `unauthorized` if the token is not valid. */
@@ -495,19 +531,65 @@ export class TrelloClient {
   }
 
   /**
-   * What an `Image` loads for a picture stored on Trello, such as an
-   * attachment's preview. Since 2021, Trello serves uploaded files only
-   * with the member's credentials in the `Authorization` header. Any
-   * member of a board can set an attachment's address, so the credentials
-   * go only to Trello's own `https` hosts, never anywhere else.
+   * The address an `Image` shows a picture from, such as an attachment's
+   * preview. Since 2021, Trello serves uploaded files only with the
+   * member's credentials in the `Authorization` header, which an `Image`
+   * of the tablet does not send: a picture stored on Trello is loaded here
+   * and given as a `data:` address. Any member of a board can set an
+   * attachment's address, so the credentials go only to Trello's own
+   * `https` hosts; any other address is returned as it is. The last
+   * pictures are kept, so that turning pages does not load them again.
+   * Fails with the HTTP status Trello answered.
    */
-  imageSource(url: string): {uri: string; headers?: Record<string, string>} {
-    const authorization = TRELLO_FILE_HOST.test(url)
-      ? this.authorization()
-      : {};
-    return Object.keys(authorization).length > 0
-      ? {uri: url, headers: authorization}
-      : {uri: url};
+  imageUri(url: string): Promise<string> {
+    if (!TRELLO_FILE_HOST.test(url) || !this.token) {
+      return Promise.resolve(url);
+    }
+    const kept = this.images.get(url);
+    if (kept) {
+      // Moved last: the oldest picture is dropped first.
+      this.images.delete(url);
+      this.images.set(url, kept);
+      return kept;
+    }
+    const loading = this.loadImage(url);
+    this.images.set(url, loading);
+    loading.catch(() => this.images.delete(url));
+    while (this.images.size > IMAGE_CACHE_SIZE) {
+      const oldest = this.images.keys().next().value;
+      if (oldest === undefined) {
+        break;
+      }
+      this.images.delete(oldest);
+    }
+    return loading;
+  }
+
+  private async loadImage(url: string): Promise<string> {
+    const failures: string[] = [];
+    for (const candidate of trelloFileUrls(url)) {
+      const host = candidate.replace(/^https:\/\/([^/]+).*$/i, '$1');
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+      try {
+        const response = await this.fetchImpl(candidate, {
+          headers: this.authorization(),
+          signal: controller.signal,
+        });
+        if (response.ok) {
+          return await this.dataUrlOf(await response.blob());
+        }
+        failures.push(`${host} HTTP ${response.status}`);
+      } catch (error) {
+        failures.push(`${host} ${describe(error)}`);
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+    throw new TrelloApiError(
+      'http',
+      `Picture not loaded: ${failures.join(', ')}`,
+    );
   }
 
   /** The member's credentials, as a header; none for anonymous requests. */
