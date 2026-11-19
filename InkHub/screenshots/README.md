@@ -1,6 +1,6 @@
 # InkHub screenshots
 
-Six screenshots for the s-INK listing on InkHub, in the order they should
+Six screenshots for the s-INK for Trello listing on InkHub, in the order they should
 appear. InkHub publishes no size or format rules, so they are full-screen
 captures taken on the Manta (1920 × 2560 in portrait), saved as PNG and left
 uncropped.

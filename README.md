@@ -77,7 +77,7 @@ npm test
 
 ### Configure the Trello API key
 
-s-INK talks to the [Trello REST API](https://developer.atlassian.com/cloud/trello/rest/)
+s-INK for Trello talks to the [Trello REST API](https://developer.atlassian.com/cloud/trello/rest/)
 directly with `fetch`; there is no official Trello SDK for JavaScript.
 Each build needs a Trello API key:
 

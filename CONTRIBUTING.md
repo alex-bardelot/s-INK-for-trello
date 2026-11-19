@@ -1,6 +1,6 @@
-# Contributing to s-INK
+# Contributing to s-INK for Trello
 
-Thanks for your interest in improving s-INK!
+Thanks for your interest in improving s-INK for Trello!
 
 ## Workflow
 

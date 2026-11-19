@@ -3,6 +3,14 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.75.3 — The app is always named s-INK for Trello
+
+- Texts that named the app just "s-INK" now say **s-INK for Trello**: the
+  plugin's texts in all five languages, the connection page of the relay,
+  the README, CONTRIBUTING, the LICENSE and the InkHub description.
+  Names of features such as "s-INK link", "s-INK relay" or "Support s-INK",
+  and the `s-INK/c|b` link marks, are unchanged.
+
 ## 0.75.2 — Labels and members lists opened near the bottom show every row
 
 - The floating list of labels or members (card page, New Trello Card,

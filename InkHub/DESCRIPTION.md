@@ -47,7 +47,7 @@ they belong to.
 - **Link notes and cards.** **Insert Trello Link** ties handwriting to a card
   or board: the words get an s-INK mark, and a tap on them opens the card.
   Cards created from the lasso can be linked to their handwriting too.
-- **Works offline.** Without Wi-Fi, s-INK says so and keeps your account
+- **Works offline.** Without Wi-Fi, s-INK for Trello says so and keeps your account
   linked; it reconnects by itself when the network is back.
 - **Five languages.** English, French, Japanese, Simplified Chinese and
   Traditional Chinese, following the tablet's language or chosen in
@@ -73,7 +73,7 @@ they belong to.
 
 ## Privacy
 
-- s-INK talks to Trello directly. There is no s-INK account and no
+- s-INK for Trello talks to Trello directly. There is no s-INK account and no
   analytics.
 - Your Trello token stays on the tablet and is only sent to `api.trello.com`.
   By default it is kept in memory only; saving it across restarts is an
@@ -85,9 +85,9 @@ they belong to.
 
 ## Feedback and support
 
-Report bugs, suggest ideas and rate s-INK here on InkHub. If s-INK is useful
+Report bugs, suggest ideas and rate s-INK for Trello here on InkHub. If s-INK for Trello is useful
 to you, **Settings › Support s-INK** has a donation page: donations fund a
-Supernote Nomad, to make s-INK work on smaller screens too.
+Supernote Nomad, to make s-INK for Trello work on smaller screens too.
 
 ## Disclaimer
 
