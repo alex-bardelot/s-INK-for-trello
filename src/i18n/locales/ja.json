@@ -287,7 +287,7 @@
   "cardDetail.saveDescription": "保存",
   "cardDetail.savingDescription": "保存中…",
   "cardDetail.descriptionFailed": "説明を Trello に保存できませんでした。入力したテキストはここに残っています。",
-  "cardDetail.addAttachment": "添付ファイルを追加",
+  "cardDetail.addAttachment": "追加",
   "cardDetail.addAttachmentHint": "タブレットのファイルを選んで、Trello のカードに添付します。",
   "cardDetail.attachPickerTitle": "カードに添付",
   "cardDetail.attachPickerConfirm": "添付",

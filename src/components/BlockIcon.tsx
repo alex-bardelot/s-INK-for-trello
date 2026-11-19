@@ -11,7 +11,9 @@ export type BlockIconKind =
   | 'members'
   | 'title'
   | 'description'
-  | 'checklist';
+  | 'checklist'
+  | 'attachments'
+  | 'comments';
 
 export interface BlockIconProps {
   kind: BlockIconKind;
@@ -263,6 +265,80 @@ const checklist: Draw = (size, stroke, color) => {
   ];
 };
 
+/**
+ * A paper clip: a long loop holding a shorter one, tilted so that it leans
+ * right as on Trello.
+ */
+const attachments: Draw = (size, stroke, color) => {
+  const outer = size * 0.4;
+  const inner = outer - 2 * stroke - stroke;
+  return (
+    <View
+      key="clip"
+      style={[
+        styles.part,
+        styles.corner,
+        {width: size, height: size, transform: [{rotate: '40deg'}]},
+      ]}>
+      {box({
+        left: (size - outer) / 2,
+        top: 0,
+        width: outer,
+        height: size,
+        borderRadius: outer / 2,
+        borderWidth: stroke,
+        borderColor: color,
+      })}
+      {box({
+        left: (size - inner) / 2,
+        top: size * 0.22,
+        width: inner,
+        height: size * 0.56,
+        borderBottomLeftRadius: inner / 2,
+        borderBottomRightRadius: inner / 2,
+        borderLeftWidth: stroke,
+        borderRightWidth: stroke,
+        borderBottomWidth: stroke,
+        borderColor: color,
+      })}
+    </View>
+  );
+};
+
+/** A speech bubble: a rounded frame with a tail under its left side. */
+const comments: Draw = (size, stroke, color) => {
+  const frame = size * 0.74;
+  const tail = size * 0.26;
+  return [
+    box(
+      {
+        left: 0,
+        top: 0,
+        width: size,
+        height: frame,
+        borderWidth: stroke,
+        borderColor: color,
+        borderRadius: stroke * 2,
+      },
+      'frame',
+    ),
+    // An "L" turned an eighth left, its corner down, is the tail.
+    box(
+      {
+        left: size * 0.18,
+        top: frame - tail / 2 - stroke,
+        width: tail,
+        height: tail,
+        borderRightWidth: stroke,
+        borderBottomWidth: stroke,
+        borderColor: color,
+        transform: [{rotate: '45deg'}],
+      },
+      'tail',
+    ),
+  ];
+};
+
 const DRAW: Readonly<Record<BlockIconKind, Draw>> = {
   board,
   list,
@@ -271,11 +347,14 @@ const DRAW: Readonly<Record<BlockIconKind, Draw>> = {
   title,
   description,
   checklist,
+  attachments,
+  comments,
 };
 
 /**
  * Icon of a block of a card (board, list, labels, members, title,
- * description, checklist), drawn with plain views like the other icons:
+ * description, checklist, attachments, comments), drawn with plain views
+ * like the other icons:
  * the plugin cannot ship native SVG support.
  */
 export function BlockIcon({

@@ -287,7 +287,7 @@
   "cardDetail.saveDescription": "保存",
   "cardDetail.savingDescription": "正在保存…",
   "cardDetail.descriptionFailed": "无法在 Trello 上保存描述。你的文字仍保留在此处。",
-  "cardDetail.addAttachment": "添加附件",
+  "cardDetail.addAttachment": "添加",
   "cardDetail.addAttachmentHint": "选择平板上的文件，并将其附加到 Trello 卡片。",
   "cardDetail.attachPickerTitle": "附加到卡片",
   "cardDetail.attachPickerConfirm": "附加",

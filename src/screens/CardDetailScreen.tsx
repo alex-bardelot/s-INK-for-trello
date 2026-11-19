@@ -99,6 +99,17 @@ const TREE_LINE = 2;
 const TREE_TRUNK_LEFT = TREE_ICON_SIZE / 2 - TREE_LINE / 2;
 const TREE_BRANCH_WIDTH = TREE_ICON_SIZE;
 const TREE_DOT_SIZE = 10;
+/** Icons of the sections, as on the New Trello Card page. */
+const SECTION_ICON_SIZE = 26;
+/** The icons' column: everything under a section starts after it. */
+const ICON_COLUMN_WIDTH = SECTION_ICON_SIZE + spacing.md;
+
+const SECTION_ICONS: Record<DetailSection, BlockIconKind> = {
+  description: 'description',
+  checklists: 'checklist',
+  attachments: 'attachments',
+  comments: 'comments',
+};
 
 const SECTION_TITLES: Record<DetailSection, TranslationKey> = {
   description: 'cardDetail.description',
@@ -1412,7 +1423,7 @@ function Block({
   pending,
   composer,
 }: BlockProps): React.JSX.Element | null {
-  const {t, locale} = useTranslation();
+  const {t} = useTranslation();
   switch (block.kind) {
     case 'summary':
       return (
@@ -1426,24 +1437,69 @@ function Block({
     case 'heading':
       return (
         <View style={styles.heading}>
-          <Text style={styles.headingText}>
-            {t(SECTION_TITLES[block.section])}
-          </Text>
-          {block.count !== undefined && (
-            <Text style={styles.headingCount}>{block.count}</Text>
-          )}
+          {/* On the page's white, in the column the content starts after. */}
+          <View style={styles.iconColumn}>
+            <BlockIcon
+              kind={SECTION_ICONS[block.section]}
+              size={SECTION_ICON_SIZE}
+              color={colors.foreground}
+            />
+          </View>
+          <View style={styles.headingBand}>
+            <Text accessibilityRole="header" style={styles.headingText}>
+              {t(SECTION_TITLES[block.section])}
+            </Text>
+            {block.count !== undefined && (
+              <Text style={styles.headingCount}>{block.count}</Text>
+            )}
+          </View>
+          {/* The section's action stands on the white, after the band. */}
           {block.section === 'description' && onEditDescription && (
-            // Kept within the band's own height.
-            <View style={styles.headingButton}>
-              <SmallButton
-                label={t('cardDetail.editDescription')}
-                accessibilityLabel={t('cardDetail.editDescriptionHint')}
-                onPress={onEditDescription}
-              />
-            </View>
+            <SmallButton
+              label={t('cardDetail.editDescription')}
+              accessibilityLabel={t('cardDetail.editDescriptionHint')}
+              onPress={onEditDescription}
+            />
+          )}
+          {block.section === 'attachments' && onAddAttachment && (
+            <SmallButton
+              label={`+ ${t('cardDetail.addAttachment')}`}
+              accessibilityLabel={t('cardDetail.addAttachmentHint')}
+              onPress={onAddAttachment}
+            />
           )}
         </View>
       );
+    default:
+      // Under its section's heading, after the icons' column.
+      return (
+        <View style={styles.indented}>
+          <SectionContent
+            block={block}
+            onToggleCheckItem={onToggleCheckItem}
+            pending={pending}
+            composer={composer}
+          />
+        </View>
+      );
+  }
+}
+
+/** A block under a section's heading. */
+function SectionContent({
+  block,
+  onToggleCheckItem,
+  pending,
+  composer,
+}: Pick<
+  BlockProps,
+  'block' | 'onToggleCheckItem' | 'pending' | 'composer'
+>): React.JSX.Element | null {
+  const {t, locale} = useTranslation();
+  switch (block.kind) {
+    case 'summary':
+    case 'heading':
+      return null;
     case 'paragraph':
       return <Text style={styles.paragraph}>{block.text}</Text>;
     case 'checklist':
@@ -1493,28 +1549,6 @@ function Block({
         </Pressable>
       );
     }
-    case 'addAttachment':
-      // As "+ Add a card" under a board's list: words on the page,
-      // inverted while pressed.
-      return (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('cardDetail.addAttachmentHint')}
-          disabled={!onAddAttachment}
-          onPress={onAddAttachment}
-          style={({pressed}) => [
-            styles.addAttachment,
-            pressed && styles.pressed,
-          ]}>
-          {({pressed}) => (
-            <Text
-              numberOfLines={1}
-              style={[styles.addAttachmentText, pressed && styles.pressedText]}>
-              {`+ ${t('cardDetail.addAttachment')}`}
-            </Text>
-          )}
-        </Pressable>
-      );
     case 'attachment': {
       const url = block.url;
       if (url === null) {
@@ -1584,7 +1618,8 @@ function Summary({
   const {t, locale} = useTranslation();
   const labels = card.labels ?? [];
   return (
-    <View style={styles.summary}>
+    // In line with the sections' content, after the icons' column.
+    <View style={[styles.summary, styles.indented]}>
       {(labels.length > 0 || members.length > 0 || !!onOpenPicker) && (
         <LabelsAndMembers
           labels={labels}
@@ -1625,9 +1660,8 @@ function Summary({
  * labels), only their round avatars are shown.
  *
  * Where the card can be changed, a tap on the labels or on the members
- * opens the list of them under it; a card without labels shows a dashed
- * tag in their place, one without members a dashed head, which open it
- * too.
+ * opens the list of them under it; a dashed tag after the labels, and a
+ * dashed head in place of members when the card has none, open it too.
  */
 function LabelsAndMembers({
   labels,
@@ -1677,7 +1711,7 @@ function LabelsAndMembers({
         {labels.map(label => (
           <LabelChip key={label.id} label={label} />
         ))}
-        {onOpenPicker && labels.length === 0 && (
+        {onOpenPicker && (
           <DashedIconButton
             icon="labels"
             accessibilityLabel={t('cardDetail.addLabel')}
@@ -2095,15 +2129,32 @@ const styles = StyleSheet.create({
   dates: {
     gap: spacing.xs,
   },
+  // The section's icon, its band and its button side by side; the band is
+  // as high as the button.
   heading: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  iconColumn: {
+    width: ICON_COLUMN_WIDTH,
+    // The gap after the column is part of its width.
+    marginRight: -spacing.sm,
+    justifyContent: 'center',
+  },
+  headingBand: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    marginTop: spacing.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borders.radius,
     backgroundColor: colors.listHeader,
+  },
+  indented: {
+    marginLeft: ICON_COLUMN_WIDTH,
   },
   headingText: {
     flex: 1,
@@ -2115,9 +2166,6 @@ const styles = StyleSheet.create({
     color: colors.listHeaderText,
     fontSize: typography.body,
     fontWeight: '600',
-  },
-  headingButton: {
-    marginVertical: -spacing.xs,
   },
   editorOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -2213,16 +2261,6 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     fontSize: typography.body,
     textDecorationLine: 'underline',
-  },
-  addAttachment: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borders.radius,
-  },
-  addAttachmentText: {
-    color: colors.foreground,
-    fontSize: typography.body,
-    fontWeight: '600',
   },
   pressed: {
     backgroundColor: colors.foreground,

@@ -3,6 +3,26 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.69.0 — Card page sections with icons
+
+- On the card page, each section (Description, Checklists, Attachments,
+  Comments) now starts with its icon on the page's white, in a column on
+  the left, followed by its dark grey band. Everything in the section
+  (text, checklist items, attachments, comments, the comment field) starts
+  after that column, as on the New Trello Card page. Attachments and
+  Comments get new icons: a paper clip and a speech bubble.
+- The section's button stands on the white after its band, as high as
+  the band: **Edit** for the description, and **+ Add** for the
+  attachments, which replaces the "+ Add an attachment" line under the
+  heading.
+- Labels, members and dates line up with the sections' content; members
+  stay against the right edge. Where the card can be changed, the dashed
+  tag **+** now always follows the labels, not only on a card without
+  any.
+- The "No attachments" and "No comments" lines are no longer shown when
+  the section offers its own way to add one (the Add button, the comment
+  field). The card's name keeps its grey band.
+
 ## 0.68.2 — No "No cards" above "Add a card"
 
 - An empty list of a board you can edit shows only **+ Add a card**,

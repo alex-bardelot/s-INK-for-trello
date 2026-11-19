@@ -33,12 +33,14 @@ export type DetailBlock =
       name: string;
       complete: boolean;
     }
-  /** Stands under the heading of a section the card has nothing in. */
+  /**
+   * Stands under the heading of a section the card has nothing in, unless
+   * the section offers a way to add something (its heading's Add button,
+   * the comment field), which already shows it is empty.
+   */
   | {kind: 'empty'; key: string; section: DetailSection}
   /** Field to write a new comment, at the top of the comments. */
   | {kind: 'commentComposer'; key: string}
-  /** Line to attach a file of the tablet, at the top of the attachments. */
-  | {kind: 'addAttachment'; key: string}
   | {
       kind: 'attachment';
       key: string;
@@ -127,10 +129,8 @@ export function buildDetailBlocks(
     section: 'attachments',
     ...(attachments.length > 0 && {count: String(attachments.length)}),
   });
-  if (canAttach) {
-    blocks.push({kind: 'addAttachment', key: 'add-attachment'});
-  }
-  if (attachments.length === 0) {
+  // A file is attached with the heading's Add button.
+  if (attachments.length === 0 && !canAttach) {
     empty('attachments');
   }
   for (const attachment of attachments) {
@@ -154,7 +154,7 @@ export function buildDetailBlocks(
   if (canComment) {
     blocks.push({kind: 'commentComposer', key: 'comment-composer'});
   }
-  if (comments.length === 0) {
+  if (comments.length === 0 && !canComment) {
     empty('comments');
   }
   for (const comment of comments) {

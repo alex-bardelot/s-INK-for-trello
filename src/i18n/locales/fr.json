@@ -287,7 +287,7 @@
   "cardDetail.saveDescription": "Enregistrer",
   "cardDetail.savingDescription": "Enregistrement…",
   "cardDetail.descriptionFailed": "La description n'a pas pu être enregistrée sur Trello. Votre texte est conservé ici.",
-  "cardDetail.addAttachment": "Ajouter une pièce jointe",
+  "cardDetail.addAttachment": "Ajouter",
   "cardDetail.addAttachmentHint": "Choisit un fichier de la tablette et le joint à la carte sur Trello.",
   "cardDetail.attachPickerTitle": "Joindre à la carte",
   "cardDetail.attachPickerConfirm": "Joindre",

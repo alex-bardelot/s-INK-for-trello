@@ -124,24 +124,22 @@ describe('buildDetailBlocks', () => {
       buildDetailBlocks(card(), {canComment})
         .map(block => block.key)
         .slice(-3);
+    // The field already shows there is no comment yet.
     expect(keys(true)).toEqual([
+      'e-attachments',
       'h-comments',
       'comment-composer',
-      'e-comments',
     ]);
     expect(keys(false)).toEqual(['e-attachments', 'h-comments', 'e-comments']);
   });
 
-  it('opens the attachments with a line to add one, when allowed', () => {
+  it('drops the empty line of the attachments when one can be added', () => {
     const keys = (canAttach: boolean) =>
       buildDetailBlocks(card(), {canAttach})
         .map(block => block.key)
         .filter(key => key.includes('attachment'));
-    expect(keys(true)).toEqual([
-      'h-attachments',
-      'add-attachment',
-      'e-attachments',
-    ]);
+    // The heading's Add button attaches a file.
+    expect(keys(true)).toEqual(['h-attachments']);
     expect(keys(false)).toEqual(['h-attachments', 'e-attachments']);
   });
 
