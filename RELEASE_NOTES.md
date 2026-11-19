@@ -3,6 +3,11 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.69.4 — Pencil on the description's Edit button
+
+- On the card page, the **Edit** button of the Description section now
+  shows a pencil before its label.
+
 ## 0.69.3 — Card actions under the card's name
 
 - On the card page, **Start work** and **Link in note** (or **Open note**)

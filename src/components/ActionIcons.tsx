@@ -137,6 +137,75 @@ export function OpenIcon({size, color}: ActionIconProps): React.JSX.Element {
   );
 }
 
+/**
+ * "Edit": a pencil leaning right, its point down left. It is drawn upright
+ * (eraser, then the outlined body, then the point) and turned an eighth.
+ */
+export function PenIcon({size, color}: ActionIconProps): React.JSX.Element {
+  const stroke = Math.max(2, Math.round(iconStroke(size) * 0.8));
+  const width = 2 * Math.round(size * 0.16);
+  const cap = Math.round(size * 0.18);
+  const tip = Math.round(size * 0.26);
+  const body = size - cap - tip;
+  const left = (size - width) / 2;
+  return (
+    <View
+      style={{width: size, height: size}}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants">
+      <View
+        style={[
+          styles.line,
+          styles.corner,
+          {width: size, height: size, transform: [{rotate: '45deg'}]},
+        ]}>
+        {/* The eraser, set apart from the body by a thin gap. */}
+        <View
+          style={[
+            styles.line,
+            styles.corner,
+            {
+              left,
+              width,
+              height: cap - stroke,
+              backgroundColor: color,
+              borderTopLeftRadius: stroke,
+              borderTopRightRadius: stroke,
+            },
+          ]}
+        />
+        <View
+          style={[
+            styles.line,
+            {
+              left,
+              top: cap,
+              width,
+              height: body,
+              borderWidth: stroke,
+              borderColor: color,
+            },
+          ]}
+        />
+        <View
+          style={[
+            styles.line,
+            styles.point,
+            {
+              left,
+              top: cap + body,
+              borderTopWidth: tip,
+              borderLeftWidth: width / 2,
+              borderRightWidth: width / 2,
+              borderTopColor: color,
+            },
+          ]}
+        />
+      </View>
+    </View>
+  );
+}
+
 /** "Archive": a box with its lid on, and a handle on its front. */
 export function ArchiveIcon({size, color}: ActionIconProps): React.JSX.Element {
   const stroke = Math.max(2, Math.round(iconStroke(size) * 0.8));
@@ -193,6 +262,17 @@ const styles = StyleSheet.create({
     height: 0,
     borderTopColor: 'transparent',
     borderBottomColor: 'transparent',
+  },
+  // A triangle pointing down, drawn by its top border.
+  point: {
+    width: 0,
+    height: 0,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+  },
+  corner: {
+    left: 0,
+    top: 0,
   },
   page: {
     position: 'relative',

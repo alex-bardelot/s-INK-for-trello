@@ -59,7 +59,7 @@ import {
 import {SmallButton} from '../components/SmallButton';
 import {SwitchTrack} from '../components/Switch';
 import {WaitingBox} from '../components/WaitingBox';
-import {NoteIcon, StartIcon} from '../components/ActionIcons';
+import {NoteIcon, PenIcon, StartIcon} from '../components/ActionIcons';
 import {TranslationKey, useTranslation} from '../i18n';
 import {logInkLink} from '../inkLink/diagnostics';
 import {pickFile} from '../platform/fileSelector';
@@ -1457,6 +1457,7 @@ function Block({
           {/* The section's action stands on the white, after the band. */}
           {block.section === 'description' && onEditDescription && (
             <SmallButton
+              icon={PenIcon}
               label={t('cardDetail.editDescription')}
               accessibilityLabel={t('cardDetail.editDescriptionHint')}
               onPress={onEditDescription}
