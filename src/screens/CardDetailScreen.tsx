@@ -694,7 +694,7 @@ export function CardDetailScreen({
             <RefreshIcon size={HEADER_ICON_SIZE} color={colors.foreground} />
           </Pressable>
         }>
-        {/* The card's name and its own actions, above every page. */}
+        {/* The card's name, then its own actions, above every page. */}
         <View style={styles.titleRow}>
           {/* Whether the card is complete; a tap changes it on Trello.
             Without the right to edit, an empty mark would only invite a
@@ -724,37 +724,35 @@ export function CardDetailScreen({
           <Text accessibilityRole="header" style={styles.cardName}>
             {detail.name}
           </Text>
-          <View style={styles.cardActions}>
-            {/* Not offered again once the card is started, unless running,
-              nor on a card already done. */}
-            {canEdit &&
-              (startWork.busy ||
-                (!startWork.started && !detail.dueComplete)) && (
-                <SmallButton
-                  label={t(
-                    startWork.busy ? 'startWork.busy' : 'startWork.start',
-                  )}
-                  accessibilityLabel={t('startWork.startHint')}
-                  disabled={startWork.busy || state.status !== 'loaded'}
-                  onPress={askStart}
-                  icon={StartIcon}
-                />
-              )}
-            {startWork.notePath ? (
+        </View>
+        {/* The card's own actions, under its name and above its labels. */}
+        <View style={styles.cardActions}>
+          {/* Not offered again once the card is started, unless running,
+            nor on a card already done. */}
+          {canEdit &&
+            (startWork.busy || (!startWork.started && !detail.dueComplete)) && (
               <SmallButton
-                label={t('startWork.openNote')}
-                accessibilityLabel={t('startWork.openNoteHint')}
-                onPress={startWork.openNote}
-                icon={NoteIcon}
-              />
-            ) : (
-              // The card's note already holds a link to it.
-              <InsertInkLinkButton
-                target={{kind: 'card', shortLink: detail.shortLink ?? card.id}}
-                name={detail.name}
+                label={t(startWork.busy ? 'startWork.busy' : 'startWork.start')}
+                accessibilityLabel={t('startWork.startHint')}
+                disabled={startWork.busy || state.status !== 'loaded'}
+                onPress={askStart}
+                icon={StartIcon}
               />
             )}
-          </View>
+          {startWork.notePath ? (
+            <SmallButton
+              label={t('startWork.openNote')}
+              accessibilityLabel={t('startWork.openNoteHint')}
+              onPress={startWork.openNote}
+              icon={NoteIcon}
+            />
+          ) : (
+            // The card's note already holds a link to it.
+            <InsertInkLinkButton
+              target={{kind: 'card', shortLink: detail.shortLink ?? card.id}}
+              name={detail.name}
+            />
+          )}
         </View>
         {startWork.report && (
           <StartWorkReportView
@@ -2081,12 +2079,15 @@ const styles = StyleSheet.create({
     fontSize: typography.heading,
     fontWeight: '700',
   },
-  // Start work and the note's button, at the end of the name's band.
+  // Start work and the note's button, under the name's band, in line with
+  // the labels and the sections' content.
   cardActions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: spacing.md,
-    marginLeft: spacing.sm,
+    marginLeft: ICON_COLUMN_WIDTH,
+    marginBottom: spacing.md,
   },
   meta: {
     color: colors.foreground,

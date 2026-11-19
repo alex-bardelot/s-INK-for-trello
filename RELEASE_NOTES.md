@@ -3,6 +3,13 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.69.3 — Card actions under the card's name
+
+- On the card page, **Start work** and **Link in note** (or **Open note**)
+  move out of the card name's grey band to a row right under it, above
+  the labels and members, in line with them. The name now has the whole
+  band to itself.
+
 ## 0.69.2 — Taller labels on the card page
 
 - On the card page, the card's labels are now as tall as the dashed tag
