@@ -3,6 +3,13 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.69.5 — Card name in line without the complete mark
+
+- On the card page, the card's name now starts at the same place whether
+  or not the round that marks the card complete is shown. Without the
+  right to change the card (and on a card not done), its room is kept
+  empty, so the name stays in line with the rest of the page.
+
 ## 0.69.4 — Pencil on the description's Edit button
 
 - On the card page, the **Edit** button of the Description section now

@@ -698,8 +698,9 @@ export function CardDetailScreen({
         <View style={styles.titleRow}>
           {/* Whether the card is complete; a tap changes it on Trello.
             Without the right to edit, an empty mark would only invite a
-            tap that does nothing: only a complete card shows it. */}
-          {(canEdit || detail.dueComplete) && (
+            tap that does nothing: only a complete card shows it. Its room
+            is kept, so that the name stays in line with the rest. */}
+          {canEdit || detail.dueComplete ? (
             <Pressable
               accessibilityRole="checkbox"
               accessibilityLabel={t(
@@ -720,6 +721,8 @@ export function CardDetailScreen({
                 complete={detail.dueComplete}
               />
             </Pressable>
+          ) : (
+            <View style={[styles.completeToggle, styles.completeRoom]} />
           )}
           <Text accessibilityRole="header" style={styles.cardName}>
             {detail.name}
@@ -2073,6 +2076,10 @@ const styles = StyleSheet.create({
   // As far from the name as from the band's edge.
   completeToggle: {
     marginRight: CONTENT_PADDING - spacing.sm,
+  },
+  // The mark's room, where the card cannot be marked complete.
+  completeRoom: {
+    width: COMPLETE_MARK_SIZE,
   },
   cardName: {
     flex: 1,
