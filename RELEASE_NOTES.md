@@ -3,6 +3,13 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.69.1 — Smaller boxes in the Labels and Members lists
+
+- In the floating Labels and Members lists of the card page, the
+  checkbox before each row is now a small 22-pixel square with slightly
+  rounded corners, instead of a box as tall as the label chip beside it.
+  The whole row still checks or unchecks on a tap.
+
 ## 0.69.0 — Card page sections with icons
 
 - On the card page, each section (Description, Checklists, Attachments,

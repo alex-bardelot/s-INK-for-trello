@@ -10,8 +10,12 @@ const CLOSE_ICON_SIZE = 28;
 const PICKER_MIN_HEIGHT = 240;
 /** Tallest the list grows in a long area, such as a scrolled page. */
 const PICKER_MAX_HEIGHT = 520;
-/** As the checklist boxes of the New Trello Card page. */
-const BOX_SIZE = 36;
+/**
+ * Well under the height of a row's content (label chips are 36 high), so
+ * the box reads as a mark beside it; the whole row takes the tap.
+ */
+const BOX_SIZE = 22;
+const BOX_MARK_SIZE = 16;
 
 /** Where the floating list stands in its area, under its button. */
 export interface FloatingPickerPosition {
@@ -194,6 +198,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderColor: colors.foreground,
+    borderRadius: 3,
     borderWidth: borders.width,
     backgroundColor: colors.background,
   },
@@ -202,7 +207,8 @@ const styles = StyleSheet.create({
   },
   boxMark: {
     color: colors.background,
-    fontSize: typography.label,
+    fontSize: BOX_MARK_SIZE,
+    lineHeight: BOX_MARK_SIZE + 2,
     fontWeight: '700',
   },
 });
