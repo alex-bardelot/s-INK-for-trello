@@ -3,6 +3,18 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.73.3 — Start work opens the new note, not the one shown before
+
+- **Start work** from a card while a note was open selected the title of
+  that note (at the same place as the new note's title), and the new note
+  only showed once that selection was dropped. Right after opening a note,
+  the tablet names it as the current one while it still shows the one
+  before. The lasso now checks it caught the new title: a selection on the
+  note before is removed at once, and the title selected once the new note
+  shows (for up to 10 seconds).
+- **Link in note** checks its selection the same way.
+- The Diagnostics log tells how many lassos fell on another note.
+
 ## 0.73.2 — No empty sections while a card loads
 
 - Opening a card no longer flashes its Description, Attachments and

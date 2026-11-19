@@ -343,8 +343,15 @@ const SELECTION_MARGIN = 12;
 
 /** How long the lasso is asked again while the plugin view goes away. */
 const LASSO_RETRY_MS = 3000;
+/**
+ * How long the lasso is asked again once it caught something else than
+ * the link: the note shown before is still there, the new one is coming.
+ */
+const LASSO_WRONG_NOTE_MS = 10000;
 /** Upper bound of lasso attempts, should the host answer at once. */
 const LASSO_MAX_ATTEMPTS = 200;
+/** Lasso box state removing the selection altogether. */
+const LASSO_BOX_REMOVED = 2;
 /** How long a new selection is watched, to make it again if it goes. */
 const LASSO_WATCH_MS = 2500;
 /** Upper bound of checks while watching, should the host answer at once. */
@@ -352,19 +359,63 @@ const LASSO_MAX_WATCH_CHECKS = 1000;
 /** Times a lost selection is made again: the user may be dropping it. */
 const LASSO_MAX_REDO = 3;
 
+/** A link just placed on a page, to select with the lasso. */
+export interface PlacedLink {
+  /** Where it lies on the page (screen pixels). */
+  rect: Rect;
+  /** The link itself (`s-INK/c/{shortLink}`), to know it was selected. */
+  link: string;
+}
+
 /**
  * Closes the plugin view, then selects a link just placed on the current
  * page with the lasso, so that it can be moved at once. The view must be
  * closed first: the host drops the lasso while it shows.
  */
-export async function closeViewAndSelect(rect: Rect | null): Promise<void> {
+export async function closeViewAndSelect(
+  placed: PlacedLink | null,
+): Promise<void> {
   try {
     await PluginManager.closePluginView();
   } catch (error) {
     logInkLink(`close view: ${String(error)}`);
   }
-  if (rect) {
-    await selectInkLink(rect);
+  if (placed) {
+    await selectInkLink(placed);
+  }
+}
+
+/**
+ * What the lasso caught: the link, something else (the note shown is not
+ * the one the link was placed in), or `unknown` when the selection cannot
+ * be read.
+ */
+async function lassoCaught(link: string): Promise<'link' | 'other' | 'unknown'> {
+  try {
+    const elements = unwrap<PageElement[]>(
+      await PluginCommAPI.getLassoElements(),
+    );
+    if (!Array.isArray(elements)) {
+      return 'unknown';
+    }
+    const found = elements.some(
+      element =>
+        element.userData === link ||
+        !!element.textBox?.textContentFull?.includes(link),
+    );
+    recycle(elements);
+    return found ? 'link' : 'other';
+  } catch {
+    return 'unknown';
+  }
+}
+
+/** Removes a selection made on the wrong note, which would keep it shown. */
+async function dropLasso(): Promise<void> {
+  try {
+    await PluginCommAPI.setLassoBoxState(LASSO_BOX_REMOVED);
+  } catch (error) {
+    logInkLink(`lasso drop: ${String(error)}`);
   }
 }
 
@@ -374,26 +425,42 @@ export async function closeViewAndSelect(rect: Rect | null): Promise<void> {
  * longer fire (the plugin is in the background): instead of waiting with
  * `setTimeout`, the lasso is asked again until it succeeds or the time is
  * up, each attempt being a call to the host.
+ *
+ * Right after `openFile`, the host may already name the new note as the
+ * current one while the note app still shows the one before: the lasso
+ * then catches what lies at the same place there (its own title), and that
+ * selection holds the note app on it. Such a selection is removed, and the
+ * lasso asked again until the new note shows.
  */
-export async function selectInkLink(rect: Rect): Promise<boolean> {
+export async function selectInkLink({rect, link}: PlacedLink): Promise<boolean> {
   const padded = {
     left: rect.left - SELECTION_MARGIN,
     top: rect.top - SELECTION_MARGIN,
     right: rect.right + SELECTION_MARGIN,
     bottom: rect.bottom + SELECTION_MARGIN,
   };
-  const deadline = Date.now() + LASSO_RETRY_MS;
+  const started = Date.now();
+  let deadline = started + LASSO_RETRY_MS;
   let attempts = 0;
+  let wrong = 0;
   let answer = '';
   while (attempts < LASSO_MAX_ATTEMPTS) {
     attempts += 1;
     try {
       const response = await PluginCommAPI.lassoElements(padded);
       if ((response as SdkResponse<unknown> | null)?.success === true) {
-        answer = 'ok';
-        break;
+        const caught = await lassoCaught(link);
+        if (caught !== 'other') {
+          answer = caught === 'link' ? 'ok' : 'ok (selection not read)';
+          break;
+        }
+        wrong += 1;
+        answer = 'caught another note';
+        await dropLasso();
+        deadline = started + LASSO_WRONG_NOTE_MS;
+      } else {
+        answer = errorOf(response);
       }
-      answer = errorOf(response);
     } catch (error) {
       answer = String(error);
     }
@@ -404,12 +471,14 @@ export async function selectInkLink(rect: Rect): Promise<boolean> {
   logInkLink(
     `lasso ${Math.round(padded.left)},${Math.round(padded.top)}-${Math.round(
       padded.right,
-    )},${Math.round(padded.bottom)}: ${answer} after ${attempts} attempt(s)`,
+    )},${Math.round(padded.bottom)}: ${answer} after ${attempts} attempt(s)${
+      wrong ? `, ${wrong} on another note` : ''
+    }, ${Date.now() - started} ms`,
   );
-  if (answer !== 'ok') {
+  if (!answer.startsWith('ok')) {
     return false;
   }
-  await keepSelected(padded);
+  await keepSelected(padded, link);
   return true;
 }
 
@@ -419,7 +488,7 @@ export async function selectInkLink(rect: Rect): Promise<boolean> {
  * note app finishing to show the note (or the plugin view going away).
  * Timers do not fire then, so the host is asked again and again.
  */
-async function keepSelected(rect: Rect): Promise<void> {
+async function keepSelected(rect: Rect, link: string): Promise<void> {
   const started = Date.now();
   let checks = 0;
   let redone = 0;
@@ -437,6 +506,11 @@ async function keepSelected(rect: Rect): Promise<void> {
     redone += 1;
     try {
       await PluginCommAPI.lassoElements(rect);
+      if ((await lassoCaught(link)) === 'other') {
+        logInkLink('lasso again: caught another note, dropped');
+        await dropLasso();
+        break;
+      }
     } catch (error) {
       logInkLink(`lasso again: ${String(error)}`);
     }

@@ -216,17 +216,13 @@ export function useStartWork({
             // A new note opens with its title selected, ready to be moved.
             const opened = await openCardNote(
               made.path,
-              !made.created
-                ? undefined
-                : made.titled
-                ? {rect: made.titleRect}
-                : {
-                    rect: null,
-                    missing: {
-                      target: {kind: 'card', shortLink: link},
-                      name: card.name,
-                    },
-                  },
+              made.created
+                ? {
+                    target: {kind: 'card', shortLink: link},
+                    name: card.name,
+                    rect: made.titled ? made.titleRect : null,
+                  }
+                : undefined,
             );
             if (opened) {
               return;

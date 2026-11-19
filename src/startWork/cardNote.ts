@@ -22,7 +22,7 @@ import {
   Permission,
 } from '../plugin/permissions';
 import {listedPath} from '../storage/directoryStore';
-import {parseInkLink} from '../inkLink/inkLink';
+import {formatInkLink, parseInkLink} from '../inkLink/inkLink';
 import {KeyValueStore} from '../storage/keyValueStore';
 import {
   boardNotesDir,
@@ -865,10 +865,14 @@ async function waitForCurrentFile(path: string): Promise<boolean> {
 
 /** What to do once a new note is open. */
 export interface NewNoteTitle {
-  /** The title placed in the file, selected with the lasso. */
+  /** What the title links to, and the name it shows. */
+  target: InkLinkTarget;
+  name: string;
+  /**
+   * Where the title placed in the file lies, to select it with the lasso;
+   * `null` when the file refused it: it is placed once the note is open.
+   */
   rect: Rect | null;
-  /** Placed once the note is open, when the file refused it. */
-  missing?: {target: InkLinkTarget; name: string};
 }
 
 /**
@@ -891,10 +895,8 @@ export async function openCardNote(
     let rect: Rect | null = null;
     if (title && (await waitForCurrentFile(path))) {
       // A title the file refused is placed now, in the middle of the page.
-      rect = title.missing
-        ? await insertInkLink(title.missing.target, title.missing.name)
-        : title.rect;
-      if (title.missing) {
+      rect = title.rect ?? (await insertInkLink(title.target, title.name));
+      if (!title.rect) {
         logInkLink(
           `note: title placed after opening: ${rect ? 'ok' : 'failed'}`,
         );
@@ -903,8 +905,11 @@ export async function openCardNote(
       logInkLink('note: opened note not current, title not selected');
     }
     // The host drops the lasso while the plugin view shows: the view is
-    // closed before the title is selected.
-    await closeViewAndSelect(rect);
+    // closed before the title is selected. The lasso checks it caught the
+    // title: the note shown before may still be on screen.
+    await closeViewAndSelect(
+      title && rect ? {rect, link: formatInkLink(title.target)} : null,
+    );
     return true;
   } catch (error) {
     logInkLink(`note: open ${path}: ${String(error)}`);

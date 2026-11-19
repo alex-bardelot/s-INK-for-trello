@@ -2,7 +2,7 @@ import React, {useCallback, useState} from 'react';
 import {PluginManager} from 'sn-plugin-lib';
 
 import {TranslationKey, useTranslation} from '../i18n';
-import {InkLinkTarget} from '../inkLink/inkLink';
+import {formatInkLink, InkLinkTarget} from '../inkLink/inkLink';
 import {bindPendingSelection, usePendingBinding} from '../inkLink/lassoBinding';
 import {closeViewAndSelect, insertInkLink} from '../inkLink/noteBridge';
 import {ChainIcon} from './ChainIcon';
@@ -56,7 +56,7 @@ export function useInkLinkAction(
     if (rect) {
       setState('idle');
       // The new link is selected with the lasso, ready to be moved.
-      await closeViewAndSelect(rect);
+      await closeViewAndSelect({rect, link: formatInkLink(target)});
     } else {
       setState('failed');
     }
