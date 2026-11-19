@@ -47,11 +47,6 @@ they belong to.
 - **Link notes and cards.** **Insert Trello Link** ties handwriting to a card
   or board: the words get an s-INK mark, and a tap on them opens the card.
   Cards created from the lasso can be linked to their handwriting too.
-- **Works offline.** Without Wi-Fi, s-INK for Trello says so and keeps your account
-  linked; it reconnects by itself when the network is back.
-- **Five languages.** English, French, Japanese, Simplified Chinese and
-  Traditional Chinese, following the tablet's language or chosen in
-  Settings.
 
 ## Requirements
 
