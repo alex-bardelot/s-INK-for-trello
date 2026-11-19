@@ -347,7 +347,7 @@
   "startWork.noList": "未设置列表：卡片保持原位。",
   "startWork.noteSection": "笔记",
   "startWork.createNote": "创建笔记",
-  "startWork.createNoteHelp": "在设备的 {folder}/看板名称 文件夹中创建一篇以卡片命名的笔记，以指向卡片的 s-INK 链接为标题，并打开它。卡片的“打开笔记”按钮可再次打开它。",
+  "startWork.createNoteHelp": "在设备的 {folder}/看板名称 文件夹中创建一篇以卡片名称和 ID 命名（名称 [ID]）的笔记，以指向卡片的 s-INK 链接为标题，并打开它。卡片的“打开笔记”按钮可再次打开它。凭借 ID，卡片改名后笔记仍与其关联。",
   "startWork.notePermission": "s-INK 需要访问你的笔记，才能创建和查找卡片的笔记。",
   "startWork.start": "开始工作",
   "startWork.busy": "正在开始…",

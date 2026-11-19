@@ -3,6 +3,22 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.72.0 — Card notes named with the card's id
+
+- A new card note is named after the card and its short link:
+  `Note/s-INK for Trello/{board}/{card name} [{short link}].note`. The
+  short link is what ties the note to its card: a card renamed on Trello,
+  or a board renamed, keeps its note. Two cards of the same name no
+  longer need `(2)`, `(3)`… names.
+- A card's note is now looked for by that short link first, in the
+  board's folder, then (after the path remembered when it was made) in
+  the other boards' folders, without opening any note. The board's note
+  signs use it too.
+- Notes made by 0.47.0–0.71.0 (`{card name}.note`) keep their name and
+  are still found, as before.
+- The help of **Create a note** says how the note is named, in all
+  locales.
+
 ## 0.71.0 — Attachments and notes on the board's cards
 
 - On the board, a card with attachments shows a paper clip and how many

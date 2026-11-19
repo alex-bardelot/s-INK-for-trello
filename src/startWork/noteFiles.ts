@@ -1,16 +1,17 @@
 /**
  * Names and places of the notes created for cards. A card's note lives in
- * `Note/s-INK for Trello/{board name}/{card name}.note` on the tablet. The
- * note is found again by the path remembered when it was made, by that
- * path, or by the s-INK link of its title, so that a renamed card or board
- * keeps its note.
+ * `Note/s-INK for Trello/{board name}/{card name} [{short link}].note` on
+ * the tablet. The card's short link in the name is what ties the note to
+ * the card: a renamed card or board keeps its note. Notes of 0.47.0–0.71.0
+ * (`{card name}.note`) are still found by the path remembered when they
+ * were made, or by the s-INK link of their title.
  */
 
 /** Folder of the card notes, under the tablet's storage root. */
 export const CARD_NOTES_FOLDER = 'Note/s-INK for Trello';
 
 /**
- * Folder of the card notes made by 0.45.x–0.46.x, named
+ * Folder of the card notes made by 0.45.x–0.46.x, named, as now,
  * `{card name} [{short link}].note`: still found, never written.
  */
 export const LEGACY_CARD_NOTES_FOLDER = 'Note/s-INK';
@@ -21,7 +22,10 @@ export const DEFAULT_STORAGE_ROOT = '/storage/emulated/0';
 /** Longest folder or file name taken from a board or card name. */
 export const NOTE_NAME_MAX_LENGTH = 80;
 
-/** Notes of cards of the same name on a board: `Name (2).note` and on. */
+/**
+ * Notes of 0.47.0–0.71.0 of cards of the same name on a board:
+ * `Name (2).note` and on.
+ */
 export const MAX_SAME_NAME_NOTES = 20;
 
 export const NOTE_EXTENSION = '.note';
@@ -75,10 +79,21 @@ export function boardNotesDir(
 }
 
 /**
- * File name of a card's note: the card name. A second card of the same
- * name on the board gets `Name (2).note`, and so on.
+ * File name of a card's note: the card's name, then its short link in
+ * brackets, `Fix the login [AbC123xy].note`. The short link never changes:
+ * it finds the note of a renamed card, and keeps two cards of the same
+ * name apart.
  */
-export function cardNoteFileName(cardName: string, rank = 1): string {
+export function cardNoteFileName(cardName: string, shortLink: string): string {
+  const name = safeFileName(cardName, 'Trello');
+  return `${name} [${shortLink}]${NOTE_EXTENSION}`;
+}
+
+/**
+ * File name of a card's note made by 0.47.0–0.71.0: the card name alone,
+ * `Name (2).note` for a second card of the same name, and so on.
+ */
+export function namedCardNoteFileName(cardName: string, rank = 1): string {
   const name = safeFileName(cardName, 'Trello');
   return `${name}${rank > 1 ? ` (${rank})` : ''}${NOTE_EXTENSION}`;
 }
@@ -88,9 +103,12 @@ export function isNoteFile(path: string): boolean {
   return path.toLowerCase().endsWith(NOTE_EXTENSION);
 }
 
-/** `true` if a file of the legacy folder is the note of the card. */
-export function isLegacyCardNoteFile(path: string, shortLink: string): boolean {
-  return path.endsWith(` [${shortLink}]${NOTE_EXTENSION}`);
+/**
+ * `true` if a file is the note of the card: its name ends with the card's
+ * short link in brackets, whatever the card's name was when it was made.
+ */
+export function isCardNoteFile(path: string, shortLink: string): boolean {
+  return shortLink !== '' && path.endsWith(` [${shortLink}]${NOTE_EXTENSION}`);
 }
 
 /** Folder holding the tablet's own templates: PNG files put by the user. */

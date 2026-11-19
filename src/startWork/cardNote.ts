@@ -31,12 +31,13 @@ import {
   cardNotesRoot,
   customTemplatesDir,
   fileNameOf,
-  isLegacyCardNoteFile,
+  isCardNoteFile,
   isNoteFile,
   isTemplateFile,
   legacyCardNotesDir,
   matchSystemTemplate,
   MAX_SAME_NAME_NOTES,
+  namedCardNoteFileName,
 } from './noteFiles';
 import {NoteTemplateChoice} from './settings';
 
@@ -143,14 +144,18 @@ async function remember(
 
 /**
  * Path of the note made for a card, or `null` if it has none (or the notes
- * cannot be read). Looks, in turn, at the path remembered when the note was
- * made, at `{board}/{card}.note` (and its `(2)`… namesakes) when its title
- * links to the card, and at the notes of 0.45.x–0.46.x.
+ * cannot be read). The card's short link in a note's name comes first: it
+ * is looked for in the board's folder, then (after the path remembered
+ * when the note was made) in the other boards' folders, for a renamed
+ * board, and among the notes of 0.45.x–0.46.x. Notes of 0.47.0–0.71.0,
+ * named after the card alone, are found at `{board}/{card}.note` (and its
+ * `(2)`… namesakes) when their title links to the card.
  *
  * @param prompt - Asks for note access if needed; otherwise a missing
  * permission answers `null`.
- * @param scan - Also reads the title of every card note, to find the note
- * of a card or board renamed since: only before making a note.
+ * @param scan - Also reads the title of every card note, to find a note of
+ * 0.47.0–0.71.0 whose card or board was renamed since: only before making
+ * a note.
  */
 export async function findCardNote(
   card: NoteCard,
@@ -164,15 +169,39 @@ export async function findCardNote(
     if (!allowed) {
       return null;
     }
+    const exported = await exportPath();
+    const boardDir = boardNotesDir(exported, card.boardName);
+    const ofCard = (path: string) =>
+      isCardNoteFile(fileNameOf(path), card.shortLink);
+
+    // By the card's short link in its name, in the board's folder.
+    const inBoard = (await listEntries(boardDir)).find(ofCard);
+    if (inBoard) {
+      return inBoard;
+    }
+
     const remembered = await store.getItem(cardNoteKey(card.shortLink));
     if (remembered && (await fileExists(remembered)) !== 'false') {
       return remembered;
     }
 
-    const exported = await exportPath();
-    const boardDir = boardNotesDir(exported, card.boardName);
+    // By the short link, under a former name of the board, then among
+    // the notes of 0.45.x–0.46.x: folders are listed, notes not opened.
+    const boardFolders = (await listEntries(cardNotesRoot(exported))).filter(
+      folder => !isNoteFile(folder) && !fileNameOf(folder).startsWith('.'),
+    );
+    for (const folder of [...boardFolders, legacyCardNotesDir(exported)]) {
+      const found = (await listEntries(folder)).find(ofCard);
+      if (found) {
+        logInkLink(`note: found by its short link ${found}`);
+        await remember(store, card.shortLink, found);
+        return found;
+      }
+    }
+
+    // A note of 0.47.0–0.71.0, named after the card alone.
     for (let rank = 1; rank <= MAX_SAME_NAME_NOTES; rank++) {
-      const path = `${boardDir}/${cardNoteFileName(card.name, rank)}`;
+      const path = `${boardDir}/${namedCardNoteFileName(card.name, rank)}`;
       if ((await fileExists(path)) === 'false') {
         break;
       }
@@ -182,19 +211,8 @@ export async function findCardNote(
       }
     }
 
-    const legacy = (await listEntries(legacyCardNotesDir(exported))).find(
-      path => isLegacyCardNoteFile(fileNameOf(path), card.shortLink),
-    );
-    if (legacy) {
-      await remember(store, card.shortLink, legacy);
-      return legacy;
-    }
-
     if (scan) {
-      for (const folder of await listEntries(cardNotesRoot(exported))) {
-        if (isNoteFile(folder) || fileNameOf(folder).startsWith('.')) {
-          continue;
-        }
+      for (const folder of boardFolders) {
         for (const path of await listEntries(folder)) {
           if (isNoteFile(path) && (await noteOwner(path)) === card.shortLink) {
             logInkLink(`note: found by its title ${path}`);
@@ -213,10 +231,10 @@ export async function findCardNote(
 /**
  * Short links of the cards of a board that have a note, to mark them on
  * the board. Cheap enough for every card: the board's note folder (and the
- * legacy one) is listed once, and a card counts when the note remembered
- * for it still exists, or when a note in the board's folder bears its name.
- * Notes are not opened, so a card with the name of another card's note is
- * marked too. Never prompts: without note access, no card is marked.
+ * legacy one) is listed once, and a card counts when a note there carries
+ * its short link, when the note remembered for it still exists, or when a
+ * note of 0.47.0–0.71.0 there bears its name. Notes are not opened. Never
+ * prompts: without note access, no card is marked.
  */
 export async function findBoardCardNotes(
   cards: readonly {shortLink?: string; name: string}[],
@@ -234,6 +252,7 @@ export async function findBoardCardNotes(
     const legacyNotes = (await listEntries(legacyCardNotesDir(exported))).map(
       fileNameOf,
     );
+    const linked = [...boardNotes, ...legacyNotes];
     const remembered = await Promise.all(
       cards.map(card =>
         card.shortLink
@@ -248,8 +267,8 @@ export async function findBoardCardNotes(
       }
       const path = remembered[i];
       const has =
-        boardNotes.has(cardNoteFileName(card.name)) ||
-        legacyNotes.some(name => isLegacyCardNoteFile(name, shortLink)) ||
+        linked.some(name => isCardNoteFile(name, shortLink)) ||
+        boardNotes.has(namedCardNoteFileName(card.name)) ||
         (!!path &&
           (path.startsWith(`${boardDir}/`)
             ? boardNotes.has(fileNameOf(path))
@@ -578,7 +597,8 @@ export type CreatedNote =
     };
 
 /**
- * Creates the note of a card in `Note/s-INK for Trello/{board}/{card}.note`,
+ * Creates the note of a card in
+ * `Note/s-INK for Trello/{board}/{card} [{short link}].note`,
  * with the card's s-INK link at the top of its first page as a title. A
  * note the card already has is kept as it is. Every step is written to the
  * Diagnostics log (`note:` lines); on failure, the failing step is returned
@@ -641,16 +661,20 @@ export async function createCardNote(
       return fail(`folder ${dir} could not be created (makeDir ${dirMade})`);
     }
 
-    // A namesake card of the board may own `{card}.note` already.
-    let path = '';
-    for (let rank = 1; rank <= MAX_SAME_NAME_NOTES && !path; rank++) {
-      const candidate = `${dir}/${cardNoteFileName(card.name, rank)}`;
-      if ((await fileExists(candidate)) !== 'true') {
-        path = candidate;
-      }
-    }
-    if (!path) {
-      return fail(`${MAX_SAME_NAME_NOTES} notes named ${card.name} already`);
+    // The card's short link in the name keeps it apart from its namesakes.
+    const path = `${dir}/${cardNoteFileName(card.name, card.shortLink)}`;
+    if ((await fileExists(path)) === 'true') {
+      // Its folder could not be listed: the note is there all the same.
+      logInkLink(`note: already there ${path}`);
+      await remember(store, card.shortLink, path);
+      return {
+        ok: true,
+        path,
+        created: false,
+        titled: true,
+        titleRect: null,
+        templateWarning: null,
+      };
     }
     const {width, height} = Dimensions.get('window');
     const portrait = height >= width;

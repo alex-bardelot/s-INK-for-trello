@@ -347,7 +347,7 @@
   "startWork.noList": "リストが未設定です。カードは移動しません。",
   "startWork.noteSection": "ノート",
   "startWork.createNote": "ノートを作成する",
-  "startWork.createNoteHelp": "端末の {folder}/ボード名 フォルダーに、カード名のノートを、カードへの s-INK リンクをタイトルにして作成し、開きます。カードの「ノートを開く」ボタンで再び開けます。",
+  "startWork.createNoteHelp": "端末の {folder}/ボード名 フォルダーに、カード名と ID の名前（名前 [ID]）のノートを、カードへの s-INK リンクをタイトルにして作成し、開きます。カードの「ノートを開く」ボタンで再び開けます。ID により、カード名を変更してもノートとの関連は保たれます。",
   "startWork.notePermission": "カードのノートを作成・検索するため、s-INK はノートへのアクセスが必要です。",
   "startWork.start": "作業開始",
   "startWork.busy": "開始中…",

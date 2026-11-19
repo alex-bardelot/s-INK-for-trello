@@ -347,7 +347,7 @@
   "startWork.noList": "No list set: the card stays where it is.",
   "startWork.noteSection": "Note",
   "startWork.createNote": "Create a note",
-  "startWork.createNoteHelp": "Creates a note named after the card, in {folder}/board name on the tablet, titled with an s-INK link to the card, and opens it. The Open note button of the card opens it again.",
+  "startWork.createNoteHelp": "Creates a note named after the card and its id (Name [id]), in {folder}/board name on the tablet; the id keeps it tied to the card if the card is renamed. The note is titled with an s-INK link to the card and opens at once. The Open note button of the card opens it again.",
   "startWork.notePermission": "s-INK needs access to your notes to create and find the notes of your cards.",
   "startWork.start": "Start work",
   "startWork.busy": "Starting…",
