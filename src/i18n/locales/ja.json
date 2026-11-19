@@ -234,6 +234,8 @@
   "board.nextCards": "次のカード",
   "board.due": "期限 {date}",
   "board.complete": "完了",
+  "board.attachments": "添付ファイル：{count}",
+  "board.hasNote": "開始済み：カードにノートがあります",
   "board.focus": "集中",
   "board.focusEmpty": "このボードには、集中モードの設定に合うカードがありません。",
   "board.review": "レビュー",

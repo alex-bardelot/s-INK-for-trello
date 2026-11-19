@@ -207,6 +207,8 @@ export function CreateCardScreen({
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
   const [items, setItems] = useState<FormCheckItem[]>([]);
+  // The item added with "+ Add an item", whose field takes the focus.
+  const [addedItemKey, setAddedItemKey] = useState<string | null>(null);
   const [createError, setCreateError] = useState<SessionErrorCode | null>(null);
   const [picker, setPicker] = useState<Picker | null>(null);
   const preferences = useRef<CardPreferences>(EMPTY_PREFERENCES);
@@ -875,6 +877,8 @@ export function CreateCardScreen({
                       </Pressable>
                       <TextInput
                         accessibilityLabel={t('card.item')}
+                        // A new item is written in at once.
+                        autoFocus={item.key === addedItemKey}
                         onChangeText={text =>
                           updateItem(item.key, {name: text})
                         }
@@ -900,12 +904,11 @@ export function CreateCardScreen({
                   <SmallButton
                     label={`+ ${t('card.addItem')}`}
                     accessibilityLabel={t('card.addItem')}
-                    onPress={() =>
-                      setItems(current => [
-                        ...current,
-                        ...makeItems([{name: '', checked: false}]),
-                      ])
-                    }
+                    onPress={() => {
+                      const [added] = makeItems([{name: '', checked: false}]);
+                      setAddedItemKey(added.key);
+                      setItems(current => [...current, added]);
+                    }}
                   />
                 </Section>
               </ScrollView>

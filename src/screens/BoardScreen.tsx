@@ -1,4 +1,12 @@
-import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   LayoutChangeEvent,
   Pressable,
@@ -42,6 +50,8 @@ import {
 } from '../components/BindSelectionButton';
 import {usePendingBinding} from '../inkLink/lassoBinding';
 import {useConnectivity} from '../network/connectivity';
+import {NoteIcon} from '../components/ActionIcons';
+import {BlockIcon} from '../components/BlockIcon';
 import {CompleteMark} from '../components/CompleteMark';
 import {InsertInkLinkButton} from '../components/InsertInkLinkButton';
 import {LabelChip} from '../components/LabelChip';
@@ -54,6 +64,7 @@ import {SmallButton} from '../components/SmallButton';
 import {WaitingBox} from '../components/WaitingBox';
 import {Locale, useTranslation} from '../i18n';
 import {toSessionError} from '../session/trelloSession';
+import {findBoardCardNotes} from '../startWork/cardNote';
 import {KeyValueStore} from '../storage/keyValueStore';
 import {
   isSupernoteRoadmap,
@@ -86,6 +97,19 @@ const COLUMN_GAP = spacing.lg;
 const LIST_GAP = spacing.lg;
 const AVATAR_SIZE = 36;
 const MAX_AVATARS = 3;
+/** Icons among a card's badges, as high as their text. */
+const BADGE_ICON_SIZE = 20;
+
+/**
+ * Short links of the board's cards that have a note (started with Start
+ * work): their tiles show a note sign. Shared by context, so that the
+ * memoized measuring layers draw it too.
+ */
+const CardNotesContext = createContext<ReadonlySet<string>>(new Set());
+
+function sameSet(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+  return a.size === b.size && [...a].every(value => b.has(value));
+}
 
 type MembersById = ReadonlyMap<string, TrelloBoardMember>;
 type OpenCard = (card: TrelloBoardCard) => void;
@@ -263,6 +287,28 @@ export function BoardScreen({
   useEffect(() => {
     load();
   }, [load]);
+
+  // The cards with a note are looked for once the board is loaded, and
+  // again each time a card's page closes: Start work may have made one.
+  const [cardNotes, setCardNotes] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  const cardOpen = openCard !== null;
+  useEffect(() => {
+    if (state.status !== 'loaded' || cardOpen) {
+      return;
+    }
+    let active = true;
+    const cards = [...state.cardsByList.values()].flat();
+    findBoardCardNotes(cards, board.name, store).then(found => {
+      if (active) {
+        setCardNotes(current => (sameSet(current, found) ? current : found));
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [board.name, cardOpen, state, store]);
 
   // Offline, the Offline button stands where the refresh button was. Once
   // the internet is back, a board that failed to load is loaded again.
@@ -665,19 +711,21 @@ export function BoardScreen({
         )}
 
         {state.status === 'loaded' && focused && (
-          <StackedBoard
-            // Measured heights depend on the column width and on the mode.
-            key={`${mode}-${columns}-${width}`}
-            lists={focused.lists}
-            cardsByList={focused.cardsByList}
-            members={state.members}
-            columns={columns}
-            onOpenCard={showCard}
-            onLongPressCard={openMenu}
-            emptyMessage={t(
-              mode === 'review' ? 'board.reviewEmpty' : 'board.focusEmpty',
-            )}
-          />
+          <CardNotesContext.Provider value={cardNotes}>
+            <StackedBoard
+              // Measured heights depend on the column width and on the mode.
+              key={`${mode}-${columns}-${width}`}
+              lists={focused.lists}
+              cardsByList={focused.cardsByList}
+              members={state.members}
+              columns={columns}
+              onOpenCard={showCard}
+              onLongPressCard={openMenu}
+              emptyMessage={t(
+                mode === 'review' ? 'board.reviewEmpty' : 'board.focusEmpty',
+              )}
+            />
+          </CardNotesContext.Provider>
         )}
 
         {state.status === 'loaded' && !focused && lists.length === 0 && (
@@ -685,7 +733,7 @@ export function BoardScreen({
         )}
 
         {state.status === 'loaded' && !focused && lists.length > 0 && (
-          <>
+          <CardNotesContext.Provider value={cardNotes}>
             <View style={styles.columns}>
               {visibleLists.map(list => (
                 <BoardColumn
@@ -728,7 +776,7 @@ export function BoardScreen({
                 />
               </View>
             )}
-          </>
+          </CardNotesContext.Provider>
         )}
       </ScreenFrame>
       {detail}
@@ -1205,7 +1253,10 @@ function CardTile({
   const tileRef = useRef<View>(null);
   // A lasso selection waits to be linked: each card shows a "Link" tab.
   const linking = usePendingBinding() !== null;
-  const {checkItems, checkItemsChecked, description} = card.badges ?? {};
+  const cardNotes = useContext(CardNotesContext);
+  const hasNote = !!card.shortLink && cardNotes.has(card.shortLink);
+  const {checkItems, checkItemsChecked, description, attachments} =
+    card.badges ?? {};
   const badges: string[] = [];
   if (card.due) {
     const date = formatCardDate(card.due, locale);
@@ -1256,11 +1307,41 @@ function CardTile({
           {card.name}
         </Text>
       </View>
-      {(badges.length > 0 || cardMembers.length > 0) && (
+      {(badges.length > 0 ||
+        !!attachments ||
+        hasNote ||
+        cardMembers.length > 0) && (
         <View style={styles.cardFooter}>
-          <Text style={styles.cardBadges} numberOfLines={1}>
-            {badges.join('   ')}
-          </Text>
+          <View style={styles.badgeRow}>
+            {badges.length > 0 && (
+              <Text style={styles.cardBadges} numberOfLines={1}>
+                {badges.join('   ')}
+              </Text>
+            )}
+            {!!attachments && (
+              <View
+                style={styles.badge}
+                accessible
+                accessibilityLabel={t('board.attachments', {
+                  count: attachments,
+                })}>
+                <BlockIcon
+                  kind="attachments"
+                  size={BADGE_ICON_SIZE}
+                  color={colors.foreground}
+                />
+                <Text style={styles.cardBadges}>{attachments}</Text>
+              </View>
+            )}
+            {hasNote && (
+              <View
+                style={styles.badge}
+                accessible
+                accessibilityLabel={t('board.hasNote')}>
+                <NoteIcon size={BADGE_ICON_SIZE} color={colors.foreground} />
+              </View>
+            )}
+          </View>
           <View style={styles.avatars}>
             {cardMembers.slice(0, MAX_AVATARS).map(member =>
               onPress ? (
@@ -1447,8 +1528,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  cardBadges: {
+  badgeRow: {
     flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    columnGap: spacing.md,
+    rowGap: spacing.xs,
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  cardBadges: {
+    flexShrink: 1,
     color: colors.foreground,
     fontSize: 18,
   },

@@ -3,6 +3,18 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.71.0 — Attachments and notes on the board's cards
+
+- On the board, a card with attachments shows a paper clip and how many
+  it has, after its other badges. The count follows the attachments
+  added from the card's page.
+- A started card (one with a note made by **Start work**) shows a note
+  sign. The board looks for the notes when it loads and each time a
+  card's page closes; it lists the board's note folder once, without
+  opening the notes or asking for access.
+- In **New Trello Card**, **+ Add an item** now puts the cursor in the
+  new item's field, ready to write.
+
 ## 0.70.1 — Compact attachments
 
 - On the card page, each attachment now takes a single compact row, as

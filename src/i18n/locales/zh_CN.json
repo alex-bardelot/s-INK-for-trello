@@ -234,6 +234,8 @@
   "board.nextCards": "下一页卡片",
   "board.due": "截止 {date}",
   "board.complete": "已完成",
+  "board.attachments": "附件：{count}",
+  "board.hasNote": "已开始：卡片有笔记",
   "board.focus": "专注",
   "board.focusEmpty": "此看板上没有符合专注模式设置的卡片。",
   "board.review": "回顾",

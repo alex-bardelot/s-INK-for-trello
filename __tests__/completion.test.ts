@@ -117,6 +117,17 @@ describe('withBoardCardDetail', () => {
     });
   });
 
+  it('counts the attachments the page read', () => {
+    const next = withBoardCardDetail(board, {
+      ...detail('a', 'l1'),
+      attachments: [
+        {id: 'f1', name: 'a.png', url: 'https://x.test/a', date: ''},
+        {id: 'f2', name: 'b.pdf', url: 'https://x.test/b', date: ''},
+      ],
+    });
+    expect(next?.get('l1')?.[0].badges.attachments).toBe(2);
+  });
+
   it('keeps the same board for an unknown or unchanged card', () => {
     expect(withBoardCardDetail(board, detail('zz', 'l1'))).toBe(board);
     expect(withBoardCardDetail(board, detail('c', 'l2'))).toBe(board);

@@ -234,6 +234,8 @@
   "board.nextCards": "Next cards",
   "board.due": "Due {date}",
   "board.complete": "Complete",
+  "board.attachments": "Attachments: {count}",
+  "board.hasNote": "Started: the card has a note",
   "board.focus": "Focus",
   "board.focusEmpty": "No card of this board matches the Focus mode settings.",
   "board.review": "Review",

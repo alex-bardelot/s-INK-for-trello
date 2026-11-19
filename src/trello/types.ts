@@ -102,6 +102,8 @@ export interface TrelloCardBadges {
   checkItemsChecked: number;
   /** `true` when the card has a description. */
   description: boolean;
+  /** Number of files and links attached to the card. */
+  attachments?: number;
 }
 
 /** A label of a board. `color` is a Trello color name, e.g. `green` or `red_dark`. */

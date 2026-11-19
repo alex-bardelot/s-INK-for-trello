@@ -211,6 +211,61 @@ export async function findCardNote(
 }
 
 /**
+ * Short links of the cards of a board that have a note, to mark them on
+ * the board. Cheap enough for every card: the board's note folder (and the
+ * legacy one) is listed once, and a card counts when the note remembered
+ * for it still exists, or when a note in the board's folder bears its name.
+ * Notes are not opened, so a card with the name of another card's note is
+ * marked too. Never prompts: without note access, no card is marked.
+ */
+export async function findBoardCardNotes(
+  cards: readonly {shortLink?: string; name: string}[],
+  boardName: string,
+  store: KeyValueStore,
+): Promise<Set<string>> {
+  const found = new Set<string>();
+  try {
+    if (!(await hasPermission(Permission.FileRead))) {
+      return found;
+    }
+    const exported = await exportPath();
+    const boardDir = boardNotesDir(exported, boardName);
+    const boardNotes = new Set((await listEntries(boardDir)).map(fileNameOf));
+    const legacyNotes = (await listEntries(legacyCardNotesDir(exported))).map(
+      fileNameOf,
+    );
+    const remembered = await Promise.all(
+      cards.map(card =>
+        card.shortLink
+          ? store.getItem(cardNoteKey(card.shortLink)).catch(() => null)
+          : Promise.resolve(null),
+      ),
+    );
+    for (const [i, card] of cards.entries()) {
+      const shortLink = card.shortLink;
+      if (!shortLink) {
+        continue;
+      }
+      const path = remembered[i];
+      const has =
+        boardNotes.has(cardNoteFileName(card.name)) ||
+        legacyNotes.some(name => isLegacyCardNoteFile(name, shortLink)) ||
+        (!!path &&
+          (path.startsWith(`${boardDir}/`)
+            ? boardNotes.has(fileNameOf(path))
+            : // Made under the board's former name: checked on its own.
+              (await fileExists(path)) === 'true'));
+      if (has) {
+        found.add(shortLink);
+      }
+    }
+  } catch (error) {
+    logInkLink(`note: listing the board's notes failed (${String(error)})`);
+  }
+  return found;
+}
+
+/**
  * Blank page templates packaged with the plugin, at the Manta's screen
  * size: `createNote` needs a template file on the tablet (error 802
  * "Background template file does not exist!" with the host's

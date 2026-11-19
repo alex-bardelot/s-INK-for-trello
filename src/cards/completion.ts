@@ -64,7 +64,9 @@ export function withBoardCardDetail(
       badges: {
         ...shown.badges,
         description: detail.desc.trim().length > 0,
-        // Without its checklists read, the card keeps the counts it had.
+        // Without its attachments or checklists read, the card keeps the
+        // counts it had.
+        ...(detail.attachments && {attachments: detail.attachments.length}),
         ...(items && {
           checkItems: items.length,
           checkItemsChecked: items.filter(item => item.state === 'complete')
@@ -93,6 +95,7 @@ function sameTile(a: TrelloBoardCard, b: TrelloBoardCard): boolean {
     a.badges.checkItems === b.badges.checkItems &&
     a.badges.checkItemsChecked === b.badges.checkItemsChecked &&
     a.badges.description === b.badges.description &&
+    a.badges.attachments === b.badges.attachments &&
     sameIds(a.idMembers, b.idMembers) &&
     a.labels.length === b.labels.length &&
     a.labels.every(

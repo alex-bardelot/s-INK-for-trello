@@ -234,6 +234,8 @@
   "board.nextCards": "Cartes suivantes",
   "board.due": "Échéance {date}",
   "board.complete": "Terminée",
+  "board.attachments": "Pièces jointes : {count}",
+  "board.hasNote": "Démarrée : la carte a une note",
   "board.focus": "Focus",
   "board.focusEmpty": "Aucune carte de ce tableau ne correspond aux réglages du mode Focus.",
   "board.review": "Revue",
