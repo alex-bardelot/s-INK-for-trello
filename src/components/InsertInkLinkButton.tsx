@@ -28,7 +28,8 @@ export interface InkLinkAction {
  * it:
  * - after the lasso "Insert Trello Link" button, it links the selection;
  * - otherwise it places an s-INK link in the middle of the current note
- *   page and selects it with the lasso, so that it can be moved at once.
+ *   page; when Settings › New card asks for it (experimental), it is then
+ *   selected with the lasso, so that it can be moved at once.
  *
  * The label reads "Link failed" after a failure, until the next try.
  */
@@ -55,7 +56,7 @@ export function useInkLinkAction(
     const rect = await insertInkLink(target, name);
     if (rect) {
       setState('idle');
-      // The new link is selected with the lasso, ready to be moved.
+      // The new link may be selected with the lasso (experimental setting).
       await closeViewAndSelect({rect, link: formatInkLink(target)});
     } else {
       setState('failed');

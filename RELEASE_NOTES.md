@@ -3,6 +3,17 @@
 All notable changes to this project are listed here, one entry per commit,
 newest first.
 
+## 0.74.0 — Lasso on new links made experimental, off by default
+
+- **Start work** no longer selects the title of the note it made, and
+  **Link in note** no longer selects the link it placed: the note simply
+  opens, or shows again.
+- That selection with the lasso, ready to move the link at once, is now an
+  experimental setting, **Select new links with the lasso**, in a new
+  **Experimental** section of **Settings › New card**. It is off by default.
+  Turned on, it works as in 0.73.3: a selection fallen on the note shown
+  before is removed, and the new link selected once its note shows.
+
 ## 0.73.3 — Start work opens the new note, not the one shown before
 
 - **Start work** from a card while a note was open selected the title of

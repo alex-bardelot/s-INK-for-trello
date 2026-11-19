@@ -877,8 +877,9 @@ export interface NewNoteTitle {
 
 /**
  * Opens a card's note in the note app and closes the plugin view to show
- * it. For a new note, its title is then selected with the lasso, ready to
- * be moved; a title the closed file refused is placed first.
+ * it. For a new note, a title the closed file refused is placed first;
+ * when Settings › New card asks for it (experimental), the title is then
+ * selected with the lasso, ready to be moved.
  *
  * @returns `false` if the host refused to open the note.
  */

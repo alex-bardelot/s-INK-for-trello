@@ -52,27 +52,37 @@ export function NewCardSettingsPanel({
   );
 
   return (
-    <SettingsSection title={t('card.title')}>
-      <Stepper
-        label={t('newCard.suggestions')}
-        help={t('newCard.suggestionsHelp')}
-        value={settings.suggestionCount}
-        min={MIN_SUGGESTIONS}
-        max={MAX_SUGGESTIONS}
-        onChange={suggestionCount => update({suggestionCount})}
-      />
-      <Switch
-        label={t('newCard.assignMe')}
-        help={t('newCard.assignMeHelp')}
-        value={settings.assignMe}
-        onChange={assignMe => update({assignMe})}
-      />
-      <Switch
-        label={t('newCard.linkSelection')}
-        help={t('newCard.linkSelectionHelp')}
-        value={settings.linkSelection}
-        onChange={linkSelection => update({linkSelection})}
-      />
-    </SettingsSection>
+    <>
+      <SettingsSection title={t('card.title')}>
+        <Stepper
+          label={t('newCard.suggestions')}
+          help={t('newCard.suggestionsHelp')}
+          value={settings.suggestionCount}
+          min={MIN_SUGGESTIONS}
+          max={MAX_SUGGESTIONS}
+          onChange={suggestionCount => update({suggestionCount})}
+        />
+        <Switch
+          label={t('newCard.assignMe')}
+          help={t('newCard.assignMeHelp')}
+          value={settings.assignMe}
+          onChange={assignMe => update({assignMe})}
+        />
+        <Switch
+          label={t('newCard.linkSelection')}
+          help={t('newCard.linkSelectionHelp')}
+          value={settings.linkSelection}
+          onChange={linkSelection => update({linkSelection})}
+        />
+      </SettingsSection>
+      <SettingsSection title={t('settings.experimental')}>
+        <Switch
+          label={t('newCard.selectNewLinks')}
+          help={t('newCard.selectNewLinksHelp')}
+          value={settings.selectNewLinks}
+          onChange={selectNewLinks => update({selectNewLinks})}
+        />
+      </SettingsSection>
+    </>
   );
 }

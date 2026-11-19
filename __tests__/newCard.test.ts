@@ -93,12 +93,13 @@ describe('new card chips', () => {
 });
 
 describe('new card settings', () => {
-  it('defaults to 3 suggestions, assign me on, link off', async () => {
+  it('defaults to 3 suggestions, assign me on, link and lasso off', async () => {
     const store = createMemoryStore();
     expect(await loadNewCardSettings(store)).toEqual({
       suggestionCount: 3,
       assignMe: true,
       linkSelection: false,
+      selectNewLinks: false,
     });
     expect(DEFAULT_NEW_CARD_SETTINGS.suggestionCount).toBe(3);
   });
@@ -109,11 +110,13 @@ describe('new card settings', () => {
       suggestionCount: 5,
       assignMe: false,
       linkSelection: true,
+      selectNewLinks: true,
     });
     expect(await loadNewCardSettings(store)).toEqual({
       suggestionCount: 5,
       assignMe: false,
       linkSelection: true,
+      selectNewLinks: true,
     });
     for (const suggestionCount of [11, -1, 2.5, '4']) {
       await store.setItem(

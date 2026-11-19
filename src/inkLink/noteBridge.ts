@@ -8,6 +8,7 @@ import {
   PointUtils,
 } from 'sn-plugin-lib';
 
+import {loadNewCardSettings} from '../cards/newCardSettings';
 import {FALLBACK_PAGE_SIZE} from '../plugin/lassoText';
 import {openInkLinkIntent} from '../plugin/launchIntent';
 import {ensurePermission, Permission} from '../plugin/permissions';
@@ -368,19 +369,36 @@ export interface PlacedLink {
 }
 
 /**
- * Closes the plugin view, then selects a link just placed on the current
- * page with the lasso, so that it can be moved at once. The view must be
- * closed first: the host drops the lasso while it shows.
+ * Whether new links are selected with the lasso: an experimental setting
+ * of Settings › New card, off by default.
+ */
+async function selectNewLinksEnabled(): Promise<boolean> {
+  try {
+    return (await loadNewCardSettings(getDeviceStore())).selectNewLinks;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Closes the plugin view, then, when Settings › New card asks for it
+ * (experimental), selects a link just placed on the current page with the
+ * lasso, so that it can be moved at once. The view must be closed first:
+ * the host drops the lasso while it shows. The setting is read before, while
+ * the view still shows.
  */
 export async function closeViewAndSelect(
   placed: PlacedLink | null,
 ): Promise<void> {
+  const select = !!placed && (await selectNewLinksEnabled());
   try {
     await PluginManager.closePluginView();
   } catch (error) {
     logInkLink(`close view: ${String(error)}`);
   }
-  if (placed) {
+  if (placed && !select) {
+    logInkLink('lasso: off in Settings, new link not selected');
+  } else if (placed) {
     await selectInkLink(placed);
   }
 }
@@ -390,7 +408,9 @@ export async function closeViewAndSelect(
  * the one the link was placed in), or `unknown` when the selection cannot
  * be read.
  */
-async function lassoCaught(link: string): Promise<'link' | 'other' | 'unknown'> {
+async function lassoCaught(
+  link: string,
+): Promise<'link' | 'other' | 'unknown'> {
   try {
     const elements = unwrap<PageElement[]>(
       await PluginCommAPI.getLassoElements(),
@@ -432,7 +452,10 @@ async function dropLasso(): Promise<void> {
  * selection holds the note app on it. Such a selection is removed, and the
  * lasso asked again until the new note shows.
  */
-export async function selectInkLink({rect, link}: PlacedLink): Promise<boolean> {
+export async function selectInkLink({
+  rect,
+  link,
+}: PlacedLink): Promise<boolean> {
   const padded = {
     left: rect.left - SELECTION_MARGIN,
     top: rect.top - SELECTION_MARGIN,

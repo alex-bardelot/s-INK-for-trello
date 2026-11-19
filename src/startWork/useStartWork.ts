@@ -213,7 +213,8 @@ export function useStartWork({
           };
           // All went well: show the note at once.
           if (!result.failed && !made.templateWarning) {
-            // A new note opens with its title selected, ready to be moved.
+            // A new note's title may be selected once it opens (an
+            // experimental setting of New card).
             const opened = await openCardNote(
               made.path,
               made.created

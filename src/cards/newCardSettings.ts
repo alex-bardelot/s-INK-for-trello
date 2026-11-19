@@ -31,12 +31,20 @@ export interface NewCardSettings {
    * to it, as the Insert Trello Link button does.
    */
   linkSelection: boolean;
+  /**
+   * Experimental: a link just placed by Link in note, or the title of the
+   * note Start work made, is selected with the lasso once the plugin view
+   * closes, ready to be moved. Off by default: right after a note opens,
+   * the lasso may fall on the note shown before.
+   */
+  selectNewLinks: boolean;
 }
 
 export const DEFAULT_NEW_CARD_SETTINGS: NewCardSettings = {
   suggestionCount: 3,
   assignMe: true,
   linkSelection: false,
+  selectNewLinks: false,
 };
 
 function readBoolean(value: unknown, fallback: boolean): boolean {
@@ -58,6 +66,10 @@ export async function loadNewCardSettings(
         : defaults.suggestionCount,
       assignMe: readBoolean(parsed.assignMe, defaults.assignMe),
       linkSelection: readBoolean(parsed.linkSelection, defaults.linkSelection),
+      selectNewLinks: readBoolean(
+        parsed.selectNewLinks,
+        defaults.selectNewLinks,
+      ),
     };
   } catch (error) {
     console.warn('[sINK] Failed to read the New card settings', error);
