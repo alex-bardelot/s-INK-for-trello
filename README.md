@@ -51,6 +51,15 @@ Other Supernote devices that support plugins may work but are not tested.
   languages fall back to English); Settings > General > Language can fix
   another one.
 
+| Boards | Board | Card |
+| :---: | :---: | :---: |
+| ![Boards](InkHub/screenshots/boards.png) | ![Board](InkHub/screenshots/board.png) | ![Card](InkHub/screenshots/card.png) |
+
+| Boards | Start work | Lasso |
+| :---: | :---: | :---: |
+| ![Create](InkHub/screenshots/create-card.png) | ![Board](InkHub/screenshots/start-work.png) | ![Card](InkHub/screenshots/lasso-menu.png) |
+
+
 ## Getting started
 
 ### Prerequisites
