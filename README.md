@@ -3,7 +3,7 @@
 A [Supernote](https://supernote.com) plugin that brings Trello boards to your
 e-ink tablet. The name mixes *sync* and *ink*.
 
-> **Status:** early development. The current build connects a Trello account,
+> **Status:** Current 1.0.0 version in under Review on InkHub,
 > lists its open boards and turns lasso selections into Trello cards. See [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ## Compatibility
