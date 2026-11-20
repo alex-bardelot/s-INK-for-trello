@@ -51,7 +51,7 @@ Other Supernote devices that support plugins may work but are not tested.
   languages fall back to English); Settings > General > Language can fix
   another one.
 
-| Boards | Board | Card |
+| Boards Page | Board Page | Card Page |
 | :---: | :---: | :---: |
 | ![Boards](InkHub/screenshots/boards.png) | ![Board](InkHub/screenshots/board.png) | ![Card](InkHub/screenshots/card.png) |
 
