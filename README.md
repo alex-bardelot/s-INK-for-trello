@@ -55,7 +55,7 @@ Other Supernote devices that support plugins may work but are not tested.
 | :---: | :---: | :---: |
 | ![Boards](InkHub/screenshots/boards.png) | ![Board](InkHub/screenshots/board.png) | ![Card](InkHub/screenshots/card.png) |
 
-| Boards | Start work | Lasso |
+| Create card | Start work | Lasso |
 | :---: | :---: | :---: |
 | ![Create](InkHub/screenshots/create-card.png) | ![Board](InkHub/screenshots/start-work.png) | ![Card](InkHub/screenshots/lasso-menu.png) |
 
